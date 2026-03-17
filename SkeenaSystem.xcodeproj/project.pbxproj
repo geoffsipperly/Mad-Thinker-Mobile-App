@@ -1,0 +1,1073 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		47E678982EBD1CEB009190EF /* Auth in Frameworks */ = {isa = PBXBuildFile; productRef = 47E678972EBD1CEB009190EF /* Auth */; };
+		47E6789A2EBD1CEB009190EF /* Functions in Frameworks */ = {isa = PBXBuildFile; productRef = 47E678992EBD1CEB009190EF /* Functions */; };
+		47E6789C2EBD1CEB009190EF /* PostgREST in Frameworks */ = {isa = PBXBuildFile; productRef = 47E6789B2EBD1CEB009190EF /* PostgREST */; };
+		47E6789E2EBD1CEB009190EF /* Realtime in Frameworks */ = {isa = PBXBuildFile; productRef = 47E6789D2EBD1CEB009190EF /* Realtime */; };
+		47E678A02EBD1CEB009190EF /* Storage in Frameworks */ = {isa = PBXBuildFile; productRef = 47E6789F2EBD1CEB009190EF /* Storage */; };
+		47E678B42EBD405B009190EF /* Supabase in Frameworks */ = {isa = PBXBuildFile; productRef = 47E678B32EBD405B009190EF /* Supabase */; };
+		47E67A9C2ED0DCA3009190EF /* AVFoundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 47E67A9B2ED0DCA3009190EF /* AVFoundation.framework */; };
+		47E67A9E2ED0DCB9009190EF /* Speech.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 47E67A9D2ED0DCB9009190EF /* Speech.framework */; };
+		47E67AA02ED0DCC8009190EF /* CoreLocation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 47E67A9F2ED0DCC8009190EF /* CoreLocation.framework */; };
+		FD0A00012F3A000100000001 /* MapboxMaps in Frameworks */ = {isa = PBXBuildFile; productRef = FD0A00002F3A000100000001 /* MapboxMaps */; };
+		FDFCA4462F31951200CD5E46 /* Media in Resources */ = {isa = PBXBuildFile; fileRef = FDFCA4452F31951200CD5E46 /* Media */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		FD2182FB2EF9C1E2001E905A /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 4759B4712E8EE1F9005E27BB /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 4759B4782E8EE1F9005E27BB;
+			remoteInfo = SkeenaSystem;
+		};
+		FD6A18D52F18487A0067DBFD /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 4759B4712E8EE1F9005E27BB /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 4759B4782E8EE1F9005E27BB;
+			remoteInfo = SkeenaSystem;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXFileReference section */
+		47E678582E8F368B009190EF /* SkeenaSystem.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = SkeenaSystem.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		47E67A9B2ED0DCA3009190EF /* AVFoundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AVFoundation.framework; path = System/Library/Frameworks/AVFoundation.framework; sourceTree = SDKROOT; };
+		47E67A9D2ED0DCB9009190EF /* Speech.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Speech.framework; path = System/Library/Frameworks/Speech.framework; sourceTree = SDKROOT; };
+		47E67A9F2ED0DCC8009190EF /* CoreLocation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreLocation.framework; path = System/Library/Frameworks/CoreLocation.framework; sourceTree = SDKROOT; };
+		FD2182F72EF9C1E2001E905A /* SkeenaSystemTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = SkeenaSystemTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		FD6334CA2EFF0B4900CF49C7 /* .gitignore */ = {isa = PBXFileReference; lastKnownFileType = text; path = .gitignore; sourceTree = "<group>"; };
+		FD6A18CF2F18487A0067DBFD /* SkeenaSystemUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = SkeenaSystemUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		FDFCA4452F31951200CD5E46 /* Media */ = {isa = PBXFileReference; lastKnownFileType = folder; name = Media; path = SkeenaSystem/Media; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		FDCA99482F130BF900B28F5D /* Exceptions for "SkeenaSystem" folder in "SkeenaSystem" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = 4759B4782E8EE1F9005E27BB /* SkeenaSystem */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
+/* Begin PBXFileSystemSynchronizedRootGroup section */
+		4759B47B2E8EE1F9005E27BB /* SkeenaSystem */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				FDCA99482F130BF900B28F5D /* Exceptions for "SkeenaSystem" folder in "SkeenaSystem" target */,
+			);
+			path = SkeenaSystem;
+			sourceTree = "<group>";
+		};
+		FD2182F82EF9C1E2001E905A /* SkeenaSystemTests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = SkeenaSystemTests;
+			sourceTree = "<group>";
+		};
+		FD6A18D02F18487A0067DBFD /* SkeenaSystemUITests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = SkeenaSystemUITests;
+			sourceTree = "<group>";
+		};
+/* End PBXFileSystemSynchronizedRootGroup section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		4759B4762E8EE1F9005E27BB /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				47E6789C2EBD1CEB009190EF /* PostgREST in Frameworks */,
+				47E6789A2EBD1CEB009190EF /* Functions in Frameworks */,
+				47E678B42EBD405B009190EF /* Supabase in Frameworks */,
+				47E67AA02ED0DCC8009190EF /* CoreLocation.framework in Frameworks */,
+				47E678982EBD1CEB009190EF /* Auth in Frameworks */,
+				47E67A9E2ED0DCB9009190EF /* Speech.framework in Frameworks */,
+				47E678A02EBD1CEB009190EF /* Storage in Frameworks */,
+				47E67A9C2ED0DCA3009190EF /* AVFoundation.framework in Frameworks */,
+				47E6789E2EBD1CEB009190EF /* Realtime in Frameworks */,
+				FD0A00012F3A000100000001 /* MapboxMaps in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		FD2182F42EF9C1E2001E905A /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		FD6A18CC2F18487A0067DBFD /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		4759B4702E8EE1F9005E27BB = {
+			isa = PBXGroup;
+			children = (
+				FDFCA4452F31951200CD5E46 /* Media */,
+				FD6334CA2EFF0B4900CF49C7 /* .gitignore */,
+				4759B47B2E8EE1F9005E27BB /* SkeenaSystem */,
+				47E678582E8F368B009190EF /* SkeenaSystem.app */,
+				FD2182F82EF9C1E2001E905A /* SkeenaSystemTests */,
+				FD6A18D02F18487A0067DBFD /* SkeenaSystemUITests */,
+				47E678B22EBD405B009190EF /* Frameworks */,
+				FD2182F72EF9C1E2001E905A /* SkeenaSystemTests.xctest */,
+				FD6A18CF2F18487A0067DBFD /* SkeenaSystemUITests.xctest */,
+			);
+			sourceTree = "<group>";
+		};
+		47E678B22EBD405B009190EF /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				47E67A9F2ED0DCC8009190EF /* CoreLocation.framework */,
+				47E67A9D2ED0DCB9009190EF /* Speech.framework */,
+				47E67A9B2ED0DCA3009190EF /* AVFoundation.framework */,
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		4759B4782E8EE1F9005E27BB /* SkeenaSystem */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 4759B4892E8EE1FA005E27BB /* Build configuration list for PBXNativeTarget "SkeenaSystem" */;
+			buildPhases = (
+				4759B4752E8EE1F9005E27BB /* Sources */,
+				4759B4762E8EE1F9005E27BB /* Frameworks */,
+				4759B4772E8EE1F9005E27BB /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				4759B47B2E8EE1F9005E27BB /* SkeenaSystem */,
+			);
+			name = SkeenaSystem;
+			packageProductDependencies = (
+				47E678972EBD1CEB009190EF /* Auth */,
+				47E678992EBD1CEB009190EF /* Functions */,
+				47E6789B2EBD1CEB009190EF /* PostgREST */,
+				47E6789D2EBD1CEB009190EF /* Realtime */,
+				47E6789F2EBD1CEB009190EF /* Storage */,
+				47E678B32EBD405B009190EF /* Supabase */,
+				FD0A00002F3A000100000001 /* MapboxMaps */,
+			);
+			productName = SkeenaSystem;
+			productReference = 47E678582E8F368B009190EF /* SkeenaSystem.app */;
+			productType = "com.apple.product-type.application";
+		};
+		FD2182F62EF9C1E2001E905A /* SkeenaSystemTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = FD2182FF2EF9C1E2001E905A /* Build configuration list for PBXNativeTarget "SkeenaSystemTests" */;
+			buildPhases = (
+				FD2182F32EF9C1E2001E905A /* Sources */,
+				FD2182F42EF9C1E2001E905A /* Frameworks */,
+				FD2182F52EF9C1E2001E905A /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				FD2182FC2EF9C1E2001E905A /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				FD2182F82EF9C1E2001E905A /* SkeenaSystemTests */,
+			);
+			name = SkeenaSystemTests;
+			packageProductDependencies = (
+			);
+			productName = SkeenaSystemTests;
+			productReference = FD2182F72EF9C1E2001E905A /* SkeenaSystemTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
+		FD6A18CE2F18487A0067DBFD /* SkeenaSystemUITests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = FD6A18D72F18487A0067DBFD /* Build configuration list for PBXNativeTarget "SkeenaSystemUITests" */;
+			buildPhases = (
+				FD6A18CB2F18487A0067DBFD /* Sources */,
+				FD6A18CC2F18487A0067DBFD /* Frameworks */,
+				FD6A18CD2F18487A0067DBFD /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				FD6A18D62F18487A0067DBFD /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				FD6A18D02F18487A0067DBFD /* SkeenaSystemUITests */,
+			);
+			name = SkeenaSystemUITests;
+			packageProductDependencies = (
+			);
+			productName = SkeenaSystemUITests;
+			productReference = FD6A18CF2F18487A0067DBFD /* SkeenaSystemUITests.xctest */;
+			productType = "com.apple.product-type.bundle.ui-testing";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		4759B4712E8EE1F9005E27BB /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastSwiftUpdateCheck = 2620;
+				LastUpgradeCheck = 2620;
+				TargetAttributes = {
+					4759B4782E8EE1F9005E27BB = {
+						CreatedOnToolsVersion = 26.0.1;
+					};
+					FD2182F62EF9C1E2001E905A = {
+						CreatedOnToolsVersion = 26.2;
+						TestTargetID = 4759B4782E8EE1F9005E27BB;
+					};
+					FD6A18CE2F18487A0067DBFD = {
+						CreatedOnToolsVersion = 26.2;
+						TestTargetID = 4759B4782E8EE1F9005E27BB;
+					};
+				};
+			};
+			buildConfigurationList = 4759B4742E8EE1F9005E27BB /* Build configuration list for PBXProject "SkeenaSystem" */;
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = 4759B4702E8EE1F9005E27BB;
+			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				47E678962EBD1CEB009190EF /* XCRemoteSwiftPackageReference "supabase-swift" */,
+				FD0A00022F3A000100000001 /* XCRemoteSwiftPackageReference "mapbox-maps-ios" */,
+			);
+			preferredProjectObjectVersion = 77;
+			productRefGroup = 4759B4702E8EE1F9005E27BB;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				4759B4782E8EE1F9005E27BB /* SkeenaSystem */,
+				FD2182F62EF9C1E2001E905A /* SkeenaSystemTests */,
+				FD6A18CE2F18487A0067DBFD /* SkeenaSystemUITests */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		4759B4772E8EE1F9005E27BB /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				FDFCA4462F31951200CD5E46 /* Media in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		FD2182F52EF9C1E2001E905A /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		FD6A18CD2F18487A0067DBFD /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		4759B4752E8EE1F9005E27BB /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		FD2182F32EF9C1E2001E905A /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		FD6A18CB2F18487A0067DBFD /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		FD2182FC2EF9C1E2001E905A /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 4759B4782E8EE1F9005E27BB /* SkeenaSystem */;
+			targetProxy = FD2182FB2EF9C1E2001E905A /* PBXContainerItemProxy */;
+		};
+		FD6A18D62F18487A0067DBFD /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 4759B4782E8EE1F9005E27BB /* SkeenaSystem */;
+			targetProxy = FD6A18D52F18487A0067DBFD /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin XCBuildConfiguration section */
+		4759B4872E8EE1FA005E27BB /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				DEVELOPMENT_TEAM = X24MYQA5M8;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				"INFOPLIST_FILE[sdk=*]" = "";
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = iphoneos;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+			};
+			name = Debug;
+		};
+		4759B4882E8EE1FA005E27BB /* Release */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReferenceAnchor = 4759B47B2E8EE1F9005E27BB /* SkeenaSystem */;
+			baseConfigurationReferenceRelativePath = Config/PROD.xcconfig;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				DEVELOPMENT_TEAM = X24MYQA5M8;
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				SDKROOT = iphoneos;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
+		4759B48A2E8EE1FA005E27BB /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = YES;
+				CODE_SIGN_ENTITLEMENTS = SkeenaSystem/SkeenaSystem.entitlements;
+				CODE_SIGN_IDENTITY = "Apple Development";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = X24MYQA5M8;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = SkeenaSystem/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = "Mad Thinker";
+				INFOPLIST_KEY_NSCameraUsageDescription = "Camera access allows adding a photo of the catch";
+				INFOPLIST_KEY_NSFaceIDUsageDescription = "Used for streamlined login";
+				INFOPLIST_KEY_NSLocationAlwaysAndWhenInUseUsageDescription = "We use location to help identify where catches occur";
+				INFOPLIST_KEY_NSLocationUsageDescription = "We tag notes with your location to help conservation efforts";
+				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "Location is used to stamp catch reports with GPS coordinates";
+				INFOPLIST_KEY_NSMicrophoneUsageDescription = "We use the microphone so you can record field notes";
+				INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription = "Used to save selected photos if needed";
+				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "Photo library access allows selecting a photo of the catch";
+				INFOPLIST_KEY_NSSpeechRecognitionUsageDescription = "We transcribe your field notes on device for quick review";
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				IPHONEOS_DEPLOYMENT_TARGET = 16.6;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0.1;
+				PRODUCT_BUNDLE_IDENTIFIER = com.sip.BendFlyShop;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				PROVISIONING_PROFILE_SPECIFIER = "";
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		4759B48B2E8EE1FA005E27BB /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = YES;
+				CODE_SIGN_ENTITLEMENTS = SkeenaSystem/SkeenaSystem.entitlements;
+				CODE_SIGN_IDENTITY = "Apple Development";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = X24MYQA5M8;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = SkeenaSystem/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = "Mad Thinker";
+				INFOPLIST_KEY_NSCameraUsageDescription = "Camera access allows adding a photo of the catch";
+				INFOPLIST_KEY_NSFaceIDUsageDescription = "Used for streamlined login";
+				INFOPLIST_KEY_NSLocationAlwaysAndWhenInUseUsageDescription = "We use location to help identify where catches occur";
+				INFOPLIST_KEY_NSLocationUsageDescription = "We tag notes with your location to help conservation efforts";
+				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "Location is used to stamp catch reports with GPS coordinates";
+				INFOPLIST_KEY_NSMicrophoneUsageDescription = "We use the microphone so you can record field notes";
+				INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription = "Used to save selected photos if needed";
+				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "Photo library access allows selecting a photo of the catch";
+				INFOPLIST_KEY_NSSpeechRecognitionUsageDescription = "We transcribe your field notes on device for quick review";
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				IPHONEOS_DEPLOYMENT_TARGET = 16.6;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0.1;
+				PRODUCT_BUNDLE_IDENTIFIER = com.sip.BendFlyShop;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				PROVISIONING_PROFILE_SPECIFIER = "";
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		FD2182FD2EF9C1E2001E905A /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = X24MYQA5M8;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.2;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.sip.BendFlyShopTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/SkeenaSystem.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/SkeenaSystem";
+			};
+			name = Debug;
+		};
+		FD2182FE2EF9C1E2001E905A /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = X24MYQA5M8;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.2;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.sip.BendFlyShopTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/SkeenaSystem.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/SkeenaSystem";
+			};
+			name = Release;
+		};
+		FD6A18D82F18487A0067DBFD /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = X24MYQA5M8;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.2;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.sip.BendFlyShopUITests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_TARGET_NAME = SkeenaSystem;
+			};
+			name = Debug;
+		};
+		FD6A18D92F18487A0067DBFD /* DevTEST */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = X24MYQA5M8;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.2;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.sip.BendFlyShopUITests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_TARGET_NAME = SkeenaSystem;
+			};
+			name = DevTEST;
+		};
+		FD6A18DA2F18487A0067DBFD /* PROD */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = X24MYQA5M8;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.2;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.sip.BendFlyShopUITests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_TARGET_NAME = SkeenaSystem;
+			};
+			name = PROD;
+		};
+		FD6A18DB2F18487A0067DBFD /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = X24MYQA5M8;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.2;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.sip.BendFlyShopUITests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_TARGET_NAME = SkeenaSystem;
+			};
+			name = Release;
+		};
+		FDCA994D2F13111700B28F5D /* DevTEST */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReferenceAnchor = 4759B47B2E8EE1F9005E27BB /* SkeenaSystem */;
+			baseConfigurationReferenceRelativePath = Config/DevTEST.xcconfig;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				DEVELOPMENT_TEAM = X24MYQA5M8;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				"INFOPLIST_FILE[sdk=*]" = "";
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = iphoneos;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+			};
+			name = DevTEST;
+		};
+		FDCA994E2F13111700B28F5D /* DevTEST */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReferenceAnchor = 4759B47B2E8EE1F9005E27BB /* SkeenaSystem */;
+			baseConfigurationReferenceRelativePath = Config/DevTEST.xcconfig;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = YES;
+				CODE_SIGN_ENTITLEMENTS = SkeenaSystem/SkeenaSystem.entitlements;
+				CODE_SIGN_IDENTITY = "Apple Development";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				DEVELOPMENT_TEAM = X24MYQA5M8;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = SkeenaSystem/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = "Mad Thinker";
+				INFOPLIST_KEY_NSCameraUsageDescription = "Camera access allows adding a photo of the catch";
+				INFOPLIST_KEY_NSFaceIDUsageDescription = "Used for streamlined login";
+				INFOPLIST_KEY_NSLocationAlwaysAndWhenInUseUsageDescription = "We use location to help identify where catches occur";
+				INFOPLIST_KEY_NSLocationUsageDescription = "We tag notes with your location to help conservation efforts";
+				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "Location is used to stamp catch reports with GPS coordinates";
+				INFOPLIST_KEY_NSMicrophoneUsageDescription = "We use the microphone so you can record field notes";
+				INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription = "Used to save selected photos if needed";
+				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "Photo library access allows selecting a photo of the catch";
+				INFOPLIST_KEY_NSSpeechRecognitionUsageDescription = "We transcribe your field notes on device for quick review";
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				IPHONEOS_DEPLOYMENT_TARGET = 16.6;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0.1;
+				PRODUCT_BUNDLE_IDENTIFIER = com.sip.BendFlyShop;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				PROVISIONING_PROFILE_SPECIFIER = "";
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = DevTEST;
+		};
+		FDCA994F2F13111700B28F5D /* DevTEST */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReferenceAnchor = 4759B47B2E8EE1F9005E27BB /* SkeenaSystem */;
+			baseConfigurationReferenceRelativePath = Config/DevTEST.xcconfig;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = X24MYQA5M8;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.2;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.sip.BendFlyShopTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/SkeenaSystem.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/SkeenaSystem";
+			};
+			name = DevTEST;
+		};
+		FDCA99502F13112400B28F5D /* PROD */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReferenceAnchor = 4759B47B2E8EE1F9005E27BB /* SkeenaSystem */;
+			baseConfigurationReferenceRelativePath = Config/PROD.xcconfig;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				DEVELOPMENT_TEAM = X24MYQA5M8;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				"INFOPLIST_FILE[sdk=*]" = "";
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = iphoneos;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+			};
+			name = PROD;
+		};
+		FDCA99512F13112400B28F5D /* PROD */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReferenceAnchor = 4759B47B2E8EE1F9005E27BB /* SkeenaSystem */;
+			baseConfigurationReferenceRelativePath = Config/PROD.xcconfig;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = YES;
+				CODE_SIGN_ENTITLEMENTS = SkeenaSystem/SkeenaSystem.entitlements;
+				CODE_SIGN_IDENTITY = "Apple Development";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = X24MYQA5M8;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = SkeenaSystem/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = "Mad Thinker";
+				INFOPLIST_KEY_NSCameraUsageDescription = "Camera access allows adding a photo of the catch";
+				INFOPLIST_KEY_NSFaceIDUsageDescription = "Used for streamlined login";
+				INFOPLIST_KEY_NSLocationAlwaysAndWhenInUseUsageDescription = "We use location to help identify where catches occur";
+				INFOPLIST_KEY_NSLocationUsageDescription = "We tag notes with your location to help conservation efforts";
+				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "Location is used to stamp catch reports with GPS coordinates";
+				INFOPLIST_KEY_NSMicrophoneUsageDescription = "We use the microphone so you can record field notes";
+				INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription = "Used to save selected photos if needed";
+				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "Photo library access allows selecting a photo of the catch";
+				INFOPLIST_KEY_NSSpeechRecognitionUsageDescription = "We transcribe your field notes on device for quick review";
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				IPHONEOS_DEPLOYMENT_TARGET = 16.6;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0.1;
+				PRODUCT_BUNDLE_IDENTIFIER = com.sip.BendFlyShop;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				PROVISIONING_PROFILE_SPECIFIER = "";
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = PROD;
+		};
+		FDCA99522F13112400B28F5D /* PROD */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReferenceAnchor = 4759B47B2E8EE1F9005E27BB /* SkeenaSystem */;
+			baseConfigurationReferenceRelativePath = Config/PROD.xcconfig;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = X24MYQA5M8;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.2;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.sip.BendFlyShopTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/SkeenaSystem.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/SkeenaSystem";
+			};
+			name = PROD;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		4759B4742E8EE1F9005E27BB /* Build configuration list for PBXProject "SkeenaSystem" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				4759B4872E8EE1FA005E27BB /* Debug */,
+				FDCA994D2F13111700B28F5D /* DevTEST */,
+				FDCA99502F13112400B28F5D /* PROD */,
+				4759B4882E8EE1FA005E27BB /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		4759B4892E8EE1FA005E27BB /* Build configuration list for PBXNativeTarget "SkeenaSystem" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				4759B48A2E8EE1FA005E27BB /* Debug */,
+				FDCA994E2F13111700B28F5D /* DevTEST */,
+				FDCA99512F13112400B28F5D /* PROD */,
+				4759B48B2E8EE1FA005E27BB /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		FD2182FF2EF9C1E2001E905A /* Build configuration list for PBXNativeTarget "SkeenaSystemTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				FD2182FD2EF9C1E2001E905A /* Debug */,
+				FDCA994F2F13111700B28F5D /* DevTEST */,
+				FDCA99522F13112400B28F5D /* PROD */,
+				FD2182FE2EF9C1E2001E905A /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		FD6A18D72F18487A0067DBFD /* Build configuration list for PBXNativeTarget "SkeenaSystemUITests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				FD6A18D82F18487A0067DBFD /* Debug */,
+				FD6A18D92F18487A0067DBFD /* DevTEST */,
+				FD6A18DA2F18487A0067DBFD /* PROD */,
+				FD6A18DB2F18487A0067DBFD /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		47E678962EBD1CEB009190EF /* XCRemoteSwiftPackageReference "supabase-swift" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/supabase-community/supabase-swift";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 2.5.1;
+			};
+		};
+		FD0A00022F3A000100000001 /* XCRemoteSwiftPackageReference "mapbox-maps-ios" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/mapbox/mapbox-maps-ios.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 11.0.0;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		47E678972EBD1CEB009190EF /* Auth */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 47E678962EBD1CEB009190EF /* XCRemoteSwiftPackageReference "supabase-swift" */;
+			productName = Auth;
+		};
+		47E678992EBD1CEB009190EF /* Functions */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 47E678962EBD1CEB009190EF /* XCRemoteSwiftPackageReference "supabase-swift" */;
+			productName = Functions;
+		};
+		47E6789B2EBD1CEB009190EF /* PostgREST */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 47E678962EBD1CEB009190EF /* XCRemoteSwiftPackageReference "supabase-swift" */;
+			productName = PostgREST;
+		};
+		47E6789D2EBD1CEB009190EF /* Realtime */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 47E678962EBD1CEB009190EF /* XCRemoteSwiftPackageReference "supabase-swift" */;
+			productName = Realtime;
+		};
+		47E6789F2EBD1CEB009190EF /* Storage */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 47E678962EBD1CEB009190EF /* XCRemoteSwiftPackageReference "supabase-swift" */;
+			productName = Storage;
+		};
+		47E678B32EBD405B009190EF /* Supabase */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 47E678962EBD1CEB009190EF /* XCRemoteSwiftPackageReference "supabase-swift" */;
+			productName = Supabase;
+		};
+		FD0A00002F3A000100000001 /* MapboxMaps */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = FD0A00022F3A000100000001 /* XCRemoteSwiftPackageReference "mapbox-maps-ios" */;
+			productName = MapboxMaps;
+		};
+/* End XCSwiftPackageProductDependency section */
+	};
+	rootObject = 4759B4712E8EE1F9005E27BB /* Project object */;
+}

@@ -1,0 +1,91 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<model type="com.apple.IDECoreDataModeler.DataModel" documentVersion="1.0" lastSavedToolsVersion="24512" systemVersion="25B78" minimumToolsVersion="Automatic" sourceLanguage="Swift" usedWithSwiftData="YES" userDefinedModelVersionIdentifier="">
+    <entity name="CatchReport" representedClassName="CatchReport" syncable="YES" codeGenerationType="class">
+        <attribute name="anglerNumber" optional="YES" attributeType="String"/>
+        <attribute name="classifiedWatersLicenseNumber" optional="YES" attributeType="String"/>
+        <attribute name="clientName" optional="YES" attributeType="String"/>
+        <attribute name="createdAt" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
+        <attribute name="guideName" optional="YES" attributeType="String"/>
+        <attribute name="latitude" optional="YES" attributeType="Double" defaultValueString="0.0" usesScalarValueType="YES"/>
+        <attribute name="lengthInches" optional="YES" attributeType="Integer 16" defaultValueString="0" usesScalarValueType="YES"/>
+        <attribute name="longitude" optional="YES" attributeType="Double" defaultValueString="0.0" usesScalarValueType="YES"/>
+        <attribute name="notes" optional="YES" attributeType="String"/>
+        <attribute name="origin" optional="YES" attributeType="String"/>
+        <attribute name="photoPath" optional="YES" attributeType="String"/>
+        <attribute name="quality" optional="YES" attributeType="String"/>
+        <attribute name="reportId" optional="YES" attributeType="UUID" usesScalarValueType="NO"/>
+        <attribute name="river" optional="YES" attributeType="String"/>
+        <attribute name="sex" optional="YES" attributeType="String"/>
+        <attribute name="species" optional="YES" attributeType="String"/>
+        <attribute name="status" optional="YES" attributeType="String"/>
+        <attribute name="tactic" optional="YES" attributeType="String"/>
+        <attribute name="tagId" optional="YES" attributeType="String"/>
+        <attribute name="uploadedAt" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
+        <relationship name="angler" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="TripClient" inverseName="catches" inverseEntity="TripClient"/>
+        <relationship name="classifiedLicence" optional="YES" toMany="YES" deletionRule="Nullify" destinationEntity="ClassifiedWaterLicense" inverseName="catchReports" inverseEntity="ClassifiedWaterLicense"/>
+        <relationship name="trip" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="Trip" inverseName="catches" inverseEntity="Trip"/>
+    </entity>
+    <entity name="ClassifiedWaterLicense" representedClassName="ClassifiedWaterLicense" syncable="YES" codeGenerationType="class">
+        <attribute name="createdAt" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
+        <attribute name="guideName" optional="YES" attributeType="String"/>
+        <attribute name="licNumber" optional="YES" attributeType="String"/>
+        <attribute name="validFrom" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
+        <attribute name="validTo" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
+        <attribute name="vendor" optional="YES" attributeType="String"/>
+        <attribute name="water" optional="YES" attributeType="String"/>
+        <relationship name="angler" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="TripClient" inverseName="licences" inverseEntity="TripClient"/>
+        <relationship name="catchReports" optional="YES" toMany="YES" deletionRule="Nullify" destinationEntity="CatchReport" inverseName="classifiedLicence" inverseEntity="CatchReport"/>
+        <relationship name="client" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="TripClient" inverseName="classifiedLicenses" inverseEntity="TripClient"/>
+    </entity>
+    <entity name="Community" representedClassName="Community" syncable="YES" codeGenerationType="class">
+        <attribute name="communityId" optional="YES" attributeType="UUID" usesScalarValueType="NO"/>
+        <attribute name="createdAt" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
+        <attribute name="name" optional="YES" attributeType="String"/>
+        <relationship name="lodges" optional="YES" toMany="YES" deletionRule="Cascade" destinationEntity="Lodge" inverseName="community" inverseEntity="Lodge"/>
+    </entity>
+    <entity name="Lodge" representedClassName="Lodge" syncable="YES" codeGenerationType="class">
+        <attribute name="createdAt" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
+        <attribute name="lodgeId" optional="YES" attributeType="UUID" usesScalarValueType="NO"/>
+        <attribute name="name" optional="YES" attributeType="String"/>
+        <relationship name="community" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="Community" inverseName="lodges" inverseEntity="Community"/>
+        <relationship name="trips" optional="YES" toMany="YES" deletionRule="Cascade" destinationEntity="Trip" inverseName="lodge" inverseEntity="Trip"/>
+    </entity>
+    <entity name="Trip" representedClassName=".Trip" syncable="YES" codeGenerationType="class">
+        <attribute name="createdAt" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
+        <attribute name="endDate" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
+        <attribute name="guideName" optional="YES" attributeType="String"/>
+        <attribute name="localUpdatedAt" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
+        <attribute name="name" optional="YES" attributeType="String"/>
+        <attribute name="startDate" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
+        <attribute name="tripId" optional="YES" attributeType="UUID" usesScalarValueType="NO"/>
+        <relationship name="catches" optional="YES" toMany="YES" deletionRule="Cascade" destinationEntity="CatchReport" inverseName="trip" inverseEntity="CatchReport"/>
+        <relationship name="clients" toMany="YES" deletionRule="Cascade" destinationEntity="TripClient" inverseName="trip" inverseEntity="TripClient"/>
+        <relationship name="lodge" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="Lodge" inverseName="trips" inverseEntity="Lodge"/>
+        <relationship name="trip" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="Trip" inverseName="trip" inverseEntity="Trip"/>
+    </entity>
+    <entity name="TripClient" representedClassName=".TripClient" syncable="YES" codeGenerationType="class">
+        <attribute name="id" optional="YES" attributeType="UUID" usesScalarValueType="NO"/>
+        <attribute name="licenseNumber" optional="YES" attributeType="String"/>
+        <attribute name="name" optional="YES" attributeType="String"/>
+        <relationship name="catches" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="CatchReport" inverseName="angler" inverseEntity="CatchReport"/>
+        <relationship name="classifiedLicenses" optional="YES" toMany="YES" deletionRule="Nullify" destinationEntity="ClassifiedWaterLicense" inverseName="client" inverseEntity="ClassifiedWaterLicense"/>
+        <relationship name="licences" optional="YES" toMany="YES" deletionRule="Nullify" destinationEntity="ClassifiedWaterLicense" inverseName="angler" inverseEntity="ClassifiedWaterLicense"/>
+        <relationship name="trip" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="Trip" inverseName="clients" inverseEntity="Trip"/>
+    </entity>
+    <entity name="VoiceNote" representedClassName=".CDVoiceNote" syncable="YES" codeGenerationType="class">
+        <attribute name="audioPath" optional="YES" attributeType="String"/>
+        <attribute name="createdAt" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
+        <attribute name="durationSec" optional="YES" attributeType="Double" defaultValueString="0.0" usesScalarValueType="YES"/>
+        <attribute name="format" optional="YES" attributeType="String"/>
+        <attribute name="horizontalAccuracy" optional="YES" attributeType="Double" defaultValueString="0.0" usesScalarValueType="YES"/>
+        <attribute name="id" optional="YES" attributeType="UUID" usesScalarValueType="NO"/>
+        <attribute name="jsonPath" optional="YES" attributeType="String"/>
+        <attribute name="language" optional="YES" attributeType="String"/>
+        <attribute name="lat" optional="YES" attributeType="Double" defaultValueString="0.0" usesScalarValueType="YES"/>
+        <attribute name="lon" optional="YES" attributeType="Double" defaultValueString="0.0" usesScalarValueType="YES"/>
+        <attribute name="onDevice" optional="YES" attributeType="Boolean" usesScalarValueType="YES"/>
+        <attribute name="sampleRate" optional="YES" attributeType="Double" defaultValueString="0.0" usesScalarValueType="YES"/>
+        <attribute name="status" optional="YES" attributeType="String"/>
+        <attribute name="transcript" optional="YES" attributeType="String"/>
+    </entity>
+</model>

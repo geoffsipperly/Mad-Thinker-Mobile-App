@@ -1,0 +1,29 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Collect staged Swift files
+STAGED_SWIFT="$(git diff --cached --name-only --diff-filter=ACMR | grep -E '\.swift$' || true)"
+[ -z "$STAGED_SWIFT" ] && exit 0
+
+echo "▶ SwiftFormat on staged files..."
+swiftformat $STAGED_SWIFT >/dev/null
+git add $STAGED_SWIFT
+
+echo "▶ SwiftLint on staged files..."
+
+# Prepare SCRIPT_INPUT_FILE_* env vars for SwiftLint
+# (what --use-script-input-files reads)
+count=0
+for f in $STAGED_SWIFT; do
+  eval "export SCRIPT_INPUT_FILE_$count=\"$PWD/$f\""
+  count=$((count+1))
+done
+export SCRIPT_INPUT_FILE_COUNT=$count
+
+# Run SwiftLint only on those files
+if ! swiftlint lint --strict --use-script-input-files --force-exclude; then
+  echo "✗ SwiftLint failed on staged files."
+  exit 1
+fi
+
+echo "✓ Pre-commit checks passed."

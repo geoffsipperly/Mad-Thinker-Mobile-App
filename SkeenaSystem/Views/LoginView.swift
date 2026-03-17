@@ -1,0 +1,403 @@
+// Bend Fly Shop
+
+import Foundation
+import LocalAuthentication
+import SwiftUI
+
+struct LoginView: View {
+  @StateObject private var auth = AuthService.shared
+
+  @State private var email: String = ""
+  @State private var password: String = ""
+  @State private var isBusy = false
+  @State private var errorText: String?
+  @State private var passwordResetInfo: String?
+
+  @State private var showRegistration = false
+  @FocusState private var focusedField: Field?
+
+  @State private var isBiometricAvailable: Bool = BiometricAuth.shared.canUseBiometrics
+
+  private enum Field { case email, password }
+
+  private var isBetaRelease: Bool {
+    if let boolVal = Bundle.main.object(forInfoDictionaryKey: "BETA_RELEASE") as? Bool {
+      return boolVal
+    }
+    if let strVal = Bundle.main.object(forInfoDictionaryKey: "BETA_RELEASE") as? String {
+      return strVal.lowercased() == "true" || strVal == "1"
+    }
+    return false
+  }
+
+  private var canUseBiometricsForLogin: Bool {
+    isBiometricAvailable && (auth.hasStoredSession || auth.hasOfflineCredentials)
+  }
+
+  var body: some View {
+    NavigationView {
+      ScrollView {
+        VStack(spacing: 16) {
+          Spacer(minLength: 24)
+
+          VStack(spacing: 8) {
+            Image(AppEnvironment.shared.appLogoAsset)
+              .resizable()
+              .scaledToFit()
+              .frame(width: 180, height: 180)
+              .clipShape(RoundedRectangle(cornerRadius: 24))
+              .shadow(radius: 10)
+              .padding(.bottom, 6)
+
+          }
+          .padding(.bottom, 8)
+
+          // Need an account?
+          HStack(spacing: 6) {
+            Text("Need an account?")
+              .foregroundColor(.gray)
+
+            Button {
+              showRegistration = true
+            } label: {
+              HStack(spacing: 6) {
+                Image(systemName: "person.badge.plus")
+                Text("Create one")
+              }
+              .font(.footnote.weight(.semibold))
+              .padding(.horizontal, 10)
+              .padding(.vertical, 6)
+              .background(Color.blue)
+              .foregroundColor(.white)
+              .clipShape(Capsule())
+            }
+            .accessibilityIdentifier("createAccountButton")
+          }
+          .padding(.horizontal)
+
+          // Form
+          VStack(spacing: 12) {
+            TextField("Email", text: $email)
+              .textInputAutocapitalization(.never)
+              .keyboardType(.emailAddress)
+              .autocorrectionDisabled()
+              .textContentType(.username)
+              .padding()
+              .background(Color.white.opacity(0.08), in: RoundedRectangle(cornerRadius: 12))
+              .foregroundColor(.white)
+              .focused($focusedField, equals: .email)
+              .submitLabel(.next)
+              .onSubmit { focusedField = .password }
+
+            SecureField("Password", text: $password)
+              .textContentType(.password)
+              .padding()
+              .background(Color.white.opacity(0.08), in: RoundedRectangle(cornerRadius: 12))
+              .foregroundColor(.white)
+              .focused($focusedField, equals: .password)
+              .submitLabel(.go)
+              .onSubmit { Task { await loginTapped() } }
+
+            if let err = errorText {
+              Text(err)
+                .font(.footnote)
+                .foregroundColor(.red)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .accessibilityIdentifier("loginErrorLabel")
+            }
+
+            if let info = passwordResetInfo {
+              Text(info)
+                .font(.footnote)
+                .foregroundColor(.green)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .accessibilityIdentifier("passwordResetInfoLabel")
+            }
+
+            Button(action: { Task { await loginTapped() } }) {
+              HStack {
+                if isBusy { ProgressView().tint(.white) }
+                Text(isBusy ? "Signing in…" : "Sign in")
+                  .bold()
+              }
+              .frame(maxWidth: .infinity)
+              .padding()
+              .background(isFormValid ? Color.blue : Color.white.opacity(0.15))
+              .foregroundColor(.white)
+              .cornerRadius(12)
+              .animation(.easeInOut(duration: 0.2), value: isFormValid)
+            }
+            .disabled(!isFormValid || isBusy)
+
+            // Face ID / Touch ID login
+            if canUseBiometricsForLogin {
+              Button {
+                Task { await biometricLoginTapped() }
+              } label: {
+                HStack(spacing: 8) {
+                  Image(systemName: "faceid")
+                  Text("Sign in with Face ID")
+                    .fontWeight(.semibold)
+                }
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 10)
+              }
+              .padding(.top, 4)
+            }
+
+            Button {
+              Task { await resetPasswordTapped() }
+            } label: {
+              Text("Forgot password?")
+                .font(.footnote)
+                .underline()
+                .foregroundColor(.white.opacity(0.8))
+            }
+            .padding(.top, 4)
+          }
+          .padding(.horizontal)
+
+          Spacer()
+
+          // Footer
+          VStack(spacing: 8) {
+            Text("Powered by Mad Thinker, Inc 2026")
+              .font(.footnote)
+              .foregroundColor(.gray.opacity(0.8))
+              .multilineTextAlignment(.center)
+              .padding(.top, 4)
+          }
+          .padding(.horizontal)
+          .padding(.bottom, 16)
+        }
+        .padding(.top, 8)
+      }
+      .background(Color.black.ignoresSafeArea())
+      .navigationBarTitleDisplayMode(.inline)
+      .navigationTitle("")
+      .onTapGesture {
+        // Dismiss keyboard when tapping anywhere outside the fields
+        focusedField = nil
+      }
+      .modifier(ScrollDismissesKeyboardIfAvailable())
+      .sheet(isPresented: $showRegistration) {
+        NavigationView {
+          GuideRegistrationView()
+            .navigationTitle("Guide Registration")
+            .navigationBarTitleDisplayMode(.inline)
+        }
+        .preferredColorScheme(.dark)
+      }
+      .task {
+        isBiometricAvailable = BiometricAuth.shared.canUseBiometrics
+        await logCurrentJWT(context: "onAppear")
+        if UserDefaults.standard.object(forKey: "OfflineRememberMeEnabled") == nil {
+          AuthService.shared.rememberMeEnabled = true
+        }
+        AppLogging.log({ "[LoginView] BETA_RELEASE=\(isBetaRelease)" }, level: .debug, category: .auth)
+      }
+    }
+    .overlay(alignment: .topLeading) {
+      if isBetaRelease {
+        HStack {
+          Text("Beta")
+            .font(.caption.weight(.semibold))
+            .padding(.horizontal, 10)
+            .padding(.vertical, 6)
+            .background(Color.blue)
+            .clipShape(Capsule())
+            .foregroundColor(.white)
+            .shadow(radius: 2)
+            .padding(.leading, 12)
+            .padding(.top, 12)
+          Spacer(minLength: 0)
+        }
+        .zIndex(1000)
+      }
+    }
+    .preferredColorScheme(.dark)
+  }
+
+  // MARK: - Actions
+
+  private var isFormValid: Bool {
+    let emailPattern = #"^\S+@\S+\.\S+$"#
+    let emailIsValid = email.range(of: emailPattern, options: .regularExpression) != nil
+    return emailIsValid && password.count >= 6
+  }
+
+  private func loginTapped() async {
+    guard !email.isEmpty, !password.isEmpty else {
+      errorText = "Please enter email and password."
+      return
+    }
+    errorText = nil
+    isBusy = true
+    do {
+      try await auth.signIn(
+        email: email.trimmingCharacters(in: .whitespaces),
+        password: password
+      )
+      // After successful sign in, log the JWT we will use elsewhere
+      await logCurrentJWT(context: "post-sign-in")
+    } catch {
+      errorText = error.localizedDescription
+    }
+    isBusy = false
+  }
+
+  private func biometricLoginTapped() async {
+    errorText = nil
+    isBusy = true
+    defer { isBusy = false }
+
+    do {
+      // 1) System Face ID / Touch ID prompt via centralized BiometricAuth
+      let ctx = try await BiometricAuth.shared.authenticateContext()
+
+      // 2) Delegate session logic (resume/online/offline) to AuthService, passing the LAContext
+      let result = await auth.biometricLoginAfterAuth(authenticationContext: ctx)
+      switch result {
+      case .resumedSession:
+        await logCurrentJWT(context: "post-biometric-sign-in (resumed)")
+      case .signedInOnline:
+        await logCurrentJWT(context: "post-biometric-sign-in (online)")
+      case .signedInOffline:
+        // Offline path: no token to log, but we can log state
+        AppLogging.log({ "Biometric offline sign-in used cached profile." }, level: .debug, category: .auth)
+      case .noCredentials:
+        errorText = "Unable to resume your session. Please sign in with email and password."
+      case .authFailed(let msg):
+        errorText = msg
+      }
+
+    } catch let bErr as BiometricAuthError {
+      switch bErr {
+      case .notAvailable:
+        errorText = "Face ID is not available on this device."
+      case .failed:
+        errorText = "Face ID failed. Please try again or sign in with your password."
+      }
+    } catch let error as NSError {
+      // LAError codes are NSError-based; preserve your previous logic
+      if error.domain == LAError.errorDomain,
+         error.code == LAError.userCancel.rawValue || error.code == LAError.systemCancel.rawValue {
+        errorText = "Face ID was cancelled."
+      } else if error.domain == LAError.errorDomain,
+                error.code == LAError.biometryNotAvailable.rawValue ||
+                 error.code == LAError.biometryNotEnrolled.rawValue {
+        errorText = "Face ID is not available on this device."
+      } else {
+        errorText = "Face ID failed. Please try again or sign in with your password."
+      }
+    } catch {
+      errorText = "Face ID failed. Please try again or sign in with your password."
+    }
+  }
+
+  private func resetPasswordTapped() async {
+    guard !email.isEmpty else {
+      errorText = "Enter your email above first."
+      return
+    }
+    passwordResetInfo = nil
+    errorText = nil
+    isBusy = true
+    do {
+      try await auth.requestPasswordReset(email: email.trimmingCharacters(in: .whitespaces))
+      passwordResetInfo = "Please check your email to reset your password."
+    } catch {
+      errorText = error.localizedDescription
+      passwordResetInfo = nil
+    }
+    isBusy = false
+  }
+
+  // MARK: - JWT Logging
+
+  private func logCurrentJWT(context: String) async {
+    // Ask AuthService for a valid token (it may use access or refresh)
+    let token = await auth.currentAccessToken()
+    let tokenStr = token ?? ""
+
+    let hasToken = !tokenStr.isEmpty
+    let len = tokenStr.count
+    let prefix = String(tokenStr.prefix(24))
+
+    // Add token source diagnostics
+    let accessTokenPrefix = String(AuthService.shared.getStoredAccessToken()?.prefix(24) ?? "")
+    let refreshTokenPrefix = String(AuthService.shared.getStoredRefreshToken()?.prefix(24) ?? "")
+
+    AppLogging.log({ "context=\(context) hasToken=\(hasToken) len=\(len) prefix=\(prefix)" }, level: .debug, category: .auth)
+    AppLogging.log({ "storedAccessToken prefix=\(accessTokenPrefix)" }, level: .debug, category: .auth)
+    AppLogging.log({ "storedRefreshToken prefix=\(refreshTokenPrefix)" }, level: .debug, category: .auth)
+
+    guard hasToken else {
+      AppLogging.log({ "⚠️ No token returned from AuthService" }, level: .warn, category: .auth)
+      return
+    }
+
+    // Decode header & payload safely
+    let (hdr, pld) = decodeJWTParts(tokenStr)
+    AppLogging.log({ "header: \(hdr)" }, level: .debug, category: .auth)
+    AppLogging.log({ "payload: \(pld)" }, level: .debug, category: .auth)
+
+    // Pull angler number from payload JSON
+    let anglerFromPayload = extractAnglerNumber(fromPayloadJSON: pld) ?? "<nil>"
+    let authAngler = auth.currentAnglerNumber ?? "<nil>"
+    AppLogging.log({ "angler_number(payload)=\(anglerFromPayload) | AuthService.currentAnglerNumber=\(authAngler)" }, level: .debug, category: .auth)
+
+    // Quick mismatch signal
+    if anglerFromPayload != authAngler {
+      AppLogging.log({ "angler_number mismatch between JWT payload and AuthService cache" }, level: .warn, category: .auth)
+    }
+  }
+
+  /// Decode header & payload parts of a JWT into pretty JSON.
+  private func decodeJWTParts(_ jwt: String) -> (String, String) {
+    let raw = jwt.lowercased().hasPrefix("bearer ") ? String(jwt.dropFirst(7)) : jwt
+    let parts = raw.split(separator: ".")
+    guard parts.count >= 2 else { return ("<malformed>", "<malformed>") }
+
+    func decodePart(_ s: Substring) -> String {
+      var b64 = s.replacingOccurrences(of: "-", with: "+")
+        .replacingOccurrences(of: "_", with: "/")
+      while b64.count % 4 != 0 {
+        b64 += "="
+      }
+      guard let data = Data(base64Encoded: b64) else { return "<decode-failed>" }
+      if let obj = try? JSONSerialization.jsonObject(with: data),
+         let pretty = try? JSONSerialization.data(withJSONObject: obj, options: [.prettyPrinted]),
+         let str = String(data: pretty, encoding: .utf8) {
+        return str
+      }
+      return String(data: data, encoding: .utf8) ?? "<non-utf8>"
+    }
+
+    return (decodePart(parts[0]), decodePart(parts[1]))
+  }
+
+  /// Extracts `angler_number` or `anglerNumber` from JWT payload JSON.
+  private func extractAnglerNumber(fromPayloadJSON json: String) -> String? {
+    guard let data = json.data(using: .utf8),
+          let obj = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else { return nil }
+
+    if let um = obj["user_metadata"] as? [String: Any] {
+      if let angler = um["angler_number"] as? String ?? um["anglerNumber"] as? String {
+        return angler
+      }
+    }
+
+    return nil
+  }
+}
+
+private struct ScrollDismissesKeyboardIfAvailable: ViewModifier {
+  func body(content: Content) -> some View {
+    if #available(iOS 16.0, *) {
+      content.scrollDismissesKeyboard(.interactively)
+    } else {
+      content
+    }
+  }
+}

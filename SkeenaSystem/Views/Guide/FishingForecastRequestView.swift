@@ -1,0 +1,553 @@
+// Bend Fly Shop
+
+import SwiftUI
+
+struct FishingForecastRequestView: View {
+  // Endpoint: public, no auth — built robustly like TripRosterAPI
+  private static let rawBaseURLString = APIURLUtilities.infoPlistString(forKey: "API_BASE_URL")
+  private static let baseURLString = APIURLUtilities.normalizeBaseURL(rawBaseURLString)
+  private static let riverConditionsPath: String = {
+    // Fallback default path (adjust if your function path differs)
+    let path = APIURLUtilities.infoPlistString(forKey: "RIVER_CONDITIONS_PATH")
+    return path.isEmpty ? "/functions/v1/river-conditions" : path
+  }()
+
+  private static func logConfig() {
+    AppLogging.log("[Forecast] config — API_BASE_URL (raw): '" + rawBaseURLString + "'", level: .debug, category: .trip)
+    AppLogging.log("[Forecast] config — API_BASE_URL (normalized): '" + baseURLString + "'", level: .debug, category: .trip)
+    AppLogging.log("[Forecast] config — river path: '" + riverConditionsPath + "'", level: .debug, category: .trip)
+  }
+
+  private static func makeURL() throws -> URL {
+    guard let base = URL(string: baseURLString), let scheme = base.scheme, let host = base.host else {
+      AppLogging.log("[Forecast] invalid API_BASE_URL — raw: '" + rawBaseURLString + "', normalized: '" + baseURLString + "'", level: .error, category: .trip)
+      throw NSError(domain: "Forecast", code: -1000, userInfo: [NSLocalizedDescriptionKey: "Invalid API_BASE_URL (raw: '" + rawBaseURLString + "', normalized: '" + baseURLString + "')"])
+    }
+    var comps = URLComponents()
+    comps.scheme = scheme
+    comps.host = host
+    comps.port = base.port
+
+    let basePath = base.path
+    let normalizedBasePath = basePath == "/" ? "" : (basePath.hasSuffix("/") ? String(basePath.dropLast()) : basePath)
+    let normalizedPath = riverConditionsPath.hasPrefix("/") ? riverConditionsPath : "/" + riverConditionsPath
+    comps.path = normalizedBasePath + normalizedPath
+
+    // Preserve any base query from API_BASE_URL
+    let existing = base.query != nil ? URLComponents(string: base.absoluteString)?.queryItems ?? [] : []
+    comps.queryItems = existing
+
+    guard let url = comps.url else {
+      throw NSError(domain: "Forecast", code: -1001, userInfo: [NSLocalizedDescriptionKey: "Failed to build river-conditions URL"])
+    }
+    return url
+  }
+
+  // Batch endpoint: derived from single-river path
+  private static let riverConditionsBatchPath = riverConditionsPath + "-batch"
+
+  private static func makeBatchURL() throws -> URL {
+    guard let base = URL(string: baseURLString), let scheme = base.scheme, let host = base.host else {
+      AppLogging.log("[Forecast] invalid API_BASE_URL — raw: '" + rawBaseURLString + "', normalized: '" + baseURLString + "'", level: .error, category: .trip)
+      throw NSError(domain: "Forecast", code: -1000, userInfo: [NSLocalizedDescriptionKey: "Invalid API_BASE_URL"])
+    }
+    var comps = URLComponents()
+    comps.scheme = scheme
+    comps.host = host
+    comps.port = base.port
+
+    let basePath = base.path
+    let normalizedBasePath = basePath == "/" ? "" : (basePath.hasSuffix("/") ? String(basePath.dropLast()) : basePath)
+    let normalizedPath = riverConditionsBatchPath.hasPrefix("/") ? riverConditionsBatchPath : "/" + riverConditionsBatchPath
+    comps.path = normalizedBasePath + normalizedPath
+
+    let existing = base.query != nil ? URLComponents(string: base.absoluteString)?.queryItems ?? [] : []
+    comps.queryItems = existing
+
+    guard let url = comps.url else {
+      throw NSError(domain: "Forecast", code: -1001, userInfo: [NSLocalizedDescriptionKey: "Failed to build river-conditions-batch URL"])
+    }
+    return url
+  }
+
+  // MARK: - State
+
+  @State private var loadingRiver: String?
+  @State private var errorText: String?
+  @State private var result: RiverConditionsResponse?
+  @State private var goToResult = false
+
+  // Batch conditions (fetched on appear)
+  @State private var batchConditions: [String: BatchCondition] = [:]
+  @State private var batchLoading = false
+
+  @Environment(\.dismiss) private var dismiss
+
+  // MARK: - Body
+
+  var body: some View {
+    DarkPageTemplate(bottomToolbar: {
+      RoleAwareToolbar(activeTab: "conditions")
+    }) {
+      ScrollView {
+        VStack(spacing: 16) {
+          // Logo + Title
+          AppHeader()
+            .padding(.top, 20)
+
+          // River rows — full-width, stacked vertically
+          let rivers = AppEnvironment.shared.lodgeRivers
+
+          VStack(spacing: 8) {
+            // Column headers aligned above metrics
+            HStack(spacing: 0) {
+              Spacer()
+              HStack(spacing: 12) {
+                Text("Level")
+                  .font(.caption2)
+                  .foregroundColor(.gray)
+                  .frame(width: 70, alignment: .center)
+                Text("Temp")
+                  .font(.caption2)
+                  .foregroundColor(.gray)
+                  .frame(width: 70, alignment: .center)
+              }
+              // Match chevron + padding space
+              Color.clear.frame(width: 28)
+            }
+            .padding(.horizontal, 16)
+            ForEach(rivers, id: \.self) { river in
+              Button {
+                fetchConditions(for: river)
+              } label: {
+                riverRow(name: river, isLoading: loadingRiver == river)
+              }
+              .buttonStyle(.plain)
+              .disabled(loadingRiver != nil)
+            }
+          }
+          .padding(.horizontal, 20)
+
+          // Station note (from xcconfig)
+          if let notes = Bundle.main.object(forInfoDictionaryKey: "FORECAST_NOTES") as? String, !notes.isEmpty {
+            Text(notes)
+              .font(.caption2)
+              .foregroundColor(.gray)
+              .multilineTextAlignment(.center)
+              .padding(.horizontal, 24)
+          }
+
+          // Extended forecast link
+          NavigationLink {
+            AnglerForecastView(location: AppEnvironment.shared.forecastLocation)
+          } label: {
+            HStack(spacing: 6) {
+              Image(systemName: "cloud.sun.rain")
+                .font(.subheadline)
+              Text("Get extended forecast")
+                .font(.subheadline.weight(.medium))
+            }
+            .foregroundColor(.blue)
+          }
+          .buttonStyle(.plain)
+
+          // Error (if any)
+          if let err = errorText {
+            Text(err)
+              .font(.caption)
+              .foregroundColor(.red.opacity(0.9))
+              .multilineTextAlignment(.center)
+              .padding(.horizontal, 20)
+          }
+
+          Spacer(minLength: 40)
+        }
+      }
+    }
+    .task { fetchBatchConditions() }
+    .navigationTitle("Conditions")
+    .navigationBarBackButtonHidden(true)
+    .navigationDestination(isPresented: $goToResult) {
+      if let res = result {
+        FishingForecastResultView(result: res)
+      }
+    }
+  }
+
+  // MARK: - River Row
+
+  @ViewBuilder
+  private func riverRow(name: String, isLoading: Bool) -> some View {
+    HStack(spacing: 0) {
+      // River name — left-justified
+      Text(name)
+        .font(.subheadline.weight(.semibold))
+        .foregroundColor(.white)
+        .lineLimit(1)
+
+      Spacer(minLength: 12)
+
+      // Metrics from batch response (or loading placeholder)
+      if let condition = batchConditions[name] {
+        HStack(spacing: 12) {
+          if let level = condition.waterLevelFt {
+            metricLabel(value: String(format: "%.2f", level), unit: "ft", icon: "water.waves")
+              .frame(width: 70)
+          } else {
+            Text("--")
+              .font(.caption)
+              .foregroundColor(.gray.opacity(0.5))
+              .frame(width: 70)
+          }
+          if let temp = condition.waterTempC {
+            metricLabel(value: String(format: "%.1f", temp), unit: "\u{00B0}C", icon: "thermometer.medium")
+              .frame(width: 70)
+          } else {
+            Text("--")
+              .font(.caption)
+              .foregroundColor(.gray.opacity(0.5))
+              .frame(width: 70)
+          }
+        }
+      } else if batchLoading {
+        ProgressView()
+          .tint(.gray)
+          .scaleEffect(0.7)
+      }
+
+      // Disclosure chevron
+      Image(systemName: "chevron.right")
+        .font(.caption)
+        .foregroundColor(.gray)
+        .padding(.leading, 12)
+    }
+    .padding(.horizontal, 16)
+    .padding(.vertical, 14)
+    .background(isLoading ? Color.white.opacity(0.08) : Color.black)
+    .clipShape(RoundedRectangle(cornerRadius: 10))
+    .overlay(
+      RoundedRectangle(cornerRadius: 10)
+        .stroke(Color.white.opacity(0.15), lineWidth: 0.5)
+    )
+    .overlay {
+      if isLoading {
+        ProgressView()
+          .tint(.white)
+      }
+    }
+  }
+
+  @ViewBuilder
+  private func metricLabel(value: String, unit: String, icon: String) -> some View {
+    HStack(spacing: 3) {
+      Image(systemName: icon)
+        .font(.caption2)
+        .foregroundColor(.gray)
+      Text(value)
+        .font(.caption.monospacedDigit())
+        .foregroundColor(.white)
+      Text(unit)
+        .font(.caption2)
+        .foregroundColor(.gray)
+    }
+  }
+
+  // MARK: - Fetch Conditions
+
+  private func fetchConditions(for river: String) {
+    errorText = nil
+    loadingRiver = river
+    Task {
+      do {
+        let apiRiver = river.replacingOccurrences(of: " River", with: "")
+        let loose = try await postForecast(river: apiRiver, date: Date())
+        self.result = materializeStrict(from: loose)
+        self.goToResult = true
+      } catch {
+        self.errorText = error.localizedDescription
+      }
+      self.loadingRiver = nil
+    }
+  }
+
+  // MARK: - Fetch Batch Conditions
+
+  private func fetchBatchConditions() {
+    let rivers = AppEnvironment.shared.lodgeRivers
+    guard !rivers.isEmpty else { return }
+
+    batchLoading = true
+
+    Task {
+      do {
+        let url = try Self.makeBatchURL()
+        AppLogging.log("[Forecast] POST batch request URL: \(url.absoluteString)", level: .debug, category: .trip)
+
+        var req = URLRequest(url: url)
+        req.httpMethod = "POST"
+        req.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        req.setValue("application/json", forHTTPHeaderField: "Accept")
+
+        struct BatchPayload: Encodable {
+          let rivers: [String]
+        }
+        let apiRivers = rivers.map { $0.replacingOccurrences(of: " River", with: "") }
+        let payload = BatchPayload(rivers: apiRivers)
+        req.httpBody = try JSONEncoder().encode(payload)
+        AppLogging.log("[Forecast] batch request body: rivers=\(apiRivers)", level: .debug, category: .trip)
+
+        let (data, resp) = try await URLSession.shared.data(for: req)
+        guard let http = resp as? HTTPURLResponse else {
+          throw NSError(domain: "RiverForecast", code: -1, userInfo: [NSLocalizedDescriptionKey: "No HTTP response"])
+        }
+
+        if !(200...299).contains(http.statusCode) {
+          let preview = String(data: data, encoding: .utf8) ?? "<non-utf8>"
+          throw NSError(domain: "RiverForecast", code: http.statusCode, userInfo: [NSLocalizedDescriptionKey: "HTTP \(http.statusCode): \(preview.prefix(300))"])
+        }
+
+        let rawResponse = String(data: data, encoding: .utf8) ?? "<non-utf8>"
+        AppLogging.log("[Forecast] batch response HTTP \(http.statusCode): \(rawResponse.prefix(500))", level: .debug, category: .trip)
+
+        let dec = JSONDecoder()
+        dec.keyDecodingStrategy = .convertFromSnakeCase
+        let batch = try dec.decode(BatchResponse.self, from: data)
+
+        var dict: [String: BatchCondition] = [:]
+        for condition in batch.conditions {
+          // Re-key using full display name (e.g. "Nehalem" → "Nehalem River")
+          let displayName = rivers.first(where: { $0.replacingOccurrences(of: " River", with: "") == condition.river }) ?? condition.river
+          dict[displayName] = condition
+          AppLogging.log("[Forecast] batch — \(condition.river): level=\(condition.waterLevelFt.map { String(format: "%.2f", $0) } ?? "nil")ft, temp=\(condition.waterTempC.map { String(format: "%.1f", $0) } ?? "nil")°C", level: .debug, category: .trip)
+        }
+        self.batchConditions = dict
+        AppLogging.log("[Forecast] batch loaded \(dict.count) river conditions for date: \(batch.date)", level: .debug, category: .trip)
+
+      } catch {
+        AppLogging.log("[Forecast] batch fetch failed: \(error.localizedDescription)", level: .debug, category: .trip)
+        // Tiles remain functional, just without metrics
+      }
+      self.batchLoading = false
+    }
+  }
+
+  // MARK: - Networking (POST JSON, no auth, resilient decode)
+
+  private func postForecast(river: String, date: Date) async throws -> LooseResponse {
+    let df = DateFormatter()
+    df.locale = Locale(identifier: "en_US_POSIX")
+    df.dateFormat = "yyyy-MM-dd"
+    let ymd = df.string(from: date)
+
+    Self.logConfig()
+    let url = try Self.makeURL()
+    AppLogging.log("[Forecast] POST request URL: \(url.absoluteString)", level: .debug, category: .trip)
+    var req = URLRequest(url: url)
+    req.httpMethod = "POST"
+    req.setValue("application/json", forHTTPHeaderField: "Content-Type")
+    req.setValue("application/json", forHTTPHeaderField: "Accept")
+
+    struct Payload: Encodable {
+      let date: String
+      let river: String
+      let include_water_temperature: Bool
+    }
+    req.httpBody = try JSONEncoder().encode(Payload(date: ymd, river: river, include_water_temperature: true))
+
+    let (data, resp) = try await URLSession.shared.data(for: req)
+    guard let http = resp as? HTTPURLResponse else {
+      throw NSError(
+        domain: "RiverForecast",
+        code: -1,
+        userInfo: [NSLocalizedDescriptionKey: "No HTTP response"]
+      )
+    }
+
+    let contentType = http.value(forHTTPHeaderField: "Content-Type")?.lowercased() ?? ""
+    if !(200 ... 299).contains(http.statusCode) {
+      if contentType.contains("application/json"),
+         let apiErr = try? JSONDecoder().decode(APIError.self, from: data) {
+        throw NSError(
+          domain: "RiverForecast",
+          code: http.statusCode,
+          userInfo: [NSLocalizedDescriptionKey: apiErr.error]
+        )
+      }
+      let preview = String(data: data, encoding: .utf8) ?? "<non-utf8 body>"
+      throw NSError(
+        domain: "RiverForecast",
+        code: http.statusCode,
+        userInfo: [NSLocalizedDescriptionKey: "HTTP \(http.statusCode): \(preview.prefix(300))"]
+      )
+    }
+
+    // Lenient decode (optionals, snake_case)
+    let dec = JSONDecoder()
+    dec.keyDecodingStrategy = .convertFromSnakeCase
+    return try dec.decode(LooseResponse.self, from: data)
+  }
+
+  private struct APIError: Decodable { let error: String }
+
+  // MARK: - Batch Response Types
+
+  private struct BatchCondition: Decodable {
+    let river: String
+    let stationId: String?
+    let date: String?
+    let waterLevelFt: Double?
+    let waterTempC: Double?
+  }
+
+  private struct BatchResponse: Decodable {
+    let date: String
+    let conditions: [BatchCondition]
+  }
+
+  // MARK: - Lenient (Loose) Response Types
+
+  private struct LooseResponse: Decodable {
+    let river: String?
+    let stationId: String?
+    let date: String?
+
+    let weather: LooseWeatherBlock?
+    let tides: LooseTidesBlock?
+    let waterLevels: [LooseWaterLevelEntry]?
+    let waterTemperatures: [LooseWaterTemperatureEntry]?
+
+    struct LooseWeatherBlock: Decodable {
+      let previousDay: LooseDayBlock?
+      let targetDay: LooseDayBlock?
+      let nextDay: LooseDayBlock?
+    }
+
+    struct LooseDayBlock: Decodable {
+      let date: String?
+      let highTempC: Double?
+      let lowTempC: Double?
+      let precipitationMm: Double?
+    }
+
+    struct LooseTidesBlock: Decodable {
+      let previousHigh: LooseTidesPoint?
+      let nextHigh: LooseTidesPoint?
+      let previousLow: LooseTidesPoint?
+      let nextLow: LooseTidesPoint?
+    }
+
+    struct LooseTidesPoint: Decodable {
+      let time: String?
+      let heightM: Double?
+      let type: String?
+    }
+
+    struct LooseWaterLevelEntry: Decodable {
+      let date: String?
+      let levelFt: Double?
+    }
+
+    struct LooseWaterTemperatureEntry: Decodable {
+      let date: String?
+      let tempC: Double?
+    }
+  }
+
+  // MARK: - Materialize strict model for FishingForecastResultView
+
+  private func materializeStrict(from loose: LooseResponse) -> RiverConditionsResponse {
+    // Helper: string date fallback -> today's yyyy-MM-dd
+    func ymdOrToday(_ s: String?) -> String {
+      if let s, !s.isEmpty { return s }
+      let df = DateFormatter(); df.locale = Locale(identifier: "en_US_POSIX"); df.dateFormat = "yyyy-MM-dd"
+      return df.string(from: Date())
+    }
+    // Helper: normalize "YYYY-MM-DDTHH:mm:ss" -> "YYYY-MM-DD HH:mm"
+    func normalizeTime(_ t: String?, defaultDate: String) -> String {
+      guard var s = t, !s.isEmpty else { return "\(defaultDate) 00:00" }
+      s = s.replacingOccurrences(of: "T", with: " ")
+      if s.count >= 16 { s = String(s.prefix(16)) } // drop seconds if present
+      return s
+    }
+
+    let river = loose.river ?? "Unknown River"
+    let date = ymdOrToday(loose.date)
+    let stationId = loose.stationId ?? "Unknown"
+
+    // Weather (fill zeros if missing)
+    let wPrev = loose.weather?.previousDay
+    let wCurr = loose.weather?.targetDay
+    let wNext = loose.weather?.nextDay
+
+    let weather = RiverConditionsResponse.WeatherBlock(
+      previousDay: .init(
+        date: ymdOrToday(wPrev?.date),
+        highTempC: wPrev?.highTempC ?? 0,
+        lowTempC: wPrev?.lowTempC ?? 0,
+        precipitationMm: wPrev?.precipitationMm ?? 0
+      ),
+      targetDay: .init(
+        date: ymdOrToday(wCurr?.date ?? date),
+        highTempC: wCurr?.highTempC ?? 0,
+        lowTempC: wCurr?.lowTempC ?? 0,
+        precipitationMm: wCurr?.precipitationMm ?? 0
+      ),
+      nextDay: .init(
+        date: ymdOrToday(wNext?.date),
+        highTempC: wNext?.highTempC ?? 0,
+        lowTempC: wNext?.lowTempC ?? 0,
+        precipitationMm: wNext?.precipitationMm ?? 0
+      )
+    )
+
+    // Tides (create placeholders for any missing entries)
+    let t = loose.tides
+    let tides = RiverConditionsResponse.TidesBlock(
+      previousHigh: .init(
+        time: normalizeTime(t?.previousHigh?.time, defaultDate: date),
+        heightM: t?.previousHigh?.heightM ?? 0,
+        type: t?.previousHigh?.type ?? "high"
+      ),
+      nextHigh: .init(
+        time: normalizeTime(t?.nextHigh?.time, defaultDate: date),
+        heightM: t?.nextHigh?.heightM ?? 0,
+        type: t?.nextHigh?.type ?? "high"
+      ),
+      previousLow: .init(
+        time: normalizeTime(t?.previousLow?.time, defaultDate: date),
+        heightM: t?.previousLow?.heightM ?? 0,
+        type: t?.previousLow?.type ?? "low"
+      ),
+      nextLow: .init(
+        time: normalizeTime(t?.nextLow?.time, defaultDate: date),
+        heightM: t?.nextLow?.heightM ?? 0,
+        type: t?.nextLow?.type ?? "low"
+      )
+    )
+
+    // Water levels (empty if missing or malformed)
+    let levels: [RiverConditionsResponse.WaterLevelEntry] =
+      (loose.waterLevels ?? [])
+        .compactMap { entry in
+          guard let d = entry.date, let v = entry.levelFt else { return nil }
+          return .init(date: d, levelFt: v)
+        }
+
+    let temps: [RiverConditionsResponse.WaterTemperatureEntry]? =
+      (loose.waterTemperatures ?? [])
+        .compactMap { entry in
+          guard let d = entry.date, let v = entry.tempC else { return nil }
+          return .init(date: d, tempC: v)
+        }
+
+    return RiverConditionsResponse(
+      river: river,
+      stationId: stationId,
+      date: date,
+      weather: weather,
+      tides: tides,
+      waterLevels: levels,
+      waterTemperatures: temps
+    )
+  }
+}

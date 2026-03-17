@@ -1,0 +1,1080 @@
+// Bend Fly Shop
+// Logging via AppLogging (.auth category)
+
+import Combine
+import Foundation
+import Security
+import os
+import LocalAuthentication
+// Uses AppLogging for centralized logging
+
+final class AuthService: ObservableObject {
+    static var shared: AuthService = AuthService()
+
+     #if DEBUG
+     /// Test helper: reset the shared singleton to a fresh instance.
+     static func resetSharedForTests(session: URLSession = .shared) {
+       shared = AuthService(session: session)
+     }
+     #endif
+  // ---- Configure these two constants ----
+  private let projectURL = AppEnvironment.shared.projectURL
+  private let anonPublicKey = AppEnvironment.shared.anonKey
+  // --------------------------------------
+
+  // -------- Offline Login Cache -----------
+  private let kOfflineEmailKey = "OfflineLastEmail"
+  private let kOfflinePasswordKey = "OfflineLastPassword" // (stored in Keychain)
+  private let kOfflineRememberMeKey = "OfflineRememberMeEnabled"
+  private let kCachedFirstName = "CachedFirstName"
+  private let kCachedUserType = "CachedUserType"
+  private let kCachedAnglerNumber = "CachedAnglerNumber"
+  // ---------------------------------------
+
+  var publicAnonKey: String { anonPublicKey }
+
+  @Published private(set) var isAuthenticated: Bool = false
+  @Published private(set) var currentUserType: UserType? // <- role for routing
+  @Published private(set) var currentFirstName: String?
+  @Published private(set) var currentAnglerNumber: String?
+
+  // Transient (in-memory only) last sign-in credentials for remember-me recording after role resolution
+  private var lastSignInEmail: String?
+  private var lastSignInPassword: String?
+
+  var rememberMeEnabled: Bool {
+    get { UserDefaults.standard.bool(forKey: kOfflineRememberMeKey) }
+    set { UserDefaults.standard.set(newValue, forKey: kOfflineRememberMeKey); AppLogging.log("[Offline][RememberMe] set=\(newValue)", level: .debug, category: .auth) }
+  }
+
+  private let kAccessToken = "epicwaters.auth.access_token"
+  private let kRefreshToken = "epicwaters.auth.refresh_token"
+  private let kAccessTokenExp = "epicwaters.auth.access_token_exp" // seconds since epoch
+
+  // Ensures only one refresh runs at a time and that all callers await the same result.
+  private var refreshTask: Task<String?, Never>?
+  private let refreshQueue = DispatchQueue(label: "AuthService.refresh.serial")
+  private let session: URLSession
+
+  private init(session: URLSession = .shared) {
+    self.session = session
+    let token = Keychain.get(kAccessToken)
+    let exp = Keychain.get(kAccessTokenExp).flatMap { Double($0) }
+    let valid = Self.isJWTValid(accessToken: token, expSeconds: exp)
+    self.isAuthenticated = valid || Keychain.get(kRefreshToken) != nil
+    AppLogging.log("init: token.len=\(token?.count ?? 0) exp=\(exp ?? -1) valid=\(valid) host=\(projectURL.host ?? "?") hasRefresh=\(Keychain.get(kRefreshToken) != nil)", level: .debug, category: .auth)
+
+    // IMPORTANT: Do not start network I/O from init(). Any early refresh should be invoked
+    // explicitly from app lifecycle (e.g., AppRootView.task or similar).
+  }
+
+  // MARK: - Public API
+
+  enum UserType: String, Codable { case angler, guide }
+
+  enum InputValidationError: Error, LocalizedError {
+    case invalidInput(String)
+    var errorDescription: String? {
+      switch self {
+      case let .invalidInput(reason): reason
+      }
+    }
+  }
+
+  // MARK: - Error mapping
+  private func mapAuthHTTPError(status: Int, responseBody: Data?) -> AuthError {
+    let body = responseBody.flatMap { String(data: $0, encoding: .utf8) }?.lowercased() ?? ""
+
+    // Common Supabase/Auth messages often include strings like these
+    if status == 400 || status == 401 {
+      if body.contains("invalid login") || body.contains("invalid email or password") || body.contains("invalid credentials") {
+        return .invalidCredentials
+      }
+      if body.contains("email not confirmed") || body.contains("email not confirmed") || body.contains("confirm your email") {
+        return .emailNotConfirmed
+      }
+      // Default for 400/401 if not recognized
+      return .invalidCredentials
+    }
+
+    if status == 429 { return .rateLimited }
+    if status >= 500 && status < 600 { return .serverUnavailable }
+
+    // Fallback: keep original for logging, but UI will show generic if needed
+    let msg = responseBody.flatMap { String(data: $0, encoding: .utf8) } ?? "<no body>"
+    return .http(code: status, message: msg)
+  }
+
+  /// Sign Up (First Time Users) per API:
+  /// POST /auth/v1/signup
+  func signUp(
+    email: String,
+    password: String,
+    firstName: String,
+    lastName: String,
+    userType: UserType,
+    community: String,
+    anglerNumber: String? = nil
+  ) async throws {
+    // Validate
+    let first = firstName.trimmingCharacters(in: .whitespacesAndNewlines)
+    let last = lastName.trimmingCharacters(in: .whitespacesAndNewlines)
+    let comm = community.trimmingCharacters(in: .whitespacesAndNewlines)
+    guard !first.isEmpty else { throw InputValidationError.invalidInput("First name is required.") }
+    guard !last.isEmpty else { throw InputValidationError.invalidInput("Last name is required.") }
+    guard !comm.isEmpty else { throw InputValidationError.invalidInput("Community is required.") }
+    if userType == .angler {
+      guard let ang = anglerNumber, !ang.isEmpty else {
+        throw InputValidationError.invalidInput("Angler number is required for anglers.")
+      }
+      let ok = ang.range(of: #"^\d{5,10}$"#, options: .regularExpression) != nil
+      guard ok else { throw InputValidationError.invalidInput("Angler number must be 5–10 digits.") }
+    }
+
+    AppLogging.log("signUp -> email=\(email) type=\(userType.rawValue) name=\(firstName) \(lastName) community=\(community) angler=\(anglerNumber ?? "<nil>")", level: .info, category: .auth)
+
+    let url = projectURL.appendingPathComponent("/auth/v1/signup")
+    var req = URLRequest(url: url)
+    req.httpMethod = "POST"
+    req.setValue("application/json", forHTTPHeaderField: "Content-Type")
+    req.setValue(anonPublicKey, forHTTPHeaderField: "apikey")
+
+    var dataObj: [String: Any] = [
+      "first_name": first,
+      "last_name": last,
+      "user_type": userType.rawValue,
+      "community": comm
+    ]
+    if let ang = anglerNumber, !ang.isEmpty { dataObj["angler_number"] = ang }
+
+    let body: [String: Any] = [
+      "email": email,
+      "password": password,
+      "data": dataObj
+    ]
+    req.httpBody = try JSONSerialization.data(withJSONObject: body, options: [])
+
+    let (data, resp) = try await session.data(for: req)
+    let code = (resp as? HTTPURLResponse)?.statusCode ?? -1
+
+    if (200 ..< 300).contains(code) {
+      AppLogging.log("signUp success (status \(code)).", level: .info, category: .auth)
+      // We already know the role; publish immediately so UI can react
+      await MainActor.run { self.currentUserType = userType }
+
+      // Try immediate sign-in (may fail if email confirmation is enforced)
+      do {
+        try await signIn(email: email, password: password)
+      } catch {
+        AppLogging.log("signUp completed but signIn failed (possibly email confirmation required). error=\(error)", level: .error, category: .auth)
+        throw error
+      }
+    } else {
+      let msg = String(data: data, encoding: .utf8) ?? "<no body>"
+      AppLogging.log("[ERROR] signUp failed status=\(code) body=\(msg)", level: .error, category: .auth)
+      throw AuthError.http(code: code, message: msg)
+    }
+  }
+
+  /// Convenience for legacy call sites:
+  func signUp(email: String, password: String) async throws {
+    try await signUp(
+      email: email,
+      password: password,
+      firstName: "Unknown",
+      lastName: "User",
+      userType: .guide,
+      community: AppEnvironment.shared.communityName,
+      anglerNumber: nil
+    )
+  }
+
+  // MARK: - Sign In (with offline fallback)
+
+  func signIn(email: String, password: String) async throws {
+    // Reset some in-memory state synchronously on the MainActor so callers see deterministic state.
+    await MainActor.run {
+      self.currentUserType = nil
+      self.currentFirstName = nil
+      self.currentAnglerNumber = nil
+      self.isAuthenticated = false
+    }
+
+    self.lastSignInEmail = email
+    self.lastSignInPassword = password
+
+    AppLogging.log("signIn -> email=\(email)", level: .info, category: .auth)
+
+    var comps = URLComponents(
+      url: projectURL.appendingPathComponent("/auth/v1/token"),
+      resolvingAgainstBaseURL: false
+    )!
+    comps.queryItems = [URLQueryItem(name: "grant_type", value: "password")]
+
+    var req = URLRequest(url: comps.url!)
+    req.httpMethod = "POST"
+    req.setValue("application/json", forHTTPHeaderField: "Content-Type")
+    req.setValue(anonPublicKey, forHTTPHeaderField: "apikey")
+
+    let body: [String: String] = ["email": email, "password": password]
+    req.httpBody = try JSONSerialization.data(withJSONObject: body, options: [])
+
+    AppLogging.log("signIn request prepared: url=/auth/v1/token method=POST contentType=application/json", level: .debug, category: .auth)
+
+    do {
+      // --- ONLINE PATH ---
+      let (data, resp) = try await session.data(for: req)
+      let code = (resp as? HTTPURLResponse)?.statusCode ?? -1
+
+      AppLogging.log("signIn status=\(code)", level: .debug, category: .auth)
+
+      guard (200 ..< 300).contains(code) else {
+        let msg = String(data: data, encoding: .utf8) ?? "<no body>"
+        AppLogging.log("[ERROR] signIn failed status=\(code) body=\(msg)", level: .error, category: .auth)
+        self.lastSignInPassword = nil
+        throw mapAuthHTTPError(status: code, responseBody: data)
+      }
+
+      let token = try JSONDecoder().decode(TokenResponse.self, from: data)
+
+      persistTokens(
+        accessToken: token.access_token,
+        refreshToken: token.refresh_token,
+        expiresIn: token.expires_in
+      )
+      // Removed setting currentUserId here as per instructions
+
+      recordOfflineCredentials(email: email, password: password)
+      AppLogging.log("[Offline] record attempt after token persist (rememberMe=\(rememberMeEnabled))", level: .debug, category: .auth)
+
+      await loadUserProfile()
+      await MainActor.run { self.isAuthenticated = true }
+
+      AppLogging.log("signIn success. access.len=\(token.access_token.count) refresh.len=\(token.refresh_token?.count ?? 0) expIn=\(token.expires_in)s", level: .info, category: .auth)
+
+    } catch {
+      // --- OFFLINE FALLBACK PATH ---
+      if let urlError = error as? URLError {
+        AppLogging.log("URLError during signIn code=\(urlError.code.rawValue) desc=\(urlError)", level: .warn, category: .auth)
+
+        let offEmail = UserDefaults.standard.string(forKey: kOfflineEmailKey) ?? "<nil>"
+        let offPwLen = (Keychain.get(kOfflinePasswordKey) ?? "").count
+        AppLogging.log("[Offline] cachedEmail=\(offEmail) cachedPw.len=\(offPwLen)", level: .debug, category: .auth)
+
+        if canSignInOffline(email: email, password: password) {
+          AppLogging.log("[Offline] sign-in success for \(email)", level: .info, category: .auth)
+
+          let cachedFirst = UserDefaults.standard.string(forKey: kCachedFirstName)
+          let cachedTypeRaw = UserDefaults.standard.string(forKey: kCachedUserType)
+          let cachedAng = UserDefaults.standard.string(forKey: kCachedAnglerNumber)
+          await MainActor.run {
+            self.currentFirstName = cachedFirst
+            if let raw = cachedTypeRaw, let t = UserType(rawValue: raw) { self.currentUserType = t }
+            self.currentAnglerNumber = cachedAng
+            self.isAuthenticated = true
+          }
+          AppLogging.log("[Offline] restored cached profile first=\(cachedFirst ?? "<nil>") type=\(cachedTypeRaw ?? "<nil>") angler=\(cachedAng ?? "<nil>")", level: .debug, category: .auth)
+          return
+        } else {
+          AppLogging.log("[Offline] sign-in failed – no matching cached credentials.", level: .warn, category: .auth)
+          self.lastSignInPassword = nil
+          throw AuthError.networkUnavailable
+        }
+      } else {
+        // Non-network error: propagate but prefer friendly mapping if it's an HTTP error wrapped elsewhere
+        self.lastSignInPassword = nil
+        throw error
+      }
+    }
+  }
+
+  func requestPasswordReset(email: String) async throws {
+    AppLogging.log("resetPassword -> email=\(email)", level: .info, category: .auth)
+    let url = projectURL.appendingPathComponent("/auth/v1/recover")
+    var req = URLRequest(url: url)
+    req.httpMethod = "POST"
+    req.setValue("application/json", forHTTPHeaderField: "Content-Type")
+    req.setValue(anonPublicKey, forHTTPHeaderField: "apikey")
+    let body: [String: String] = ["email": email]
+    req.httpBody = try JSONSerialization.data(withJSONObject: body, options: [])
+    let (data, resp) = try await session.data(for: req)
+    let code = (resp as? HTTPURLResponse)?.statusCode ?? -1
+
+    if (200 ..< 300).contains(code) {
+      AppLogging.log("resetPassword requested (status \(code)).", level: .info, category: .auth)
+    } else {
+      let msg = String(data: data, encoding: .utf8) ?? "<no body>"
+      AppLogging.log("[ERROR] resetPassword failed status=\(code) body=\(msg)", level: .error, category: .auth)
+      throw mapAuthHTTPError(status: code, responseBody: data)
+    }
+  }
+
+  /// Returns a valid access token if one is stored and not expired.
+  func currentAccessToken() async -> String? {
+    let token = Keychain.get(kAccessToken)
+    let exp = Keychain.get(kAccessTokenExp).flatMap { Double($0) }
+    let valid = Self.isJWTValid(accessToken: token, expSeconds: exp)
+
+    if valid {
+      AppLogging.log("currentAccessToken valid=true len=\(token?.count ?? 0) exp=\(exp ?? -1)", level: .debug, category: .auth)
+      return token
+    }
+
+    AppLogging.log("currentAccessToken expired/invalid; checking for refresh token…", level: .debug, category: .auth)
+
+    guard let refresh = Keychain.get(kRefreshToken), !refresh.isEmpty else {
+      AppLogging.log("currentAccessToken: no refresh token available; returning nil isAuth=\(isAuthenticated)", level: .debug, category: .auth)
+      // In offline-login-only mode, we simply don't have a token for server calls.
+      return nil
+    }
+
+    let refreshed = await refreshAccessToken()
+    AppLogging.log("currentAccessToken after refresh -> \(refreshed != nil ? "obtained" : "nil")", level: .debug, category: .auth)
+    return refreshed
+  }
+
+  /// Networked sign-out:
+  func signOutRemote() async {
+    AppLogging.log("signOutRemote -> sending logout request", level: .info, category: .auth)
+    let url = projectURL.appendingPathComponent("/auth/v1/logout")
+    var req = URLRequest(url: url)
+    req.httpMethod = "POST"
+    req.setValue(anonPublicKey, forHTTPHeaderField: "apikey")
+
+    // Use the currently cached token *without* forcing a refresh.
+    let token = Keychain.get(kAccessToken)
+    if let token,
+       Self.isJWTValid(accessToken: token, expSeconds: Keychain.get(kAccessTokenExp).flatMap { Double($0) }) {
+      req.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+    } else {
+      AppLogging.log("signOutRemote: no valid access token; will clear locally.", level: .warn, category: .auth)
+    }
+
+    do {
+      let (_, resp) = try await session.data(for: req)
+      let code = (resp as? HTTPURLResponse)?.statusCode ?? -1
+      if code == 204 || (200 ..< 300).contains(code) {
+        AppLogging.log("remote logout succeeded (status \(code)).", level: .info, category: .auth)
+      } else {
+        AppLogging.log("remote logout non-2xx (status \(code)); continuing with local sign out.", level: .warn, category: .auth)
+      }
+    } catch {
+      AppLogging.log("remote logout error: \(error); continuing with local sign out.", level: .error, category: .auth)
+    }
+
+    await signOut()
+  }
+
+    /// Clears tokens and flips `isAuthenticated` to false (deterministic).
+    func signOut() async {
+      AppLogging.log("signOut: clearing tokens and flipping isAuthenticated=false", level: .info, category: .auth)
+      // Centralized clearing that removes keychain items, UserDefaults, and flips
+      // published state on the MainActor before returning.
+      await clearStoredTokens()
+      // Keep other cleanup
+      AuthStore.shared.clear()
+    }
+
+  // MARK: - Profile / Role
+    func loadUserProfile() async {
+      AppLogging.log("[Profile] fetch /auth/v1/user", level: .debug, category: .auth)
+      guard let token = await currentAccessToken() else {
+        AppLogging.log("[Profile] no access token for profile fetch", level: .warn, category: .auth)
+        return
+      }
+
+      var req = URLRequest(url: projectURL.appendingPathComponent("/auth/v1/user"))
+      req.httpMethod = "GET"
+      req.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+      req.setValue(anonPublicKey, forHTTPHeaderField: "apikey")
+
+      do {
+        let (data, resp) = try await session.data(for: req)
+        let code = (resp as? HTTPURLResponse)?.statusCode ?? -1
+        guard (200..<300).contains(code) else {
+          let body = String(data: data, encoding: .utf8) ?? ""
+          AppLogging.log("[Profile][WARN] non-2xx status=\(code) body=\(body)", level: .warn, category: .auth)
+          return
+        }
+
+        // Robust decoding for the Supabase user response shape.
+        struct UserProfile: Decodable {
+          let id: String
+          let email: String?
+          let user_metadata: UserMetadata?
+        }
+        struct UserMetadata: Decodable {
+          let first_name: String?
+          let user_type: String?
+          let angler_number: String?
+
+          private enum CodingKeys: String, CodingKey {
+            case first_name, user_type, angler_number
+          }
+
+          init(from decoder: Decoder) throws {
+            let container = try decoder.container(keyedBy: CodingKeys.self)
+            self.first_name = try container.decodeIfPresent(String.self, forKey: .first_name)
+            self.user_type = try container.decodeIfPresent(String.self, forKey: .user_type)
+
+            // angler_number may be a String or a Number in some responses — handle both.
+            if let s = try? container.decodeIfPresent(String.self, forKey: .angler_number) {
+              self.angler_number = s
+            } else if let i = try? container.decodeIfPresent(Int.self, forKey: .angler_number) {
+              self.angler_number = String(i)
+            } else {
+              self.angler_number = nil
+            }
+          }
+        }
+
+        let profile = try JSONDecoder().decode(UserProfile.self, from: data)
+
+        await MainActor.run {
+          // Removed setting currentUserId here as per instructions
+          if let md = profile.user_metadata {
+            self.currentFirstName = md.first_name
+            if let utype = md.user_type, let ut = UserType(rawValue: utype) {
+              self.currentUserType = ut
+            } else {
+              self.currentUserType = nil
+            }
+            self.currentAnglerNumber = md.angler_number
+          } else {
+            self.currentFirstName = nil
+            self.currentUserType = nil
+            self.currentAnglerNumber = nil
+          }
+          // Persist minimal cached profile for offline use
+          UserDefaults.standard.set(self.currentFirstName, forKey: kCachedFirstName)
+          UserDefaults.standard.set(self.currentUserType?.rawValue, forKey: kCachedUserType)
+          UserDefaults.standard.set(self.currentAnglerNumber, forKey: kCachedAnglerNumber)
+          AppLogging.log("[Offline][ProfileCache] saved first=\(self.currentFirstName ?? "<nil>") userType=\(self.currentUserType?.rawValue ?? "<nil>") angler=\(self.currentAnglerNumber ?? "<nil>")", level: .debug, category: .auth)
+
+          if let t = self.currentUserType {
+            // Default Remember Me based on role: guides ON, anglers OFF
+            let desired = (t == .guide)
+            if self.rememberMeEnabled != desired {
+              self.rememberMeEnabled = desired
+              AppLogging.log("[Offline][RememberMe] auto-set based on role=\(t.rawValue) -> \(desired)", level: .debug, category: .auth)
+            }
+          }
+
+          // Ensure offline credentials are recorded after role-based rememberMe defaulting
+          if self.rememberMeEnabled {
+            let hasPw = (Keychain.get(self.kOfflinePasswordKey)?.isEmpty == false)
+            if !hasPw, let le = self.lastSignInEmail, let lp = self.lastSignInPassword, !le.isEmpty, !lp.isEmpty {
+              self.recordOfflineCredentials(email: le, password: lp)
+              AppLogging.log("[Offline] post-profile recordOfflineCredentials (rememberMe=true)", level: .debug, category: .auth)
+            }
+          }
+          // Clear transient password ASAP
+          self.lastSignInPassword = nil
+        }
+
+      } catch {
+        AppLogging.log("[Profile][ERROR] \(error)", level: .error, category: .auth)
+      }
+    }
+
+  // MARK: - Biometric Login
+
+  enum BiometricLoginResult {
+    case resumedSession
+    case signedInOnline
+    case signedInOffline
+    case noCredentials
+    case authFailed(String)
+  }
+
+  // Re-entrancy guard used to prevent concurrent biometric login flows.
+  // Marked as non-public; access is serialized via @MainActor on the flows.
+  private var isPerformingBiometricLogin: Bool = false
+
+  /// Biometric-protected login flow that assumes the system biometric prompt has already succeeded.
+  /// It performs the same logic as `biometricLogin()` but without presenting LAContext.
+  @MainActor
+  func biometricLoginAfterAuth(authenticationContext: LAContext? = nil) async -> BiometricLoginResult {
+    // Prevent concurrent biometric login attempts
+    guard !isPerformingBiometricLogin else {
+      AppLogging.log("[Biometric] Reentrant biometric login blocked", level: .warn, category: .auth)
+      return .authFailed("Another biometric login is already in progress")
+    }
+    isPerformingBiometricLogin = true
+    defer { isPerformingBiometricLogin = false }
+
+    AppLogging.log("[Biometric] biometricLoginAfterAuth: start", level: .debug, category: .auth)
+
+    // Try resume session first if we have stored tokens
+    if hasStoredSession {
+      let resumed = await resumeSessionIfPossible()
+      if resumed {
+        AppLogging.log("[Biometric] Resumed session via tokens (after-auth).", level: .info, category: .auth)
+        return .resumedSession
+      }
+      AppLogging.log("[Biometric] Resume failed (after-auth); will try offline credentials path.", level: .debug, category: .auth)
+    }
+
+    // Fallback to cached offline credentials (use the provided LAContext if present)
+    guard let creds = getOfflineCredentials(authenticationContext: authenticationContext) else {
+      AppLogging.log("[Biometric] No cached offline credentials (after-auth).", level: .warn, category: .auth)
+      return .noCredentials
+    }
+
+    do {
+      try await signIn(email: creds.email, password: creds.password)
+      AppLogging.log("[Biometric] Signed in online using cached credentials (after-auth).", level: .info, category: .auth)
+      return .signedInOnline
+    } catch let err as AuthError {
+      switch err {
+      case .networkUnavailable:
+        AppLogging.log("[Biometric] Network unavailable; attempting explicit offline sign-in (after-auth).", level: .warn, category: .auth)
+        if canSignInOffline(email: creds.email, password: creds.password) {
+          let cachedFirst = UserDefaults.standard.string(forKey: kCachedFirstName)
+          let cachedTypeRaw = UserDefaults.standard.string(forKey: kCachedUserType)
+          let cachedAng = UserDefaults.standard.string(forKey: kCachedAnglerNumber)
+          // We're on MainActor so we can update directly
+          self.currentFirstName = cachedFirst
+          if let raw = cachedTypeRaw, let t = UserType(rawValue: raw) { self.currentUserType = t }
+          self.currentAnglerNumber = cachedAng
+          self.isAuthenticated = true
+
+          AppLogging.log("[Biometric][Offline] Restored cached profile (after-auth).", level: .info, category: .auth)
+          return .signedInOffline
+        } else {
+          AppLogging.log("[Biometric][Offline] Cached credentials did not match (after-auth).", level: .warn, category: .auth)
+          return .noCredentials
+        }
+      default:
+        AppLogging.log("[Biometric] Sign-in failed with error (after-auth): \(err)", level: .error, category: .auth)
+        return .authFailed(err.localizedDescription)
+      }
+    } catch {
+      AppLogging.log("[Biometric] Sign-in threw unexpected error (after-auth): \(error)", level: .error, category: .auth)
+      return .authFailed(error.localizedDescription)
+    }
+  }
+
+  /// Attempts a biometric-protected login path.
+  /// Flow:
+  /// 1) Authenticate with Face ID/Touch ID (local LAContext).
+  /// 2) Delegate to `biometricLoginAfterAuth(authenticationContext:)` so the LAContext can be reused for Keychain reads.
+  func biometricLogin() async -> BiometricLoginResult {
+    // Step 1: Biometric auth (create ephemeral LAContext)
+    let context = LAContext()
+    var error: NSError?
+    let reason = "Authenticate to login"
+
+    guard context.canEvaluatePolicy(.deviceOwnerAuthenticationWithBiometrics, error: &error) else {
+      let msg = error?.localizedDescription ?? "Biometrics not available"
+      AppLogging.log("[Biometric] Not available: \(msg)", level: .warn, category: .auth)
+      return .authFailed(msg)
+    }
+
+    do {
+      // Using async evaluatePolicy (SDK availability assumed)
+      try await context.evaluatePolicy(.deviceOwnerAuthenticationWithBiometrics, localizedReason: reason)
+    } catch {
+      AppLogging.log("[Biometric] Auth failed: \(error)", level: .warn, category: .auth)
+      return .authFailed(error.localizedDescription)
+    }
+
+    // Delegate to after-auth flow, passing the same LAContext so Keychain reads can use it.
+    return await biometricLoginAfterAuth(authenticationContext: context)
+  }
+
+  // MARK: - Debug Helpers (safe to call from UI for diagnostics)
+
+  func getStoredAccessToken() -> String? {
+    Keychain.get(kAccessToken)
+  }
+
+  func getStoredRefreshToken() -> String? {
+    Keychain.get(kRefreshToken)
+  }
+
+    // MARK: - Token refresh
+    private func refreshAccessToken() async -> String? {
+      // If a refresh Task already exists, await it
+      if let existing = refreshTask {
+        AppLogging.log("[Refresh] awaiting existing refresh task…", level: .debug, category: .auth)
+        return await existing.value
+      }
+
+      // Create and store a new refresh Task in a synchronized way
+      var task: Task<String?, Never>!
+      refreshQueue.sync {
+        if let existing = refreshTask {
+          task = existing
+          return
+        }
+        task = Task<String?, Never> {
+          // Ensure we clear the stored task when done
+          defer {
+            self.refreshQueue.sync { self.refreshTask = nil }
+          }
+
+          guard let refreshTok = Keychain.get(self.kRefreshToken), !refreshTok.isEmpty else {
+            AppLogging.log("[Refresh] No refresh token available.", level: .warn, category: .auth)
+            return nil
+          }
+
+          let rPrefix = String(refreshTok.prefix(24))
+          AppLogging.log("[Refresh] Attempting refresh_token grant… using refresh prefix=\(rPrefix) len=\(refreshTok.count)", level: .debug, category: .auth)
+
+          // Build URL with query param for grant_type (helps mocks that inspect query)
+          var comps = URLComponents(url: self.projectURL.appendingPathComponent("/auth/v1/token"),
+                                    resolvingAgainstBaseURL: false)!
+          comps.queryItems = [URLQueryItem(name: "grant_type", value: "refresh_token")]
+
+          var req = URLRequest(url: comps.url!)
+          req.httpMethod = "POST"
+          req.setValue("application/x-www-form-urlencoded", forHTTPHeaderField: "Content-Type")
+          req.setValue(self.anonPublicKey, forHTTPHeaderField: "apikey")
+
+          // Build a form-encoded body too (covers mocks that inspect body)
+          let encodedRefresh = refreshTok.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? refreshTok
+          let bodyStr = "grant_type=refresh_token&refresh_token=\(encodedRefresh)"
+          req.httpBody = bodyStr.data(using: .utf8)
+
+          // Temporary debug: print request URL and body so tests can be inspected
+          AppLogging.log("[Refresh][DEBUG] RequestURL=\(req.url?.absoluteString ?? "<no-url>") body=\(String(data: req.httpBody ?? Data(), encoding: .utf8) ?? "<no-body>")", level: .debug, category: .auth)
+
+          func performRequest() async throws -> (Data, URLResponse) {
+            try await session.data(for: req)
+          }
+
+          do {
+            let (data, resp) = try await performRequest()
+            let code = (resp as? HTTPURLResponse)?.statusCode ?? -1
+
+            if (200 ..< 300).contains(code) {
+              let token = try JSONDecoder().decode(TokenResponse.self, from: data)
+
+              // Check refresh token rotation and log accordingly
+              let currentStoredRefresh = Keychain.get(self.kRefreshToken)
+              if token.refresh_token == nil {
+                AppLogging.log("[Refresh] No new refresh token provided; preserving existing.", level: .info, category: .auth)
+              } else if let newRefresh = token.refresh_token {
+                if newRefresh != currentStoredRefresh {
+                  AppLogging.log("[Refresh] Refresh token rotated.", level: .info, category: .auth)
+                } else {
+                  AppLogging.log("[Refresh] Refresh token unchanged.", level: .info, category: .auth)
+                }
+              }
+
+              // Persist new tokens & expiry
+              persistTokens(accessToken: token.access_token, refreshToken: token.refresh_token, expiresIn: token.expires_in)
+              AppLogging.log("[Refresh] Success. new access.len=\(token.access_token.count) expIn=\(token.expires_in)s", level: .info, category: .auth)
+              // Ensure in-memory authenticated state is updated on main actor
+              await MainActor.run { self.isAuthenticated = true }
+              return token.access_token
+            } else if code == 400 || code == 401 {
+              let body = String(data: data, encoding: .utf8) ?? ""
+              AppLogging.log("[Refresh][ERROR] Hard failure status=\(code) body=\(body). Clearing tokens.", level: .error, category: .auth)
+              // Invalid refresh (e.g., token revoked). Clear stored tokens and mark signed out.
+              await handleRefreshFailure()
+              return nil
+            } else if code == 429 || (code >= 500 && code < 600) {
+              let body = String(data: data, encoding: .utf8) ?? ""
+              AppLogging.log("[Refresh][WARN] Transient error status=\(code) body=\(body). Retrying once after delay.", level: .warn, category: .auth)
+              try await Task.sleep(nanoseconds: 1_000_000_000) // 1 second
+
+              // Retry once
+              do {
+                let (retryData, retryResp) = try await performRequest()
+                let retryCode = (retryResp as? HTTPURLResponse)?.statusCode ?? -1
+                if (200 ..< 300).contains(retryCode) {
+                  let token = try JSONDecoder().decode(TokenResponse.self, from: retryData)
+
+                  // Check refresh token rotation and log accordingly on retry
+                  let currentStoredRefresh = Keychain.get(self.kRefreshToken)
+                  if token.refresh_token == nil {
+                    AppLogging.log("[Refresh] No new refresh token provided; preserving existing.", level: .info, category: .auth)
+                  } else if let newRefresh = token.refresh_token {
+                    if newRefresh != currentStoredRefresh {
+                      AppLogging.log("[Refresh] Refresh token rotated.", level: .info, category: .auth)
+                    } else {
+                      AppLogging.log("[Refresh] Refresh token unchanged.", level: .info, category: .auth)
+                    }
+                  }
+
+                  persistTokens(accessToken: token.access_token, refreshToken: token.refresh_token, expiresIn: token.expires_in)
+                  AppLogging.log("[Refresh] Retry success. new access.len=\(token.access_token.count) expIn=\(token.expires_in)s", level: .info, category: .auth)
+                  await MainActor.run { self.isAuthenticated = true }
+                  return token.access_token
+                } else {
+                  AppLogging.log("[Refresh][WARN] Retry also failed with status \(retryCode). Tokens preserved.", level: .warn, category: .auth)
+                  return nil
+                }
+              } catch {
+                AppLogging.log("[Refresh][WARN] Retry network error: \(error). Tokens preserved.", level: .warn, category: .auth)
+                return nil
+              }
+            } else {
+              let body = String(data: data, encoding: .utf8) ?? ""
+              AppLogging.log("[Refresh][WARN] Unexpected status \(code) body=\(body). Tokens preserved.", level: .warn, category: .auth)
+              return nil
+            }
+          } catch {
+            if let uerr = error as? URLError {
+              AppLogging.log("[Refresh][ERROR] URLError code=\(uerr.code.rawValue) desc=\(uerr)", level: .error, category: .auth)
+            } else {
+              AppLogging.log("[Refresh][ERROR] exception: \(error)", level: .error, category: .auth)
+            }
+            AppLogging.log("[Refresh] Network error; preserving tokens and returning nil.", level: .warn, category: .auth)
+            return nil
+          }
+        }
+        self.refreshTask = task
+      }
+
+      return await task.value
+    }
+    
+    /// Remove stored tokens directly via the Security framework and reset in-memory auth state.
+    private func clearStoredTokens() async {
+      AppLogging.log("clearStoredTokens: deleting keychain items and clearing defaults", level: .info, category: .auth)
+      let keys: [String] = [
+        kAccessToken,
+        kRefreshToken,
+        kAccessTokenExp
+      ]
+
+      for account in keys {
+        let query: [CFString: Any] = [
+          kSecClass: kSecClassGenericPassword,
+          kSecAttrAccount: account
+        ]
+        // ignore result — we just want the item gone
+        SecItemDelete(query as CFDictionary)
+      }
+
+      // Conditionally remove offline credentials based on Remember Me
+      if !UserDefaults.standard.bool(forKey: kOfflineRememberMeKey) {
+        // Remove offline email and password when remember me is OFF
+        UserDefaults.standard.removeObject(forKey: kOfflineEmailKey)
+        Keychain.delete(kOfflinePasswordKey)
+        UserDefaults.standard.removeObject(forKey: kCachedFirstName)
+        UserDefaults.standard.removeObject(forKey: kCachedUserType)
+        UserDefaults.standard.removeObject(forKey: kCachedAnglerNumber)
+        AppLogging.log("[Offline] rememberMe=false; cleared cached offline credentials", level: .debug, category: .auth)
+        AppLogging.log("[Offline] cleared cached profile (rememberMe=false)", level: .debug, category: .auth)
+      } else {
+        AppLogging.log("[Offline] rememberMe=true; preserving cached offline credentials on sign out", level: .debug, category: .auth)
+        AppLogging.log("[Offline] preserving cached profile on sign out (rememberMe=true)", level: .debug, category: .auth)
+      }
+
+      // Update in-memory state on MainActor so callers (and tests) see the effect immediately.
+      await MainActor.run {
+        self.isAuthenticated = false
+        self.currentUserType = nil
+        self.currentFirstName = nil
+        self.currentAnglerNumber = nil
+        // Removed resetting currentUserId here as per instructions
+      }
+    }
+
+  // MARK: - Offline helpers
+
+    private func canSignInOffline(email: String, password: String) -> Bool {
+      let inputEmail = email.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+      let inputPw = password
+
+      let storedEmailRaw = UserDefaults.standard.string(forKey: kOfflineEmailKey)
+      let storedPw = Keychain.get(kOfflinePasswordKey)
+
+      let storedEmail = storedEmailRaw?.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+
+      let hasStoredEmail = (storedEmail?.isEmpty == false)
+      let hasStoredPw = (storedPw?.isEmpty == false)
+      let emailMatches = (storedEmail == inputEmail)
+      let pwMatches = (storedPw == inputPw)
+
+      AppLogging.log("[Offline][CHECK] hasStoredEmail=\(hasStoredEmail) hasStoredPw=\(hasStoredPw) emailMatches=\(emailMatches) pwMatches=\(pwMatches) inputPw.len=\(inputPw.count)", level: .debug, category: .auth)
+
+      guard hasStoredEmail, hasStoredPw, emailMatches, pwMatches else { return false }
+      return true
+    }
+
+    private func recordOfflineCredentials(email: String, password: String) {
+      guard rememberMeEnabled else {
+        AppLogging.log("[Offline] rememberMe=false; not recording offline credentials", level: .debug, category: .auth)
+        return
+      }
+      UserDefaults.standard.set(email, forKey: kOfflineEmailKey)
+      Keychain.set(password, forKey: kOfflinePasswordKey)
+      AppLogging.log("[Offline] recordOfflineCredentials for \(email)", level: .debug, category: .auth)
+    }
+
+  // MARK: - Refresh failure
+
+    @MainActor
+    private func handleRefreshFailure() async {
+      // Use the centralized async clear so state updates are deterministic.
+      await clearStoredTokens()
+      AuthStore.shared.clear()
+      AppLogging.log("[Refresh] Failed; tokens cleared, isAuthenticated=false.", level: .error, category: .auth)
+    }
+
+  // MARK: - Token Handling
+
+    private func persistTokens(accessToken: String, refreshToken: String?, expiresIn: Int) {
+      // Store access token (value, forKey:)
+      Keychain.set(accessToken, forKey: kAccessToken)
+
+      // Store refresh token if provided
+      if let r = refreshToken {
+        Keychain.set(r, forKey: kRefreshToken)
+      }
+
+      // Store expiry time as seconds since epoch
+      let exp = Int(Date().timeIntervalSince1970) + expiresIn
+      Keychain.set(String(exp), forKey: kAccessTokenExp)
+
+      AppLogging.log("persistTokens -> access.len=\(accessToken.count) refresh.len=\(refreshToken?.count ?? 0) exp=\(exp)", level: .debug, category: .auth)
+    }
+
+  private static func isJWTValid(accessToken: String?, expSeconds: Double?) -> Bool {
+    guard let tok = accessToken, !tok.isEmpty else { return false }
+    let now = Date().timeIntervalSince1970
+    if let exp = expSeconds { return exp - now > 120 } // 120s buffer
+    if let jwtExp = decodeJWTExp(tok) { return jwtExp - now > 120 }
+    return false
+  }
+
+  private static func decodeJWTExp(_ jwt: String) -> Double? {
+    let parts = jwt.split(separator: ".")
+    guard parts.count >= 2 else { return nil }
+    let payloadB64 = String(parts[1])
+    var base64 = payloadB64.replacingOccurrences(of: "-", with: "+")
+      .replacingOccurrences(of: "_", with: "/")
+    while base64.count % 4 != 0 {
+      base64.append("=")
+    }
+    guard let data = Data(base64Encoded: base64),
+          let obj = try? JSONSerialization.jsonObject(with: data) as? [String: Any]
+    else { return nil }
+
+    if let expNumber = obj["exp"] as? NSNumber {
+      return expNumber.doubleValue
+    } else if let exp = obj["exp"] as? Double {
+      return exp
+    } else if let exp = obj["exp"] as? Int {
+      return Double(exp)
+    } else {
+      return nil
+    }
+  }
+
+  // MARK: - Models / Errors
+
+  private struct TokenResponse: Decodable {
+    let access_token: String
+    let token_type: String
+    let expires_in: Int
+    let refresh_token: String?
+    let user: User?
+
+    struct User: Decodable {
+      let id: String
+      let email: String?
+    }
+  }
+
+  enum AuthError: Error, LocalizedError, Equatable {
+    case http(code: Int, message: String)
+    case invalidCredentials
+    case emailNotConfirmed
+    case rateLimited
+    case networkUnavailable
+    case serverUnavailable
+    case unknown
+
+    var errorDescription: String? {
+      switch self {
+      case let .http(code, message):
+        // Fallback if we haven't mapped it yet
+        return "Auth error (\(code)): \(message)"
+      case .invalidCredentials:
+        return "That email and password don’t match. Please check your credentials and try again."
+      case .emailNotConfirmed:
+        return "Please confirm your email to continue. Check your inbox for a confirmation link."
+      case .rateLimited:
+        return "Too many attempts. Please wait a moment and try again."
+      case .networkUnavailable:
+        return "You appear to be offline. Please check your connection and try again."
+      case .serverUnavailable:
+        return "Our servers are temporarily unavailable. Please try again in a little while."
+      case .unknown:
+        return "Something went wrong. Please try again."
+      }
+    }
+
+    static func == (lhs: AuthError, rhs: AuthError) -> Bool {
+      switch (lhs, rhs) {
+      case let (.http(lc, lm), .http(rc, rm)):
+        return lc == rc && lm == rm
+      case (.invalidCredentials, .invalidCredentials): return true
+      case (.emailNotConfirmed, .emailNotConfirmed): return true
+      case (.rateLimited, .rateLimited): return true
+      case (.networkUnavailable, .networkUnavailable): return true
+      case (.serverUnavailable, .serverUnavailable): return true
+      case (.unknown, .unknown): return true
+      default: return false
+      }
+    }
+  }
+}
+
+// MARK: - Face ID / Session helpers
+
+extension AuthService {
+  /// True if we have a stored refresh token and can attempt to resume a session.
+  var hasStoredSession: Bool {
+    Keychain.get("epicwaters.auth.refresh_token") != nil
+  }
+
+  /// Cached offline credentials (email & password) if we've logged in at least once.
+  /// This overload preserves the original signature and calls the new implementation.
+  func getOfflineCredentials() -> (email: String, password: String)? {
+    return getOfflineCredentials(authenticationContext: nil)
+  }
+
+  /// New: Accepts an optional LAContext so Keychain reads can be done with the same authentication context
+  func getOfflineCredentials(authenticationContext: LAContext?) -> (email: String, password: String)? {
+    // Email is stored in UserDefaults (unchanged)
+    guard let storedEmail = UserDefaults.standard.string(forKey: kOfflineEmailKey),
+          !storedEmail.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+      return nil
+    }
+    let email = storedEmail.trimmingCharacters(in: .whitespacesAndNewlines)
+
+    // If caller supplied an LAContext, attempt to read the password using that context
+    if let ctx = authenticationContext {
+      // Configure the context to fail instead of prompting again —
+      // we expect caller already did the biometric prompt.
+      ctx.interactionNotAllowed = true
+
+      var query: [CFString: Any] = [
+        kSecClass: kSecClassGenericPassword,
+        kSecAttrAccount: kOfflinePasswordKey,
+        kSecReturnData: true,
+        kSecMatchLimit: kSecMatchLimitOne
+      ]
+      // Use the same authentication context the caller used to authenticate to Face ID.
+      query[kSecUseAuthenticationContext] = ctx
+
+      var result: AnyObject?
+      let status = SecItemCopyMatching(query as CFDictionary, &result)
+      if status == errSecSuccess, let data = result as? Data, let pw = String(data: data, encoding: .utf8), !pw.isEmpty {
+        return (email, pw)
+      } else {
+        AppLogging.log("[Keychain] getOfflineCredentials(authContext) SecItemCopyMatching status=\(status)", level: .debug, category: .auth)
+        // Fall through to fallback below (Keychain.get) in case the item wasn't protected with an access control.
+      }
+    }
+
+    // Fallback: use existing Keychain wrapper (no authentication context)
+    if let storedPassword = Keychain.get(kOfflinePasswordKey), !storedPassword.isEmpty {
+      return (email, storedPassword)
+    }
+
+    return nil
+  }
+
+  /// True if we have any cached offline credentials.
+  var hasOfflineCredentials: Bool {
+    getOfflineCredentials() != nil
+  }
+
+  /// Attempts to resume a session using stored tokens.
+  @discardableResult
+  func resumeSessionIfPossible() async -> Bool {
+    guard Keychain.get("epicwaters.auth.refresh_token") != nil else {
+      AppLogging.log("[AuthService][Biometric] No stored refresh token; cannot resume session.", level: .debug, category: .auth)
+      return false
+    }
+
+    AppLogging.log("[AuthService][Biometric] Attempting session resume using stored tokens…", level: .debug, category: .auth)
+
+    guard let token = await currentAccessToken() else {
+      AppLogging.log("[AuthService][Biometric] currentAccessToken returned nil; resume failed.", level: .debug, category: .auth)
+      return false
+    }
+
+    let prefix = String(token.prefix(24))
+    AppLogging.log("[AuthService][Biometric] Obtained access token during resume. prefix=\(prefix)", level: .debug, category: .auth)
+
+    await loadUserProfile()
+    await MainActor.run {
+      self.isAuthenticated = true
+    }
+
+    return true
+  }
+}
+
+// Tiny Keychain wrapper (unchanged)
+private enum Keychain {
+  @discardableResult
+    static func set(_ value: String, forKey key: String) -> Bool {
+      guard let data = value.data(using: .utf8) else { return false }
+
+      // Delete any existing item that matches the account (do NOT include the new value here)
+      let deleteQuery: [CFString: Any] = [
+        kSecClass: kSecClassGenericPassword,
+        kSecAttrAccount: key
+      ]
+      SecItemDelete(deleteQuery as CFDictionary)
+
+      // Add new item with value + accessibility
+      let addQuery: [CFString: Any] = [
+        kSecClass: kSecClassGenericPassword,
+        kSecAttrAccount: key,
+        kSecValueData: data,
+        kSecAttrAccessible: kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly
+      ]
+      let status = SecItemAdd(addQuery as CFDictionary, nil)
+
+      // If it failed because the item already exists for some reason, attempt update as a fallback
+      if status == errSecDuplicateItem {
+        let updateQuery: [CFString: Any] = [
+          kSecClass: kSecClassGenericPassword,
+          kSecAttrAccount: key
+        ]
+        let updateAttrs: [CFString: Any] = [
+          kSecValueData: data
+        ]
+        let ustatus = SecItemUpdate(updateQuery as CFDictionary, updateAttrs as CFDictionary)
+        return ustatus == errSecSuccess
+      }
+
+      return status == errSecSuccess
+    }
+
+  static func get(_ key: String) -> String? {
+    let query: [CFString: Any] = [
+      kSecClass: kSecClassGenericPassword,
+      kSecAttrAccount: key,
+      kSecReturnData: true,
+      kSecMatchLimit: kSecMatchLimitOne
+    ]
+    var result: AnyObject?
+    let status = SecItemCopyMatching(query as CFDictionary, &result)
+    guard status == errSecSuccess,
+          let data = result as? Data,
+          let str = String(data: data, encoding: .utf8) else { return nil }
+    return str
+  }
+
+  @discardableResult
+  static func delete(_ key: String) -> Bool {
+    let query: [CFString: Any] = [
+      kSecClass: kSecClassGenericPassword,
+      kSecAttrAccount: key
+    ]
+    let status = SecItemDelete(query as CFDictionary)
+    return status == errSecSuccess || status == errSecItemNotFound
+  }
+}

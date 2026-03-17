@@ -1,0 +1,16 @@
+# Xcode per-user settings (never commit)
+xcuserdata/
+*.xcodeproj/xcuserdata/
+*.xcworkspace/xcuserdata/
+*.xcuserstate
+
+# macOS
+.DS_Store
+
+# Build outputs
+DerivedData/
+build/
+
+# Claude Code
+.claude/
+

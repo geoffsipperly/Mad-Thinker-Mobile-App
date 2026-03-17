@@ -1,0 +1,17 @@
+--swiftversion 5.10
+--indent 2
+--maxwidth 120
+--wraparguments before-first
+--wrapcollections before-first
+--stripunusedargs closure-only
+--header "Bend Fly Shop"
+--ifdef no-indent
+--self init-only
+--modifierorder
+--typeattributes prev-line
+--binarygrouping none
+--octalgrouping none
+--hexgrouping none
+--patternlet hoist
+--importgrouping testable-first
+--disable redundantSelf,trailingCommas,sortedImports

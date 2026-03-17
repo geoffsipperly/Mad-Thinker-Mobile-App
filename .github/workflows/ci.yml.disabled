@@ -1,0 +1,249 @@
+name: CI
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  DEVELOPER_DIR: /Applications/Xcode.app/Contents/Developer
+  SCHEME: SkeenaSystem
+  DESTINATION: "platform=iOS Simulator,name=iPhone 16,OS=latest"
+
+jobs:
+  # ─────────────────────────────────────────────────────────────
+  # SwiftLint - Static code analysis
+  # ─────────────────────────────────────────────────────────────
+  lint:
+    name: SwiftLint
+    runs-on: macos-15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Cache SwiftLint
+        uses: actions/cache@v4
+        with:
+          path: ~/.swiftlint-cache
+          key: swiftlint-0.54.0
+
+      - name: Run SwiftLint
+        env:
+          CI: "false"  # Don't use --strict mode until violations are fixed
+        run: ./Scripts/swiftlint.sh
+
+  # ─────────────────────────────────────────────────────────────
+  # SwiftFormat - Code formatting check
+  # ─────────────────────────────────────────────────────────────
+  format:
+    name: SwiftFormat
+    runs-on: macos-15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install SwiftFormat
+        run: brew install swiftformat
+
+      - name: Check formatting
+        run: swiftformat --lint . || echo "SwiftFormat found issues (non-blocking for now)"
+
+  # ─────────────────────────────────────────────────────────────
+  # Build - Compile the app
+  # ─────────────────────────────────────────────────────────────
+  build:
+    name: Build
+    runs-on: macos-15
+    needs: [lint, format]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Select Xcode
+        run: sudo xcode-select -s /Applications/Xcode.app/Contents/Developer
+
+      - name: Show Xcode version
+        run: xcodebuild -version
+
+      - name: Cache SPM dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/Library/Developer/Xcode/DerivedData/**/SourcePackages
+            .build
+          key: spm-${{ runner.os }}-${{ hashFiles('**/Package.resolved', '**/*.xcodeproj/project.pbxproj') }}
+          restore-keys: |
+            spm-${{ runner.os }}-
+
+      - name: Resolve packages
+        run: |
+          xcodebuild -resolvePackageDependencies \
+            -project SkeenaSystem.xcodeproj \
+            -scheme ${{ env.SCHEME }}
+
+      - name: Build for testing
+        run: |
+          xcodebuild build-for-testing \
+            -project SkeenaSystem.xcodeproj \
+            -scheme ${{ env.SCHEME }} \
+            -destination "${{ env.DESTINATION }}" \
+            -configuration Debug \
+            CODE_SIGNING_ALLOWED=NO \
+            | xcpretty --color && exit ${PIPESTATUS[0]}
+
+  # ─────────────────────────────────────────────────────────────
+  # Unit Tests - Run unit tests with coverage
+  # ─────────────────────────────────────────────────────────────
+  test:
+    name: Unit Tests
+    runs-on: macos-15
+    needs: build
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Select Xcode
+        run: sudo xcode-select -s /Applications/Xcode.app/Contents/Developer
+
+      - name: Show Xcode and simulator info
+        run: |
+          xcodebuild -version
+          xcrun simctl list devices available | grep -E "(iPhone|== )"
+
+      - name: Boot simulator
+        run: |
+          # Find and boot the iPhone 16 simulator
+          DEVICE_ID=$(xcrun simctl list devices available | grep "iPhone 16" | head -1 | grep -oE '[A-F0-9-]{36}')
+          echo "Booting simulator: $DEVICE_ID"
+          xcrun simctl boot "$DEVICE_ID" || true
+          # Wait for simulator to be ready
+          sleep 10
+
+      - name: Cache SPM dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/Library/Developer/Xcode/DerivedData/**/SourcePackages
+            .build
+          key: spm-${{ runner.os }}-${{ hashFiles('**/Package.resolved', '**/*.xcodeproj/project.pbxproj') }}
+          restore-keys: |
+            spm-${{ runner.os }}-
+
+      - name: Run unit tests
+        run: |
+          xcodebuild test \
+            -project SkeenaSystem.xcodeproj \
+            -scheme ${{ env.SCHEME }} \
+            -destination "${{ env.DESTINATION }}" \
+            -configuration Debug \
+            -enableCodeCoverage YES \
+            -resultBundlePath TestResults.xcresult \
+            -retry-tests-on-failure \
+            CODE_SIGNING_ALLOWED=NO \
+            | xcpretty --color --report junit --output test-results.xml && exit ${PIPESTATUS[0]}
+
+      - name: Upload test results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: test-results
+          path: |
+            TestResults.xcresult
+            test-results.xml
+
+      - name: Generate coverage report
+        if: success()
+        run: |
+          xcrun xccov view --report TestResults.xcresult > coverage.txt
+          cat coverage.txt
+
+      - name: Upload coverage artifact
+        uses: actions/upload-artifact@v4
+        if: success()
+        with:
+          name: coverage-report
+          path: coverage.txt
+
+  # ─────────────────────────────────────────────────────────────
+  # UI Tests - Disabled until UI tests are added to the scheme
+  # ─────────────────────────────────────────────────────────────
+  # ui-test:
+  #   name: UI Tests
+  #   runs-on: macos-15
+  #   needs: build
+  #   if: github.ref == 'refs/heads/main' || github.event_name == 'push'
+  #   steps:
+  #     - name: Checkout
+  #       uses: actions/checkout@v4
+  #
+  #     - name: Select Xcode
+  #       run: sudo xcode-select -s /Applications/Xcode.app/Contents/Developer
+  #
+  #     - name: Cache SPM dependencies
+  #       uses: actions/cache@v4
+  #       with:
+  #         path: |
+  #           ~/Library/Developer/Xcode/DerivedData/**/SourcePackages
+  #           .build
+  #         key: spm-${{ runner.os }}-${{ hashFiles('**/Package.resolved', '**/*.xcodeproj/project.pbxproj') }}
+  #         restore-keys: |
+  #           spm-${{ runner.os }}-
+  #
+  #     - name: Boot simulator
+  #       run: |
+  #         DEVICE_ID=$(xcrun simctl list devices available | grep "iPhone 16" | head -1 | grep -o '[A-F0-9-]\{36\}')
+  #         xcrun simctl boot "$DEVICE_ID" || true
+  #
+  #     - name: Run UI tests
+  #       run: |
+  #         xcodebuild test \
+  #           -project SkeenaSystem.xcodeproj \
+  #           -scheme ${{ env.SCHEME }} \
+  #           -destination "${{ env.DESTINATION }}" \
+  #           -configuration Debug \
+  #           -only-testing:SkeenaSystemUITests \
+  #           CODE_SIGNING_ALLOWED=NO \
+  #           | xcpretty --color && exit ${PIPESTATUS[0]}
+
+  # ─────────────────────────────────────────────────────────────
+  # Security Scan - Temporarily disabled while fixing unit tests
+  # ─────────────────────────────────────────────────────────────
+  # security:
+  #   name: Security Scan
+  #   runs-on: macos-15
+  #   needs: lint
+  #   permissions:
+  #     actions: read
+  #     contents: read
+  #     security-events: write
+  #   steps:
+  #     - name: Checkout
+  #       uses: actions/checkout@v4
+  #
+  #     - name: Initialize CodeQL
+  #       uses: github/codeql-action/init@v3
+  #       with:
+  #         languages: swift
+  #         queries: security-and-quality
+  #
+  #     - name: Select Xcode
+  #       run: sudo xcode-select -s /Applications/Xcode.app/Contents/Developer
+  #
+  #     - name: Build for CodeQL
+  #       run: |
+  #         xcodebuild build \
+  #           -project SkeenaSystem.xcodeproj \
+  #           -scheme ${{ env.SCHEME }} \
+  #           -destination "${{ env.DESTINATION }}" \
+  #           -configuration Debug \
+  #           CODE_SIGNING_ALLOWED=NO
+  #
+  #     - name: Perform CodeQL Analysis
+  #       uses: github/codeql-action/analyze@v3
+  #       with:
+  #         category: "/language:swift"
