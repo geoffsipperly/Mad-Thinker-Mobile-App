@@ -103,6 +103,7 @@ final class CatchReportPicMemoStore: ObservableObject {
     initialLengthInches: Int?,
     mlFeatureVector: Data? = nil,
     lengthSource: String? = nil,
+    modelVersion: String? = nil,
     appVersion: String?,
     deviceDescription: String?,
     platform: String?,
@@ -140,6 +141,7 @@ final class CatchReportPicMemoStore: ObservableObject {
       initialLengthInches: initialLengthInches,
       mlFeatureVector: mlFeatureVector,
       lengthSource: lengthSource,
+      modelVersion: modelVersion,
       appVersion: appVersion,
       deviceDescription: deviceDescription,
       platform: platform

@@ -23,6 +23,7 @@ struct CatchPhotoAnalysis {
   let lifecycleStage: String?
   let featureVector: CatchPhotoAnalyzer.LengthFeatureVector?
   let lengthSource: LengthEstimateSource?
+  let modelVersion: String?
 
   init(
     riverName: String?,
@@ -31,7 +32,8 @@ struct CatchPhotoAnalysis {
     estimatedLength: String?,
     lifecycleStage: String? = nil,
     featureVector: CatchPhotoAnalyzer.LengthFeatureVector? = nil,
-    lengthSource: LengthEstimateSource? = nil
+    lengthSource: LengthEstimateSource? = nil,
+    modelVersion: String? = nil
   ) {
     self.riverName = riverName
     self.species = species
@@ -40,6 +42,7 @@ struct CatchPhotoAnalysis {
     self.lifecycleStage = lifecycleStage
     self.featureVector = featureVector
     self.lengthSource = lengthSource
+    self.modelVersion = modelVersion
   }
 }
 
@@ -246,7 +249,8 @@ final class CatchPhotoAnalyzer {
       sex: sexText,
       estimatedLength: lengthText,
       featureVector: featureVector,
-      lengthSource: lengthSource
+      lengthSource: lengthSource,
+      modelVersion: CatchPhotoAnalyzer._lengthRegressorVersion
     )
   }
 
@@ -717,6 +721,8 @@ final class CatchPhotoAnalyzer {
 
   /// Cached length regressor model
   private static var _lengthRegressor: MLModel?
+  /// Cached model version string read from CoreML metadata
+  private static var _lengthRegressorVersion: String?
 
   /// Runs the LengthRegressor CoreML model on a feature vector.
   /// Returns predicted length in inches, or nil on failure.
@@ -727,7 +733,15 @@ final class CatchPhotoAnalyzer {
         AppLogging.log("predictLength: LengthRegressor.mlmodelc not found in bundle", level: .error, category: .ml)
         return nil
       }
-      CatchPhotoAnalyzer._lengthRegressor = try? MLModel(contentsOf: url)
+      let model = try? MLModel(contentsOf: url)
+      CatchPhotoAnalyzer._lengthRegressor = model
+      // Extract version from model metadata (set during training via coremltools)
+      let metadata = model?.modelDescription.metadata
+      let version = (metadata?[.versionString] as? String)
+        ?? (metadata?[.description] as? String)
+        ?? "unknown"
+      CatchPhotoAnalyzer._lengthRegressorVersion = version
+      AppLogging.log("LengthRegressor loaded, model version: \(version)", level: .info, category: .ml)
     }
 
     guard let model = CatchPhotoAnalyzer._lengthRegressor else {
@@ -758,7 +772,8 @@ final class CatchPhotoAnalyzer {
     }
 
     let predicted = lengthValue.doubleValue
-    AppLogging.log({ "predictLength: predicted \(predicted) inches" }, level: .info, category: .ml)
+    let ver = CatchPhotoAnalyzer._lengthRegressorVersion ?? "unknown"
+    AppLogging.log({ "predictLength: predicted \(predicted) inches (model version: \(ver))" }, level: .info, category: .ml)
     return predicted
   }
 

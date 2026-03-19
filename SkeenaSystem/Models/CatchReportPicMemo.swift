@@ -75,6 +75,8 @@ public struct CatchReportPicMemo: Identifiable, Codable, Equatable {
   public var mlFeatureVector: Data?
   /// How the length was estimated: "regressor", "heuristic", or "manual".
   public var lengthSource: String?
+  /// Version of the LengthRegressor model that produced the estimate.
+  public var modelVersion: String?
 
   // Meta
   public var appVersion: String?
@@ -118,6 +120,7 @@ public struct CatchReportPicMemo: Identifiable, Codable, Equatable {
     initialLengthInches: Int? = nil,
     mlFeatureVector: Data? = nil,
     lengthSource: String? = nil,
+    modelVersion: String? = nil,
     appVersion: String? = nil,
     deviceDescription: String? = nil,
     platform: String? = nil
@@ -158,6 +161,7 @@ public struct CatchReportPicMemo: Identifiable, Codable, Equatable {
     self.initialLengthInches = initialLengthInches
     self.mlFeatureVector = mlFeatureVector
     self.lengthSource = lengthSource
+    self.modelVersion = modelVersion
     self.appVersion = appVersion
     self.deviceDescription = deviceDescription
     self.platform = platform

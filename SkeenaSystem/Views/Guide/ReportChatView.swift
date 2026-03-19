@@ -604,6 +604,7 @@ struct ReportChatView: View {
       initialLengthInches: snapshot.initialLengthInches,
       mlFeatureVector: snapshot.mlFeatureVector,
       lengthSource: snapshot.lengthSource,
+      modelVersion: snapshot.modelVersion,
       appVersion: appVersion,
       deviceDescription: deviceDescription,
       platform: "iOS",

@@ -121,6 +121,7 @@ final class UploadCatchPicMemo {
     let lengthInches: Int?
     let mlFeatures: [String: Double]?
     let lengthSource: String?
+    let modelVersion: String?
   }
 
   private struct MetaDTO: Codable {
@@ -415,7 +416,8 @@ final class UploadCatchPicMemo {
       sex: r.initialSex,
       lengthInches: r.initialLengthInches,
       mlFeatures: mlFeatures,
-      lengthSource: r.lengthSource
+      lengthSource: r.lengthSource,
+      modelVersion: r.modelVersion
     )
 
     #if DEBUG

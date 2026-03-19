@@ -719,6 +719,8 @@ final class CatchChatViewModel: ObservableObject {
     var mlFeatureVector: Data?
     /// How the length was estimated: "regressor", "heuristic", or "manual".
     var lengthSource: String?
+    /// Version of the LengthRegressor model that produced the estimate.
+    var modelVersion: String?
   }
 
   func makePicMemoSnapshot() -> CatchPicMemoSnapshot? {
@@ -761,7 +763,8 @@ final class CatchChatViewModel: ObservableObject {
       initialSex: initPrettySex.isEmpty ? nil : initPrettySex,
       initialLengthInches: initLengthInches,
       mlFeatureVector: initialAnalysis?.featureVector.flatMap { try? JSONEncoder().encode($0) },
-      lengthSource: (currentAnalysis?.lengthSource ?? initialAnalysis?.lengthSource)?.rawValue
+      lengthSource: (currentAnalysis?.lengthSource ?? initialAnalysis?.lengthSource)?.rawValue,
+      modelVersion: initialAnalysis?.modelVersion
     )
   }
 
