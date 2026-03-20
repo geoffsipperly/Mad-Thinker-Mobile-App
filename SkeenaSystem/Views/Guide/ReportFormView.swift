@@ -42,15 +42,18 @@ struct ReportFormView: View {
 
     let now = Date()
     let startOfToday = Calendar.current.startOfDay(for: now)
+    // Use start-of-yesterday so same-day trips remain visible the next day
+    // instead of vanishing once the calendar date rolls over.
+    let startOfYesterday = Calendar.current.date(byAdding: .day, value: -1, to: startOfToday)!
 
     // Break the predicate into simple parts so the compiler is happy
     let started = NSPredicate(format: "startDate <= %@", now as NSDate)
-    let openOrNotEndedToday = NSPredicate(
-      format: "endDate == nil OR endDate >= %@", startOfToday as NSDate
+    let openOrRecentlyEnded = NSPredicate(
+      format: "endDate == nil OR endDate >= %@", startOfYesterday as NSDate
     )
 
     let predicate = NSCompoundPredicate(andPredicateWithSubpredicates: [
-      started, openOrNotEndedToday
+      started, openOrRecentlyEnded
     ])
 
     _trips = FetchRequest(
