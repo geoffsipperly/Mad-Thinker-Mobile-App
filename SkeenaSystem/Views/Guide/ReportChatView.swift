@@ -26,6 +26,13 @@ struct ReportChatView: View {
   @State private var licenseOptions: [LicenseOption] = []
   @State private var selectedLicenseNumber: String?
 
+  // Solo mode
+  @State private var isSoloMode = false
+  @State private var showSoloAnglerPrompt = false
+  @State private var soloAnglerNumberInput = ""
+  @State private var soloSaving = false
+  @State private var soloErrorMessage: String?
+
   // Navigation to full-screen chat
   @State private var showChatFullScreen = false
 
@@ -130,12 +137,61 @@ struct ReportChatView: View {
 
   private var header: some View {
     VStack(spacing: 12) {
-      tripCard
-      clientCard
-      licenceCard
+      soloToggleCard
+      if !isSoloMode {
+        tripCard
+        clientCard
+        licenceCard
+      }
     }
     .padding(.top, 6)
     .padding(.bottom, 4)
+  }
+
+  private var soloToggleCard: some View {
+    Button(action: {
+      withAnimation(.easeInOut(duration: 0.25)) {
+        isSoloMode.toggle()
+      }
+      if isSoloMode {
+        handleSoloActivated()
+      } else {
+        handleSoloDeactivated()
+      }
+    }) {
+      HStack {
+        Image(systemName: isSoloMode ? "person.fill.checkmark" : "person.fill")
+          .font(.subheadline)
+          .foregroundColor(isSoloMode ? .green : .white.opacity(0.7))
+        Text(isSoloMode ? "Fishing Solo" : "Fishing Solo?")
+          .font(.subheadline)
+          .foregroundColor(isSoloMode ? .green : .white)
+        Spacer()
+        if isSoloMode {
+          Image(systemName: "checkmark.circle.fill")
+            .foregroundColor(.green)
+        }
+      }
+      .padding()
+      .frame(maxWidth: .infinity, alignment: .leading)
+      .background(isSoloMode ? Color.green.opacity(0.15) : Color.white.opacity(0.08))
+      .cornerRadius(16)
+      .padding(.horizontal)
+    }
+    .alert("Enter Your Angler License #", isPresented: $showSoloAnglerPrompt) {
+      TextField("License number", text: $soloAnglerNumberInput)
+        .keyboardType(.numberPad)
+      Button("Save") {
+        Task { await saveSoloAnglerNumber() }
+      }
+      .disabled(soloAnglerNumberInput.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+      Button("Cancel", role: .cancel) {
+        // Revert solo mode since they cancelled
+        withAnimation { isSoloMode = false }
+      }
+    } message: {
+      Text("To record solo catches, we need your angler license number. This is saved to your profile and can be updated anytime.")
+    }
   }
 
   private var tripCard: some View {
@@ -287,7 +343,11 @@ struct ReportChatView: View {
   }
 
   private var isCaptureEnabled: Bool {
-    selectedClientID != nil &&
+    if isSoloMode {
+      let anglerNum = (AuthService.shared.currentAnglerNumber ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+      return !anglerNum.isEmpty
+    }
+    return selectedClientID != nil &&
       !vm.clientName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
   }
 
@@ -320,6 +380,11 @@ struct ReportChatView: View {
     vm.anglerNumber = ""
     vm.classifiedWatersLicenseNumber = nil
 
+    // Clear solo mode
+    isSoloMode = false
+    soloAnglerNumberInput = ""
+    soloErrorMessage = nil
+
     // Clear selections and options
     selectedTripID = nil
     selectedClientID = nil
@@ -329,6 +394,142 @@ struct ReportChatView: View {
     licenseOptions = []
 
     // Note: chatVM state will be dropped when this view is dismissed.
+  }
+
+  // MARK: - Solo mode helpers
+
+  private func handleSoloActivated() {
+    let existingNumber = (AuthService.shared.currentAnglerNumber ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+    if existingNumber.isEmpty {
+      // First time — prompt for angler number
+      soloAnglerNumberInput = ""
+      showSoloAnglerPrompt = true
+    } else {
+      // Already have a number — pre-populate and activate
+      configureSoloState(anglerNumber: existingNumber)
+    }
+  }
+
+  private func handleSoloDeactivated() {
+    // Restore normal mode — clear solo overrides
+    vm.anglerNumber = ""
+    vm.clientName = ""
+    vm.classifiedWatersLicenseNumber = nil
+    // Re-trigger normal trip/client selection
+    if let tid = selectedTripID {
+      selectedTripID = tid // re-fire onChange
+    }
+  }
+
+  private func saveSoloAnglerNumber() async {
+    let trimmed = soloAnglerNumberInput.trimmingCharacters(in: .whitespacesAndNewlines)
+    guard !trimmed.isEmpty else { return }
+    do {
+      try await AuthService.shared.updateAnglerNumber(trimmed)
+      await MainActor.run {
+        configureSoloState(anglerNumber: trimmed)
+      }
+    } catch {
+      await MainActor.run {
+        soloErrorMessage = error.localizedDescription
+        withAnimation { isSoloMode = false }
+      }
+    }
+  }
+
+  private func configureSoloState(anglerNumber: String) {
+    let guideName = (AuthService.shared.currentFirstName ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+    vm.anglerNumber = anglerNumber
+    vm.clientName = guideName
+    vm.classifiedWatersLicenseNumber = nil
+    vm.guideName = guideName
+    chatVM.updateAnglerContext(angler: guideName)
+    chatVM.updateGuideContext(guide: guideName)
+  }
+
+  /// Finds or creates a same-day solo trip in Core Data.
+  /// Returns the Trip to use for the catch report.
+  private func findOrCreateSoloTrip() -> Trip? {
+    let today = Calendar.current.startOfDay(for: Date())
+    let tomorrow = Calendar.current.date(byAdding: .day, value: 1, to: today)!
+
+    // Look for an existing solo trip created today
+    let request: NSFetchRequest<Trip> = Trip.fetchRequest()
+    request.predicate = NSCompoundPredicate(andPredicateWithSubpredicates: [
+      NSPredicate(format: "name BEGINSWITH %@", "Solo"),
+      NSPredicate(format: "startDate >= %@ AND startDate < %@", today as NSDate, tomorrow as NSDate)
+    ])
+    request.fetchLimit = 1
+
+    if let existing = (try? context.fetch(request))?.first {
+      return existing
+    }
+
+    // Create a new solo trip
+    let guideName = (AuthService.shared.currentFirstName ?? "Guide").trimmingCharacters(in: .whitespacesAndNewlines)
+    let guideLastName = (AuthService.shared.currentLastName ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+    let anglerNumber = (AuthService.shared.currentAnglerNumber ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+
+    let df = DateFormatter()
+    df.dateFormat = "MMM d"
+    let tripName = "Solo – \(df.string(from: Date()))"
+
+    let trip = Trip(context: context)
+    trip.tripId = UUID()
+    trip.guideName = guideName
+    trip.name = tripName
+    trip.startDate = today
+    trip.endDate = today
+    trip.createdAt = Date()
+
+    // Create a TripClient for the guide themselves
+    let client = TripClient(context: context)
+    client.name = guideName
+    client.licenseNumber = anglerNumber
+    client.trip = trip
+
+    do {
+      try context.save()
+      AppLogging.log("[Solo] Created solo trip: \(tripName) id=\(trip.tripId?.uuidString ?? "?")", level: .info, category: .trip)
+
+      // Upload the solo trip to the server (fire-and-forget)
+      let iso = ISO8601DateFormatter()
+      iso.formatOptions = [.withInternetDateTime]
+      let upsert = TripAPI.UpsertTripRequest(
+        tripId: trip.tripId?.uuidString ?? UUID().uuidString,
+        tripName: tripName,
+        startDate: iso.string(from: today),
+        endDate: iso.string(from: today),
+        guideName: guideName,
+        clientName: nil,
+        community: AppEnvironment.shared.communityName,
+        lodge: nil,
+        anglers: [
+          .init(
+            anglerNumber: anglerNumber,
+            firstName: guideName,
+            lastName: guideLastName.isEmpty ? nil : guideLastName,
+            dateOfBirth: nil,
+            residency: nil,
+            sex: nil,
+            mailingAddress: nil,
+            telephoneNumber: nil,
+            classifiedWatersLicenses: nil
+          )
+        ]
+      )
+      Task {
+        await AuthStore.shared.refreshFromSupabase()
+        if let jwt = AuthStore.shared.jwt {
+          _ = try? await TripAPI.upsertTrip(upsert, jwt: jwt)
+        }
+      }
+
+      return trip
+    } catch {
+      AppLogging.log("[Solo] Failed to create solo trip: \(error)", level: .error, category: .trip)
+      return nil
+    }
   }
 
   // MARK: - Trips loading
@@ -556,14 +757,15 @@ struct ReportChatView: View {
       return
     }
 
-    let trip = selectedTrip
+    // Resolve trip — solo mode creates/reuses a same-day trip automatically
+    let trip: Trip? = isSoloMode ? findOrCreateSoloTrip() : selectedTrip
 
     let anglerNumber = vm.anglerNumber
     let cwlNumber = vm.classifiedWatersLicenseNumber
     let tripIdString = trip?.tripId?.uuidString
 
-    let communityName = trip?.lodge?.community?.name
-    let lodgeName = trip?.lodge?.name
+    let communityName = isSoloMode ? AppEnvironment.shared.communityName : trip?.lodge?.community?.name
+    let lodgeName = isSoloMode ? nil : trip?.lodge?.name
     let loggedInGuide = (AuthService.shared.currentFirstName ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
     let guideName = loggedInGuide.isEmpty ? snapshot.guideName : loggedInGuide
 
@@ -571,11 +773,11 @@ struct ReportChatView: View {
     let deviceDescription = "\(UIDevice.current.model) \(UIDevice.current.systemVersion)"
 
     // Derive a human-readable trip name for v2 API (match PicMemo display)
-    let rawTripName = selectedTrip?.name?.trimmingCharacters(in: .whitespacesAndNewlines)
+    let rawTripName = trip?.name?.trimmingCharacters(in: .whitespacesAndNewlines)
     let tripNameValue: String? = {
       if let n = rawTripName, !n.isEmpty { return n }
+      if isSoloMode { return nil } // solo trips already have a name set above
       let label = currentTripText()
-      // Avoid placeholder text being sent as a name
       if label == "No trips created" { return nil }
       return label
     }()

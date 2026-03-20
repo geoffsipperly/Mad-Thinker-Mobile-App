@@ -36,6 +36,7 @@ final class AuthService: ObservableObject {
   @Published private(set) var isAuthenticated: Bool = false
   @Published private(set) var currentUserType: UserType? // <- role for routing
   @Published private(set) var currentFirstName: String?
+  @Published private(set) var currentLastName: String?
   @Published private(set) var currentAnglerNumber: String?
 
   // Transient (in-memory only) last sign-in credentials for remember-me recording after role resolution
@@ -405,16 +406,18 @@ final class AuthService: ObservableObject {
         }
         struct UserMetadata: Decodable {
           let first_name: String?
+          let last_name: String?
           let user_type: String?
           let angler_number: String?
 
           private enum CodingKeys: String, CodingKey {
-            case first_name, user_type, angler_number
+            case first_name, last_name, user_type, angler_number
           }
 
           init(from decoder: Decoder) throws {
             let container = try decoder.container(keyedBy: CodingKeys.self)
             self.first_name = try container.decodeIfPresent(String.self, forKey: .first_name)
+            self.last_name = try container.decodeIfPresent(String.self, forKey: .last_name)
             self.user_type = try container.decodeIfPresent(String.self, forKey: .user_type)
 
             // angler_number may be a String or a Number in some responses — handle both.
@@ -434,6 +437,7 @@ final class AuthService: ObservableObject {
           // Removed setting currentUserId here as per instructions
           if let md = profile.user_metadata {
             self.currentFirstName = md.first_name
+            self.currentLastName = md.last_name
             if let utype = md.user_type, let ut = UserType(rawValue: utype) {
               self.currentUserType = ut
             } else {
@@ -442,6 +446,7 @@ final class AuthService: ObservableObject {
             self.currentAnglerNumber = md.angler_number
           } else {
             self.currentFirstName = nil
+            self.currentLastName = nil
             self.currentUserType = nil
             self.currentAnglerNumber = nil
           }
@@ -476,6 +481,48 @@ final class AuthService: ObservableObject {
         AppLogging.log("[Profile][ERROR] \(error)", level: .error, category: .auth)
       }
     }
+
+  // MARK: - Update Angler Number (for guides using Solo mode)
+
+  /// Updates the current user's angler_number in Supabase user_metadata
+  /// and refreshes the local cache.
+  func updateAnglerNumber(_ number: String) async throws {
+    let trimmed = number.trimmingCharacters(in: .whitespacesAndNewlines)
+    guard !trimmed.isEmpty else {
+      throw InputValidationError.invalidInput("Angler number cannot be empty.")
+    }
+
+    guard let token = await currentAccessToken() else {
+      throw InputValidationError.invalidInput("Session expired. Please sign in again.")
+    }
+
+    let url = projectURL.appendingPathComponent("/auth/v1/user")
+    var req = URLRequest(url: url)
+    req.httpMethod = "PUT"
+    req.setValue("application/json", forHTTPHeaderField: "Content-Type")
+    req.setValue(anonPublicKey, forHTTPHeaderField: "apikey")
+    req.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+
+    let body: [String: Any] = [
+      "data": ["angler_number": trimmed]
+    ]
+    req.httpBody = try JSONSerialization.data(withJSONObject: body)
+
+    let (data, response) = try await session.data(for: req)
+    let status = (response as? HTTPURLResponse)?.statusCode ?? 0
+
+    guard (200...299).contains(status) else {
+      let msg = String(data: data, encoding: .utf8) ?? "<no body>"
+      AppLogging.log("[AuthService] updateAnglerNumber failed: HTTP \(status) \(msg)", level: .error, category: .auth)
+      throw mapAuthHTTPError(status: status, responseBody: data)
+    }
+
+    await MainActor.run {
+      self.currentAnglerNumber = trimmed
+      UserDefaults.standard.set(trimmed, forKey: kCachedAnglerNumber)
+      AppLogging.log("[AuthService] updateAnglerNumber -> \(trimmed)", level: .info, category: .auth)
+    }
+  }
 
   // MARK: - Biometric Login
 
