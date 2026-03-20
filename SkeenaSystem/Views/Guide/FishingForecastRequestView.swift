@@ -95,8 +95,10 @@ struct FishingForecastRequestView: View {
           AppHeader()
             .padding(.top, 20)
 
-          // River rows — full-width, stacked vertically
+          // Water body rows — rivers + water bodies, stacked vertically
           let rivers = AppEnvironment.shared.lodgeRivers
+          let waterBodies = AppEnvironment.shared.lodgeWaterBodies
+          let allWaterSources = rivers + waterBodies
 
           VStack(spacing: 8) {
             // Column headers aligned above metrics
@@ -116,11 +118,11 @@ struct FishingForecastRequestView: View {
               Color.clear.frame(width: 28)
             }
             .padding(.horizontal, 16)
-            ForEach(rivers, id: \.self) { river in
+            ForEach(allWaterSources, id: \.self) { source in
               Button {
-                fetchConditions(for: river)
+                fetchConditions(for: source)
               } label: {
-                riverRow(name: river, isLoading: loadingRiver == river)
+                riverRow(name: source, isLoading: loadingRiver == source)
               }
               .buttonStyle(.plain)
               .disabled(loadingRiver != nil)
@@ -259,7 +261,7 @@ struct FishingForecastRequestView: View {
     loadingRiver = river
     Task {
       do {
-        let apiRiver = river.replacingOccurrences(of: " River", with: "")
+        let apiRiver = AppEnvironment.stripRiverSuffix(river)
         let loose = try await postForecast(river: apiRiver, date: Date())
         self.result = materializeStrict(from: loose)
         self.goToResult = true
@@ -274,7 +276,9 @@ struct FishingForecastRequestView: View {
 
   private func fetchBatchConditions() {
     let rivers = AppEnvironment.shared.lodgeRivers
-    guard !rivers.isEmpty else { return }
+    let waterBodies = AppEnvironment.shared.lodgeWaterBodies
+    let allSources = rivers + waterBodies
+    guard !allSources.isEmpty else { return }
 
     batchLoading = true
 
@@ -291,10 +295,11 @@ struct FishingForecastRequestView: View {
         struct BatchPayload: Encodable {
           let rivers: [String]
         }
-        let apiRivers = rivers.map { $0.replacingOccurrences(of: " River", with: "") }
-        let payload = BatchPayload(rivers: apiRivers)
+        // Strip river suffixes for rivers; water bodies pass through as-is
+        let apiNames = rivers.map { AppEnvironment.stripRiverSuffix($0) } + waterBodies
+        let payload = BatchPayload(rivers: apiNames)
         req.httpBody = try JSONEncoder().encode(payload)
-        AppLogging.log("[Forecast] batch request body: rivers=\(apiRivers)", level: .debug, category: .trip)
+        AppLogging.log("[Forecast] batch request body: rivers=\(apiNames)", level: .debug, category: .trip)
 
         let (data, resp) = try await URLSession.shared.data(for: req)
         guard let http = resp as? HTTPURLResponse else {
@@ -315,13 +320,15 @@ struct FishingForecastRequestView: View {
 
         var dict: [String: BatchCondition] = [:]
         for condition in batch.conditions {
-          // Re-key using full display name (e.g. "Nehalem" → "Nehalem River")
-          let displayName = rivers.first(where: { $0.replacingOccurrences(of: " River", with: "") == condition.river }) ?? condition.river
+          // Re-key using full display name:
+          // Rivers: "Nehalem" → "Nehalem River" (match via stripRiverSuffix)
+          // Water bodies: "Puget Sound" → "Puget Sound" (exact match)
+          let displayName = allSources.first(where: { AppEnvironment.stripRiverSuffix($0) == condition.name }) ?? condition.name
           dict[displayName] = condition
-          AppLogging.log("[Forecast] batch — \(condition.river): level=\(condition.waterLevelFt.map { String(format: "%.2f", $0) } ?? "nil")ft, temp=\(condition.waterTempC.map { String(format: "%.1f", $0) } ?? "nil")°C", level: .debug, category: .trip)
+          AppLogging.log("[Forecast] batch — \(condition.name): type=\(condition.waterType ?? "?"), level=\(condition.waterLevelFt.map { String(format: "%.2f", $0) } ?? "nil")ft, temp=\(condition.waterTempC.map { String(format: "%.1f", $0) } ?? "nil")°C", level: .debug, category: .trip)
         }
         self.batchConditions = dict
-        AppLogging.log("[Forecast] batch loaded \(dict.count) river conditions for date: \(batch.date)", level: .debug, category: .trip)
+        AppLogging.log("[Forecast] batch loaded \(dict.count) conditions for date: \(batch.date)", level: .debug, category: .trip)
 
       } catch {
         AppLogging.log("[Forecast] batch fetch failed: \(error.localizedDescription)", level: .debug, category: .trip)
@@ -392,8 +399,10 @@ struct FishingForecastRequestView: View {
   // MARK: - Batch Response Types
 
   private struct BatchCondition: Decodable {
-    let river: String
+    let name: String
+    let waterType: String?
     let stationId: String?
+    let source: String?
     let date: String?
     let waterLevelFt: Double?
     let waterTempC: Double?
@@ -407,8 +416,10 @@ struct FishingForecastRequestView: View {
   // MARK: - Lenient (Loose) Response Types
 
   private struct LooseResponse: Decodable {
-    let river: String?
+    let name: String?
+    let waterType: String?
     let stationId: String?
+    let source: String?
     let date: String?
 
     let weather: LooseWeatherBlock?
@@ -470,7 +481,7 @@ struct FishingForecastRequestView: View {
       return s
     }
 
-    let river = loose.river ?? "Unknown River"
+    let river = loose.name ?? "Unknown"
     let date = ymdOrToday(loose.date)
     let stationId = loose.stationId ?? "Unknown"
 

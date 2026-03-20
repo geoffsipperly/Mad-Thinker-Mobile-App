@@ -66,6 +66,8 @@ public final class AppEnvironment {
     public var overrideCommunityName: String?
     public var overrideCommunityTagline: String?
     public var overrideDefaultRiver: String?
+    public var overrideLodgeWaterBodies: [String]?
+    public var overrideDefaultWaterBody: String?
 
     private init() {}
 
@@ -371,6 +373,27 @@ public final class AppEnvironment {
             return String(name.dropLast(suffix.count))
         }
         return name
+    }
+
+    // MARK: - Water bodies configuration
+
+    /// Water body names available for this community (e.g., "Puget Sound", "Hood Canal").
+    /// Used for polygon-based GPS detection and conditions forecasts.
+    public var lodgeWaterBodies: [String] {
+        if let v = overrideLodgeWaterBodies { return v }
+        if let raw = stringFromInfo("LODGE_WATER_BODIES"), !raw.isEmpty {
+            return raw.components(separatedBy: ",")
+                .map { $0.trimmingCharacters(in: .whitespaces) }
+                .filter { !$0.isEmpty }
+        }
+        return [] // No hardcoded fallback — LODGE_WATER_BODIES must be set in xcconfig
+    }
+
+    /// Default water body name when no GPS-based water body is resolved.
+    public var defaultWaterBody: String? {
+        if let v = overrideDefaultWaterBody { return v }
+        if let v = stringFromInfo("DEFAULT_WATER_BODY"), !v.isEmpty { return v }
+        return lodgeWaterBodies.first
     }
 
     // MARK: - Fish detection ML calibration

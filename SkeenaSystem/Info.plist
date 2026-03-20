@@ -84,6 +84,10 @@
 	<string>$(GEAR_URL)</string>
 	<key>LODGE_RIVERS</key>
 	<string>$(LODGE_RIVERS)</string>
+	<key>DEFAULT_WATER_BODY</key>
+	<string>$(DEFAULT_WATER_BODY)</string>
+	<key>LODGE_WATER_BODIES</key>
+	<string>$(LODGE_WATER_BODIES)</string>
 	<key>LOG_LEVEL</key>
 	<string>$(LOG_LEVEL)</string>
 	<key>MBXAccessToken</key>

@@ -73,6 +73,8 @@ COMMUNITY_TAGLINE = Your Fly Fishing Destination
 
 DEFAULT_RIVER = Nehalem
 LODGE_RIVERS = Nehalem River,Wilson River,Trask River,Nestucca River,Kilchis River
+DEFAULT_WATER_BODY = Puget Sound
+LODGE_WATER_BODIES = Hood Canal,Puget Sound
 FORECAST_LOCATION = Oregon Coast
 FORECAST_NOTES = Data sourced from USGS. Kilchis River data is approximated from the Wilson River station due to the absence of a dedicated gauge.
 DEFAULT_MAP_LATITUDE = 45.4562
