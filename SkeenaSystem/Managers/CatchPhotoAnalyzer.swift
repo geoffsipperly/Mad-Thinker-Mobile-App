@@ -49,6 +49,7 @@ struct CatchPhotoAnalysis {
 final class CatchPhotoAnalyzer {
   // private let communityID: String
   private let riverLocator: RiverLocator
+  private let waterBodyLocator: WaterBodyLocator
 
   // ViT species model (raw MLModel)
   private let coreMLModel: MLModel
@@ -71,8 +72,9 @@ final class CatchPhotoAnalyzer {
 
   // MARK: - Init
 
-  init(riverLocator: RiverLocator = .shared) {
+  init(riverLocator: RiverLocator = .shared, waterBodyLocator: WaterBodyLocator = .shared) {
     self.riverLocator = riverLocator
+    self.waterBodyLocator = waterBodyLocator
 
     let config = MLModelConfiguration()
 
@@ -90,31 +92,22 @@ final class CatchPhotoAnalyzer {
 
   func analyze(
     image: UIImage,
-    location: CLLocation?,
-    communityID: String?
+    location: CLLocation?
   ) async -> CatchPhotoAnalysis {
-    // 1. River name / status via offline locator + community context
+    // 1. Location detection: river spines first, then water body polygons
     var riverDisplay: String?
 
-    if let communityID {
-      if !riverLocator.hasRivers(forCommunity: communityID) {
-        // Scenario 3: community has no rivers configured
-        riverDisplay = "No rivers configured for \(communityID)"
-      } else {
-        // We *do* have rivers for this community → try to detect one
-        let name = riverLocator.riverName(near: location, forCommunity: communityID)
+    let riverName = riverLocator.riverName(near: location)
+    AppLogging.log("[Analyzer] RiverLocator result: '\(riverName)' for location: \(location?.coordinate.latitude ?? 0), \(location?.coordinate.longitude ?? 0)", level: .debug, category: .ml)
 
-        if name.isEmpty {
-          // Scenario 2: community has rivers, but no match for this location
-          riverDisplay = "No river detected for \(communityID)"
-        } else {
-          // Normal case: matched a specific river
-          riverDisplay = name
-        }
-      }
+    if !riverName.isEmpty {
+      riverDisplay = riverName
+    } else if let waterBody = waterBodyLocator.waterBodyName(at: location) {
+      riverDisplay = waterBody
+      AppLogging.log("[Analyzer] Water body matched: \(waterBody)", level: .debug, category: .ml)
     } else {
-      // No community ID given; VM will fall back to its generic message
       riverDisplay = nil
+      AppLogging.log("[Analyzer] No location matched", level: .debug, category: .ml)
     }
 
     // 2. Species via ViT
@@ -224,7 +217,7 @@ final class CatchPhotoAnalyzer {
           AppEnvironment.shared.fishMinLengthInches,
           min(predicted, AppEnvironment.shared.fishMaxLengthInches)
         )
-        lengthText = String(format: "%.0f inches (ML estimate)", clamped.rounded())
+        lengthText = String(format: "%.0f inches", clamped.rounded())
         lengthSource = .regressor
         AppLogging.log({ "Length regressor: raw=\(String(format: "%.1f", predicted)), clamped=\(String(format: "%.1f", clamped))" }, level: .debug, category: .ml)
 

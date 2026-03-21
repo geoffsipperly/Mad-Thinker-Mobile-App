@@ -117,10 +117,10 @@ final class UploadFarmedReports {
   /// Falls back to `AppEnvironment.shared.defaultRiver` when no river is within range.
   static func resolveRiverName(lat: Double, lon: Double) -> String {
     let location = CLLocation(latitude: lat, longitude: lon)
-    let community = AppEnvironment.shared.communityName
-    let name = RiverLocator.shared.riverName(near: location, forCommunity: community)
+    let name = RiverLocator.shared.riverName(near: location)
     if name.isEmpty {
-      return AppEnvironment.shared.defaultRiver
+      return WaterBodyLocator.shared.waterBodyName(at: location)
+             ?? AppEnvironment.shared.defaultRiver
     }
     return name
   }

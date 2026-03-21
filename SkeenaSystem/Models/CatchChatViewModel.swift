@@ -42,7 +42,6 @@ final class CatchChatViewModel: ObservableObject {
   // Context from the header
   @Published private(set) var guideName: String = ""
   @Published private(set) var currentAnglerName: String = ""
-  @Published private(set) var communityID: String?
 
     // Latest device location (from ReportChatView)
     private var currentLocation: CLLocation?
@@ -76,10 +75,6 @@ final class CatchChatViewModel: ObservableObject {
   private var step: Step = .idle
 
   // MARK: - Context updates
-
-  func updateCommunity(communityID: String?) {
-      self.communityID = communityID
-    }
 
   func updateGuideContext(guide: String) {
     guideName = guide == "Guide" ? "" : guide
@@ -150,8 +145,7 @@ final class CatchChatViewModel: ObservableObject {
 
           let analysis = await analyzer.analyze(
             image: picked.image,
-            location: bestLocation,
-            communityID: self.communityID
+            location: bestLocation
           )
 
         await MainActor.run {
@@ -397,7 +391,7 @@ final class CatchChatViewModel: ObservableObject {
 
       if cleaned.isEmpty {
         // No message from analyzer → fall back to generic text
-        parts.append("River: Unable to Detect via GPS")
+        parts.append("Location: Unable to Detect via GPS")
       } else if cleaned.hasPrefix("No river detected for")
                   || cleaned.hasPrefix("No rivers configured for") {
         // Our special messages for scenarios 2 and 3:
@@ -407,7 +401,7 @@ final class CatchChatViewModel: ObservableObject {
         parts.append(cleaned)
       } else {
         // Normal case: show the river name
-        parts.append("River: \(cleaned)")
+        parts.append("Location: \(cleaned)")
       }
 
     let (species, stage) = splitSpecies(a.species)

@@ -78,7 +78,7 @@ struct ReportChatView: View {
     .onChange(of: selectedTripID) { _ in
       handleTripChanged()
       chatVM.updateTripContext(trip: currentTripText())
-      chatVM.updateCommunity(communityID: currentCommunityID)
+
     }
     .onChange(of: selectedClientID) { _ in
       handleClientChanged()
@@ -126,7 +126,6 @@ struct ReportChatView: View {
     chatVM.updateGuideContext(guide: loggedInGuide)
     chatVM.updateAnglerContext(angler: currentClientText())
     chatVM.updateTripContext(trip: currentTripText())
-    chatVM.updateCommunity(communityID: currentCommunityID)
   }
 
   private func handleOnDisappear() {
@@ -356,7 +355,6 @@ struct ReportChatView: View {
     chatVM.updateGuideContext(guide: vm.guideName)
     chatVM.updateAnglerContext(angler: vm.clientName)
     chatVM.updateTripContext(trip: currentTripText())
-    chatVM.updateCommunity(communityID: currentCommunityID)
 
     // Start the conversation if needed
     chatVM.startConversationIfNeeded()
@@ -622,11 +620,6 @@ struct ReportChatView: View {
   private var selectedTrip: Trip? {
     guard let id = selectedTripID else { return nil }
     return trips.first(where: { $0.objectID == id })
-  }
-
-  // Community identifier / name derived from the selected trip
-  private var currentCommunityID: String? {
-    selectedTrip?.lodge?.community?.name
   }
 
   private func tripDisplay(_ t: Trip) -> String {

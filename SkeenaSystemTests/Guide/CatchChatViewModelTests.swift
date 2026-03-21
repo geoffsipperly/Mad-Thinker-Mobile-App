@@ -397,17 +397,6 @@ final class CatchChatViewModelTests: XCTestCase {
     XCTAssertEqual(vm.currentAnglerName, "John Doe")
   }
 
-  func testUpdateCommunity_setsValue() {
-    vm.updateCommunity(communityID: "Bend Fly Shop")
-    XCTAssertEqual(vm.communityID, "Bend Fly Shop")
-  }
-
-  func testUpdateCommunity_nil_clearsValue() {
-    vm.updateCommunity(communityID: "Bend Fly Shop")
-    vm.updateCommunity(communityID: nil)
-    XCTAssertNil(vm.communityID)
-  }
-
   // MARK: - makePicMemoSnapshot Tests (public interface)
 
   func testMakePicMemoSnapshot_noAnalysis_returnsNil() {

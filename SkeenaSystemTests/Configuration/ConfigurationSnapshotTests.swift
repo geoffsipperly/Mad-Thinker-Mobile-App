@@ -84,14 +84,14 @@ final class ConfigurationSnapshotTests: XCTestCase {
   // MARK: - RIVER CONFIGURATION SNAPSHOT
   // ============================================================================
 
-  /// All river short names available for Bend Fly Shop
+  /// All river short names available for configured community
   func testSnapshot_allRiverNames() {
     let expectedRivers: Set<String> = [
-      "Nehalem",
-      "Wilson",
-      "Trask",
-      "Nestucca",
-      "Kilchis"
+      "Hoh",
+      "Green",
+      "Sauk",
+      "Skykomish",
+      "Sol Duc"
     ]
 
     let locator = RiverLocator.shared
@@ -99,33 +99,22 @@ final class ConfigurationSnapshotTests: XCTestCase {
     // Verify each river is found at its first coordinate
     var foundRivers: Set<String> = []
 
-    // Test Nehalem River
-    let nehalemBenchmarkLoc = CLLocation(latitude: 45.4562, longitude: -123.8426)
-    let nehalem = locator.riverName(near: nehalemBenchmarkLoc, forCommunity: "Bend Fly Shop")
-    if !nehalem.isEmpty { foundRivers.insert(nehalem) }
+    let riverCoords: [(String, Double, Double)] = [
+      ("Hoh", 47.7494, -124.4401),
+      ("Green", 47.5650, -122.3450),
+      ("Sauk", 48.4850, -121.5920),
+      ("Skykomish", 47.8554, -121.9690),
+      ("Sol Duc", 47.9050, -124.5600),
+    ]
 
-    // Test Wilson River
-    let wilsonBenchmarkLoc = CLLocation(latitude: 45.4562, longitude: -123.8426)
-    let wilson = locator.riverName(near: wilsonBenchmarkLoc, forCommunity: "Bend Fly Shop")
-    if !wilson.isEmpty { foundRivers.insert(wilson) }
-
-    // Test Trask River
-    let traskBenchmarkLoc = CLLocation(latitude: 45.4562, longitude: -123.8426)
-    let trask = locator.riverName(near: traskBenchmarkLoc, forCommunity: "Bend Fly Shop")
-    if !trask.isEmpty { foundRivers.insert(trask) }
-
-    // Test Nestucca River
-    let nestuccaBenchmarkLoc = CLLocation(latitude: 45.4562, longitude: -123.8426)
-    let nestucca = locator.riverName(near: nestuccaBenchmarkLoc, forCommunity: "Bend Fly Shop")
-    if !nestucca.isEmpty { foundRivers.insert(nestucca) }
-
-    // Test Kilchis River
-    let kilchisBenchmarkLoc = CLLocation(latitude: 45.4562, longitude: -123.8426)
-    let kilchis = locator.riverName(near: kilchisBenchmarkLoc, forCommunity: "Bend Fly Shop")
-    if !kilchis.isEmpty { foundRivers.insert(kilchis) }
+    for (_, lat, lon) in riverCoords {
+      let loc = CLLocation(latitude: lat, longitude: lon)
+      let name = locator.riverName(near: loc)
+      if !name.isEmpty { foundRivers.insert(name) }
+    }
 
     XCTAssertEqual(foundRivers, expectedRivers,
-                   "SNAPSHOT: Bend Fly Shop has exactly 5 rivers")
+                   "SNAPSHOT: Community has exactly 5 rivers")
   }
 
   /// River count

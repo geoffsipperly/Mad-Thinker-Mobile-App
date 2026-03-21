@@ -77,27 +77,39 @@ final class WaterBodyLocator {
     /// Returns the name of the water body containing the given location, or nil.
     /// Checks more specific/smaller bodies first (per WaterBodyAtlas.checkOrder).
     func waterBodyName(at location: CLLocation?) -> String? {
-        guard let location else { return nil }
+        guard let location else {
+            AppLogging.log("[WaterBodyLocator] location is nil, returning nil", level: .debug, category: .ml)
+            return nil
+        }
 
         let point = location.coordinate
+        AppLogging.log("[WaterBodyLocator] Checking point (\(point.latitude), \(point.longitude)) against \(waterBodies.count) water bodies", level: .debug, category: .ml)
         for body in waterBodies {
-            if Self.pointInPolygon(point: point, polygon: body.polygon) {
+            let result = Self.pointInPolygon(point: point, polygon: body.polygon)
+            AppLogging.log("[WaterBodyLocator] '\(body.name)' polygon (\(body.polygon.count) vertices): pointInPolygon = \(result)", level: .debug, category: .ml)
+            if result {
                 return body.name
             }
         }
+        AppLogging.log("[WaterBodyLocator] No water body matched", level: .debug, category: .ml)
         return nil
     }
 
     // MARK: - Ray-casting point-in-polygon
 
-    /// Standard ray-casting algorithm. Casts a horizontal ray east from the point
-    /// and counts how many polygon edges it crosses. Odd = inside, even = outside.
+    /// Epsilon for boundary tolerance (~11 metres of latitude/longitude).
+    private static let epsilon: Double = 0.0001
+
+    /// Ray-casting with boundary tolerance. Points exactly on a vertex or edge
+    /// can produce incorrect results with pure ray-casting, so we also check
+    /// proximity to every edge of the polygon.
     static func pointInPolygon(
         point: CLLocationCoordinate2D,
         polygon: [CLLocationCoordinate2D]
     ) -> Bool {
         guard polygon.count >= 3 else { return false }
 
+        // 1. Standard ray-casting
         var inside = false
         var j = polygon.count - 1
 
@@ -105,7 +117,6 @@ final class WaterBodyLocator {
             let pi = polygon[i]
             let pj = polygon[j]
 
-            // Check if the ray crosses this edge
             if (pi.longitude > point.longitude) != (pj.longitude > point.longitude) {
                 let intersectLat = pi.latitude
                     + (point.longitude - pi.longitude)
@@ -119,6 +130,47 @@ final class WaterBodyLocator {
             j = i
         }
 
-        return inside
+        if inside { return true }
+
+        // 2. Boundary tolerance — treat points within epsilon of any edge as inside
+        j = polygon.count - 1
+        for i in 0..<polygon.count {
+            if distanceToSegment(point: point, a: polygon[j], b: polygon[i]) < epsilon {
+                return true
+            }
+            j = i
+        }
+
+        return false
+    }
+
+    /// Minimum distance from a point to a line segment (in coordinate space).
+    private static func distanceToSegment(
+        point: CLLocationCoordinate2D,
+        a: CLLocationCoordinate2D,
+        b: CLLocationCoordinate2D
+    ) -> Double {
+        let dx = b.longitude - a.longitude
+        let dy = b.latitude - a.latitude
+        let lengthSq = dx * dx + dy * dy
+
+        // Degenerate segment (a == b): just return distance to the vertex
+        if lengthSq < 1e-15 {
+            let px = point.longitude - a.longitude
+            let py = point.latitude - a.latitude
+            return (px * px + py * py).squareRoot()
+        }
+
+        // Project point onto the line, clamped to [0,1]
+        let t = max(0, min(1,
+            ((point.longitude - a.longitude) * dx + (point.latitude - a.latitude) * dy) / lengthSq
+        ))
+
+        let projLon = a.longitude + t * dx
+        let projLat = a.latitude + t * dy
+
+        let ex = point.longitude - projLon
+        let ey = point.latitude - projLat
+        return (ex * ex + ey * ey).squareRoot()
     }
 }
