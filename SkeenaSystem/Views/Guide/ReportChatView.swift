@@ -535,13 +535,10 @@ struct ReportChatView: View {
   private func loadTrips() {
     let now = Date()
     let startOfToday = Calendar.current.startOfDay(for: now)
-    // Use start-of-yesterday so same-day trips remain visible the next day
-    // instead of vanishing once the calendar date rolls over.
-    let startOfYesterday = Calendar.current.date(byAdding: .day, value: -1, to: startOfToday)!
 
     let startedPredicate = NSPredicate(format: "startDate <= %@", now as NSDate)
     let openOrRecentlyEndedPredicate = NSPredicate(
-      format: "endDate == nil OR endDate >= %@", startOfYesterday as NSDate
+      format: "endDate == nil OR endDate >= %@", startOfToday as NSDate
     )
     let combined = NSCompoundPredicate(
       andPredicateWithSubpredicates: [startedPredicate, openOrRecentlyEndedPredicate]
