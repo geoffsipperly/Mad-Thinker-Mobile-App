@@ -64,6 +64,7 @@ final class UploadCatchPicMemo {
     let createdAt: Date
     let uploadedAt: Date
     let tripId: String?
+    let communityId: String?
     let tripName: String?
     let catchInfo: CatchDTO
     let initialAnalysis: InitialAnalysisDTO?
@@ -71,7 +72,7 @@ final class UploadCatchPicMemo {
     let meta: MetaDTO
 
     enum CodingKeys: String, CodingKey {
-      case reportId, createdAt, uploadedAt, tripId, tripName
+      case reportId, createdAt, uploadedAt, tripId, communityId, tripName
       case catchInfo = "catch"
       case initialAnalysis, status, meta
     }
@@ -454,6 +455,7 @@ final class UploadCatchPicMemo {
       createdAt: createdAt,
       uploadedAt: uploadedAt,
       tripId: tripIdToSend,
+      communityId: r.communityId,
       tripName: tripNameToSend,
       catchInfo: catchDTO,
       initialAnalysis: initial,

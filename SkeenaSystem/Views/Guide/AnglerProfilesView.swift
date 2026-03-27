@@ -2,18 +2,18 @@ import SwiftUI
 import Foundation
 import Combine
 
-private struct TripRosterResponse: Decodable {
-  let trips: [TripDTO]
+struct RosterTripResponse: Decodable {
+  let trips: [RosterTripDTO]
 }
-private struct TripDTO: Decodable, Identifiable {
+struct RosterTripDTO: Decodable, Identifiable {
   let trip_id: String
   let trip_name: String?
   let start_date: String
   let end_date: String
-  let anglers: [AnglerDTO]
+  let anglers: [RosterAnglerDTO]
   var id: String { trip_id }
 }
-private struct AnglerDTO: Decodable, Identifiable, Hashable, Equatable {
+struct RosterAnglerDTO: Decodable, Identifiable, Hashable, Equatable {
   let angler_id: String
   let last_name: String
   let first_name: String
@@ -21,12 +21,12 @@ private struct AnglerDTO: Decodable, Identifiable, Hashable, Equatable {
   var id: String { angler_id }
 }
 
-extension AnglerDTO {
-  static func == (lhs: AnglerDTO, rhs: AnglerDTO) -> Bool { lhs.angler_id == rhs.angler_id }
+extension RosterAnglerDTO {
+  static func == (lhs: RosterAnglerDTO, rhs: RosterAnglerDTO) -> Bool { lhs.angler_id == rhs.angler_id }
   func hash(into hasher: inout Hasher) { hasher.combine(angler_id) }
 }
 
-private struct PreferencesDTO: Decodable {
+struct PreferencesDTO: Decodable {
   let drinks: Bool?
   let drinks_text: String?
   let food: Bool?
@@ -40,7 +40,7 @@ private struct PreferencesDTO: Decodable {
   let cpap: Bool?
   let cpap_text: String?
 }
-private struct ProficiencyDTO: Decodable {
+struct ProficiencyDTO: Decodable {
   let casting: Int?
   let wading: Int?
   let hiking: Int?
@@ -49,7 +49,7 @@ private struct ProficiencyDTO: Decodable {
   let species_name: String?
   let tactic_name: String?
 }
-private struct GearDTO: Decodable {
+struct GearDTO: Decodable {
   let lodge_name: String?
   let waders: Bool?
   let boots: Bool?
@@ -60,7 +60,7 @@ private struct GearDTO: Decodable {
 }
 
 // New detailed DTOs for Angler Details API
-private struct AnglerDetailsResponse: Decodable {
+struct AnglerDetailsResponse: Decodable {
   let angler_id: String
   let angler_number: String
   let first_name: String
@@ -69,7 +69,7 @@ private struct AnglerDetailsResponse: Decodable {
   let proficiencies: [ProficiencyDetailsDTO]?
   let gear: [GearDTO]?
 }
-private struct ProficiencyDetailsDTO: Decodable {
+struct ProficiencyDetailsDTO: Decodable {
   let casting: Int?
   let wading: Int?
   let hiking: Int?
@@ -82,7 +82,7 @@ private struct ProficiencyDetailsDTO: Decodable {
   let hiking_context: ProficiencyContextDTO?
   let learning_style_context: ProficiencyContextDTO?
 }
-private struct ProficiencyContextDTO: Decodable {
+struct ProficiencyContextDTO: Decodable {
   let question: String?
   let context: String?
   let high: String?
@@ -90,7 +90,7 @@ private struct ProficiencyContextDTO: Decodable {
   let low: String?
 }
 
-private enum TripRosterAPI {
+enum TripRosterAPI {
   // Composable base + path URLs from Info.plist keys, fallback defaults
 
   private static let rawBaseURLString = APIURLUtilities.infoPlistString(forKey: "API_BASE_URL")
@@ -136,7 +136,7 @@ private enum TripRosterAPI {
     return url
   }
 
-  static func fetchRoster(community: String, lodge: String) async throws -> TripRosterResponse {
+  static func fetchRoster(community: String, lodge: String) async throws -> RosterTripResponse {
     logConfig()
     var items: [URLQueryItem] = []
     if let communityId = CommunityService.shared.activeCommunityId {
@@ -175,7 +175,7 @@ private enum TripRosterAPI {
 
     let dec = JSONDecoder()
     dec.keyDecodingStrategy = .useDefaultKeys
-    return try dec.decode(TripRosterResponse.self, from: data)
+    return try dec.decode(RosterTripResponse.self, from: data)
   }
 
   static func fetchAnglerDetails(anglerID: String, community: String, lodge: String) async throws -> AnglerDetailsResponse {
@@ -209,10 +209,10 @@ private enum TripRosterAPI {
 }
 
 @MainActor
-private final class AnglerProfilesVM: ObservableObject {
+final class AnglerProfilesVM: ObservableObject {
   @Published var isLoading = false
   @Published var error: String?
-  @Published var anglers: [AnglerDTO] = []
+  @Published var anglers: [RosterAnglerDTO] = []
 
   let community: String
   let lodge: String
@@ -229,7 +229,7 @@ private final class AnglerProfilesVM: ObservableObject {
     do {
       let resp = try await TripRosterAPI.fetchRoster(community: community, lodge: lodge)
       // Flatten anglers across trips
-      var set = Set<AnglerDTO>()
+      var set = Set<RosterAnglerDTO>()
       for t in resp.trips { for a in t.anglers { set.insert(a) } }
       // Sort by last name, then first name
       self.anglers = set.sorted { lhs, rhs in
@@ -299,7 +299,7 @@ struct AnglerProfilesView: View {
 // MARK: - New Detail View and VM for Angler Details
 
 @MainActor
-private final class AnglerDetailsVM: ObservableObject {
+final class AnglerDetailsVM: ObservableObject {
   @Published var isLoading = false
   @Published var error: String?
   @Published var details: AnglerDetailsResponse?
@@ -327,7 +327,7 @@ private final class AnglerDetailsVM: ObservableObject {
   }
 }
 
-private struct AnglerDetailsSheetView: View {
+struct AnglerDetailsSheetView: View {
   let anglerID: String
   let displayName: String
   let anglerNumber: String
@@ -393,7 +393,7 @@ private struct AnglerDetailsSheetView: View {
 
           PreferencesSection(preferences: details.preferences, profs: details.proficiencies)
 
-          GearSection(gearList: details.gear, firstName: details.first_name)
+          AnglerProfileGearSection(gearList: details.gear, firstName: details.first_name)
         }
       }
       .padding()
@@ -409,7 +409,7 @@ private struct AnglerDetailsSheetView: View {
 
 // MARK: - Helpers used by AnglerDetailsSheetView
 
-private func proficiencySummaryRowFromDetails(_ prof: ProficiencyDetailsDTO) -> some View {
+func proficiencySummaryRowFromDetails(_ prof: ProficiencyDetailsDTO) -> some View {
   VStack(alignment: .leading, spacing: 8) {
     HStack {
       meter(label: "Casting", value: prof.casting, kind: .skill)
@@ -424,7 +424,7 @@ private func proficiencySummaryRowFromDetails(_ prof: ProficiencyDetailsDTO) -> 
   }
 }
 
-private func proficiencyQuestionMeterRow(_ prof: ProficiencyDetailsDTO) -> some View {
+func proficiencyQuestionMeterRow(_ prof: ProficiencyDetailsDTO) -> some View {
   VStack(alignment: .leading, spacing: 6) {
     // Casting
     if let question = prof.casting_context?.question {
@@ -459,7 +459,7 @@ private func proficiencyQuestionMeterRow(_ prof: ProficiencyDetailsDTO) -> some 
   }
 }
 
-private func learningStyleSentence(firstName: String, profs: [ProficiencyDetailsDTO]) -> String? {
+func learningStyleSentence(firstName: String, profs: [ProficiencyDetailsDTO]) -> String? {
   guard let style = profs.compactMap({ $0.learning_style }).first,
         let ctx = profs.compactMap({ $0.learning_style_context }).first else { return nil }
   // Derive a simple level adjective (low/medium/high) from the context, lowercased
@@ -468,7 +468,7 @@ private func learningStyleSentence(firstName: String, profs: [ProficiencyDetails
   return "Learning style: \(firstName) prefers \(adjective) instruction"
 }
 
-private struct PreferencesSection: View {
+struct PreferencesSection: View {
   let preferences: PreferencesDTO?
   let profs: [ProficiencyDetailsDTO]?
   @State private var show: Bool = false
@@ -528,7 +528,7 @@ private struct PreferencesSection: View {
 }
 
 // Added SelfAssessmentSection as per instructions
-private struct SelfAssessmentSection: View {
+struct SelfAssessmentSection: View {
   let profs: [ProficiencyDetailsDTO]?
   @State private var show: Bool = false
   var body: some View {
@@ -573,8 +573,8 @@ private struct SelfAssessmentSection: View {
   }
 }
 
-// Updated GearSection to include firstName and new UI logic
-private struct GearSection: View {
+// Updated AnglerProfileGearSection to include firstName and new UI logic
+struct AnglerProfileGearSection: View {
   let gearList: [GearDTO]?
   let firstName: String
   @State private var show: Bool = false
@@ -615,7 +615,7 @@ private struct GearSection: View {
 
 // MARK: - Reused helpers from original detail view
 
-private func sectionHeader(_ title: String) -> some View {
+func sectionHeader(_ title: String) -> some View {
   Text(title)
     .font(.headline)
     .foregroundColor(Color.blue)
@@ -624,7 +624,7 @@ private func sectionHeader(_ title: String) -> some View {
 }
 
 @ViewBuilder
-private func preferenceRow(label: String, value: Bool?, text: String?) -> some View {
+func preferenceRow(label: String, value: Bool?, text: String?) -> some View {
   if let val = value, val == true {
     VStack(alignment: .leading, spacing: 4) {
       HStack(alignment: .firstTextBaseline, spacing: 6) {
@@ -643,8 +643,8 @@ private func preferenceRow(label: String, value: Bool?, text: String?) -> some V
   }
 }
 
-private enum MeterKind { case skill, learning }
-private func meter(label: String, value: Int?, kind: MeterKind) -> some View {
+enum MeterKind { case skill, learning }
+func meter(label: String, value: Int?, kind: MeterKind) -> some View {
   VStack(spacing: 6) {
     ZStack {
       Circle()
@@ -681,7 +681,7 @@ private func meter(label: String, value: Int?, kind: MeterKind) -> some View {
 }
 
 // Updated chip function styling as per instructions
-private func chip(_ text: String) -> some View {
+func chip(_ text: String) -> some View {
   Text(text)
     .font(.caption)
     .foregroundColor(.white)
@@ -694,7 +694,7 @@ private func chip(_ text: String) -> some View {
 }
 
 // Updated gearRow signature and implementation
-private func gearRow(_ gear: GearDTO, firstName: String) -> some View {
+func gearRow(_ gear: GearDTO, firstName: String) -> some View {
   VStack(alignment: .leading, spacing: 4) {
     // Removed lodge_name entirely per instructions
 

@@ -426,19 +426,20 @@ final class CatchChatViewModel: ObservableObject {
 
       let cleaned = cleanedField(a.riverName ?? "")
 
-      if cleaned.isEmpty {
-        // No message from analyzer → fall back to generic text
-        parts.append("Location: Unable to Detect via GPS")
-      } else if cleaned.hasPrefix("No river detected for")
-                  || cleaned.hasPrefix("No rivers configured for") {
-        // Our special messages for scenarios 2 and 3:
-        // - "No river detected for <community>"
-        // - "No rivers configured for <community>"
-        // Use them verbatim so the user sees exactly that.
-        parts.append(cleaned)
-      } else {
-        // Normal case: show the river name
+      if !cleaned.isEmpty
+          && !cleaned.hasPrefix("No river detected for")
+          && !cleaned.hasPrefix("No rivers configured for") {
+        // Normal case: show the matched river / water body name
         parts.append("Location: \(cleaned)")
+      } else if let loc = currentLocation {
+        // No river match — show raw GPS coordinates
+        parts.append(String(
+          format: "Location: %.4f, %.4f",
+          loc.coordinate.latitude,
+          loc.coordinate.longitude
+        ))
+      } else {
+        parts.append("Location: No GPS coordinates available")
       }
 
     let (species, stage) = splitSpecies(a.species)

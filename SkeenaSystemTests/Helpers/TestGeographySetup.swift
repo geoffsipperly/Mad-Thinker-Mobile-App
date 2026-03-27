@@ -22,6 +22,7 @@ enum TestGeographySetup {
             logoAssetName: nil,
             tagline: nil,
             displayName: nil,
+            learnUrl: nil,
             featureFlags: [:],
             geography: geo
         )

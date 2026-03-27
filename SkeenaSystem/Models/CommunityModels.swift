@@ -37,6 +37,7 @@ struct CommunityInfo: Codable, Identifiable {
     let logoAssetName: String?
     let tagline: String?
     let displayName: String?
+    let learnUrl: String?
 
     // Geography (JSONB from communities table)
     let geography: CommunityGeography?
@@ -52,6 +53,7 @@ struct CommunityInfo: Codable, Identifiable {
         case logoAssetName = "logo_asset_name"
         case tagline
         case displayName = "display_name"
+        case learnUrl = "learn_url"
         case geography
         case communityTypes = "community_types"
     }
@@ -64,6 +66,7 @@ struct CommunityInfo: Codable, Identifiable {
             logoAssetName: logoAssetName,
             tagline: tagline,
             displayName: displayName,
+            learnUrl: learnUrl,
             featureFlags: communityTypes?.featureFlags ?? [:],
             geography: geography ?? .empty
         )

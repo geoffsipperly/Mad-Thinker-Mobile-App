@@ -106,6 +106,8 @@
 	<string>$(OBSERVATIONS_URL)</string>
 	<key>PROFICIENCY_URL</key>
 	<string>$(PROFICIENCY_URL)</string>
+	<key>DEFAULT_LEARN_HOST</key>
+	<string>$(DEFAULT_LEARN_HOST)</string>
 	<key>RIVER_CONDITIONS_URL</key>
 	<string>$(RIVER_CONDITIONS_URL)</string>
 	<key>STAFF_BIOS</key>

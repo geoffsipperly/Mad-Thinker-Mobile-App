@@ -73,7 +73,12 @@ private enum AnglerLandingAPI {
 
   static func downloadCatchURL() throws -> URL {
     logConfig()
-    return try makeURL(path: downloadCatchPath)
+    var queryItems: [URLQueryItem] = []
+    if let communityId = CommunityService.shared.activeCommunityId {
+      queryItems.append(URLQueryItem(name: "community_id", value: communityId))
+      AppLogging.log("[AnglerLanding] download scoped to community_id: \(communityId)", level: .debug, category: .catch)
+    }
+    return try makeURL(path: downloadCatchPath, queryItems: queryItems)
   }
 }
 
@@ -109,7 +114,6 @@ struct AnglerLandingView: View {
 
   // Navigation path (enables pop-to-root)
   @State private var navPath = NavigationPath()
-  @State private var pendingDestination: AnglerDestination?
 
   // UI state
   @State private var showTripPrep = false
@@ -124,27 +128,24 @@ struct AnglerLandingView: View {
 
   private func handleNavigateTo(_ destination: AnglerDestination?) {
     if let destination {
-      if navPath.isEmpty {
-        // Already at root — navigate directly
-        applyDestination(destination)
-      } else {
-        // Pop to root first, then navigate after the path settles
-        pendingDestination = destination
-        navPath = NavigationPath()
+      switch destination {
+      case .trip:
+        // Trip is a slide-over overlay — show it on top of the current view
+        // without popping the nav stack to avoid flashing the landing screen.
+        showTripPrep = true
+      default:
+        // Dismiss trip overlay if open
+        showTripPrep = false
+        // Replace the entire path with the new destination in one step
+        // to avoid flashing the landing screen.
+        var newPath = NavigationPath()
+        newPath.append(destination)
+        navPath = newPath
       }
     } else {
       // nil = go Home
-      pendingDestination = nil
+      showTripPrep = false
       navPath = NavigationPath()
-    }
-  }
-
-  private func applyDestination(_ dest: AnglerDestination) {
-    switch dest {
-    case .trip:
-      showTripPrep = true
-    case .conditions, .learn, .community, .profile:
-      navPath.append(dest)
     }
   }
 
@@ -183,6 +184,7 @@ struct AnglerLandingView: View {
         case .learn:
           LearnTacticsView()
             .environment(\.navigateTo, handleNavigateTo)
+            .environmentObject(communityService)
         case .community:
           CommunityForumView()
             .environment(\.navigateTo, handleNavigateTo)
@@ -220,16 +222,6 @@ struct AnglerLandingView: View {
       }
     }
     .environmentObject(auth)
-    .onChange(of: navPath.count) { newCount in
-      // When the path becomes empty and we have a pending destination, navigate there
-      if newCount == 0, let dest = pendingDestination {
-        pendingDestination = nil
-        // Dispatch async so the NavigationStack settles before we push again
-        DispatchQueue.main.async {
-          applyDestination(dest)
-        }
-      }
-    }
     .task {
       if reports.isEmpty { await fetchReports() }
       await fetchBuzz()

@@ -228,6 +228,15 @@ public final class AppEnvironment {
         return projectURL.appendingPathComponent("/functions/v1/manage-trip")
     }
 
+    /// Default learn URL fallback (from xcconfig / Info.plist).
+    /// xcconfig stores host+path only (no protocol) because // is treated as a comment.
+    public var defaultLearnURL: String {
+        if let host = stringFromInfo("DEFAULT_LEARN_HOST"), !host.isEmpty {
+            return "https://\(host)"
+        }
+        return "https://howtoflyfish.orvis.com/video-lessons"
+    }
+
     /// River conditions endpoint (functions/v1/river-conditions).
     public var riverConditionsURL: URL {
         if let v = overrideRiverConditionsURL { return v }
@@ -344,18 +353,18 @@ public final class AppEnvironment {
         return "Oregon Coast"
     }
 
-    /// Default map center latitude (e.g., 45.4562 for Tillamook, Oregon).
+    /// Default map center latitude (e.g., 47.6062 for Seattle, WA).
     public var defaultMapLatitude: Double {
         if let v = overrideDefaultMapLatitude { return v }
         if let s = stringFromInfo("DEFAULT_MAP_LATITUDE"), let v = Double(s) { return v }
-        return 45.4562
+        return 47.6062
     }
 
-    /// Default map center longitude (e.g., -123.8426 for Tillamook, Oregon).
+    /// Default map center longitude (e.g., -122.3321 for Seattle, WA).
     public var defaultMapLongitude: Double {
         if let v = overrideDefaultMapLongitude { return v }
         if let s = stringFromInfo("DEFAULT_MAP_LONGITUDE"), let v = Double(s) { return v }
-        return -123.8426
+        return -122.3321
     }
 
     // MARK: - Image configuration

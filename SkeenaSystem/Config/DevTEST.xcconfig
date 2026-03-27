@@ -46,6 +46,8 @@ PROFICIENCY_URL = /functions/v1/proficiency
 GEAR_URL = /functions/v1/gear
 CLASSIFIED_LICENSES_URL = /functions/v1/classified-licenses
 CATCH_STORY_URL = /functions/v1/catch-story
+// Host+path only (no protocol) — xcconfig treats // as a comment.
+DEFAULT_LEARN_HOST = howtoflyfish.orvis.com/video-lessons
 NOTES_UPLOAD_URL = /functions/v1/notes
 TRIP_ROSTER_URL = /functions/v1/trip-roster
 OBSERVATIONS_URL = /functions/v1/observations
@@ -84,8 +86,8 @@ LODGE_WATER_BODIES = Hood Canal,Puget Sound
 TACTICS_ENABLED = NO
 FORECAST_LOCATION = Western Washington
 FORECAST_NOTES =  Water height and temperature data sourced from USGS, WSC, and NOAA as available. Tide data provided by NOAAs CO-OPS Tides & Currents API
-DEFAULT_MAP_LATITUDE = 45.4562
-DEFAULT_MAP_LONGITUDE = -123.8426
+DEFAULT_MAP_LATITUDE = 47.6062
+DEFAULT_MAP_LONGITUDE = -122.3321
 
 // ──────────────────────────────────────────────
 // MARK: - Maps

@@ -61,6 +61,7 @@ public struct CatchReportPicMemo: Identifiable, Codable, Equatable {
   public var tripEndDate: Date?
   public var guideName: String?
   public var community: String?
+  public var communityId: String?
   public var lodge: String?
 
   // Initial AI analysis (for v2 initialAnalysis section)
@@ -112,6 +113,7 @@ public struct CatchReportPicMemo: Identifiable, Codable, Equatable {
     tripEndDate: Date? = nil,
     guideName: String? = nil,
     community: String? = nil,
+    communityId: String? = nil,
     lodge: String? = nil,
     initialRiverName: String? = nil,
     initialSpecies: String? = nil,
@@ -153,6 +155,7 @@ public struct CatchReportPicMemo: Identifiable, Codable, Equatable {
     self.tripEndDate = tripEndDate
     self.guideName = guideName
     self.community = community
+    self.communityId = communityId
     self.lodge = lodge
     self.initialRiverName = initialRiverName
     self.initialSpecies = initialSpecies

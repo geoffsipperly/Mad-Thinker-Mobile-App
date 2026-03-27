@@ -14,6 +14,11 @@ struct GuideRegistrationView: View {
   private let supabaseSignupURL = AppEnvironment.shared.projectURL.appendingPathComponent("/auth/v1/signup")
   private let supabaseAnonKey = AppEnvironment.shared.anonKey
 
+  // MARK: - Registration path
+
+  /// nil = choice screen, true = invite path, false = full registration
+  @State private var hasCommunityCode: Bool?
+
   // MARK: - Form fields
 
   @State private var userType: AuthService.UserType = .guide
@@ -99,6 +104,11 @@ struct GuideRegistrationView: View {
     !isBusy && hasAgreedToTerms && isPasswordValid && allFieldsFilled
   }
 
+  /// Validation for the invite-based registration path (no name/license required)
+  private var canRegisterInvite: Bool {
+    !isBusy && hasAgreedToTerms && isPasswordValid && isEmailValid && isCommunityCodeValid
+  }
+
     private var termsRole: TermsRole {
       userType == .guide ? .guide : .angler
     }
@@ -129,7 +139,15 @@ struct GuideRegistrationView: View {
     }
     .toolbar {
       ToolbarItem(placement: .navigationBarLeading) {
-        Button(action: { dismiss() }) {
+        Button(action: {
+          if hasCommunityCode != nil {
+            // Go back to the choice screen
+            hasCommunityCode = nil
+            resetAllFields()
+          } else {
+            dismiss()
+          }
+        }) {
           Image(systemName: "chevron.left")
             .font(.title3.weight(.semibold))
             .foregroundColor(.white)
@@ -179,6 +197,179 @@ struct GuideRegistrationView: View {
 
   @ViewBuilder
   private var mainContent: some View {
+    switch hasCommunityCode {
+    case nil:
+      communityCodeChoiceScreen
+    case true:
+      inviteRegistrationContent
+    case false:
+      fullRegistrationContent
+    }
+  }
+
+  // MARK: - Choice Screen
+
+  @ViewBuilder
+  private var communityCodeChoiceScreen: some View {
+    VStack(spacing: 24) {
+      Spacer()
+
+      Image("MadThinkerLogo")
+        .resizable()
+        .scaledToFit()
+        .frame(width: 120, height: 120)
+        .clipShape(RoundedRectangle(cornerRadius: 16))
+
+      Text("Do you have a community code?")
+        .font(.title3.weight(.semibold))
+        .foregroundColor(.white)
+        .multilineTextAlignment(.center)
+
+      Text("If your guide or community admin gave you a code, you can use it to quickly set up your account.")
+        .font(.subheadline)
+        .foregroundColor(.gray)
+        .multilineTextAlignment(.center)
+        .padding(.horizontal, 32)
+
+      VStack(spacing: 12) {
+        Button {
+          hasCommunityCode = true
+        } label: {
+          HStack {
+            Image(systemName: "ticket")
+            Text("Yes, I have a code")
+          }
+          .font(.headline)
+          .frame(maxWidth: .infinity)
+          .frame(height: 48)
+          .background(Color.blue, in: RoundedRectangle(cornerRadius: 12))
+          .foregroundColor(.white)
+        }
+        .accessibilityIdentifier("hasCodeButton")
+
+        Button {
+          hasCommunityCode = false
+        } label: {
+          HStack {
+            Image(systemName: "person.badge.plus")
+            Text("No, continue without one")
+          }
+          .font(.headline)
+          .frame(maxWidth: .infinity)
+          .frame(height: 48)
+          .background(Color.white.opacity(0.12), in: RoundedRectangle(cornerRadius: 12))
+          .foregroundColor(.white)
+        }
+        .accessibilityIdentifier("noCodeButton")
+      }
+      .padding(.horizontal, 24)
+
+      Spacer()
+      Spacer()
+    }
+  }
+
+  // MARK: - Invite Registration Path
+
+  @ViewBuilder
+  private var inviteRegistrationContent: some View {
+    VStack(spacing: 0) {
+      ScrollView {
+        Image("MadThinkerLogo")
+          .resizable()
+          .scaledToFit()
+          .frame(width: 120, height: 120)
+          .clipShape(RoundedRectangle(cornerRadius: 16))
+          .padding(.top, 12)
+          .padding(.bottom, 4)
+
+        VStack(spacing: 10) {
+          inviteRegistrationForm
+          errorView
+        }
+        .padding(.top, 8)
+      }
+
+      inviteRegisterButtonBar
+    }
+  }
+
+  @ViewBuilder
+  private var inviteRegistrationForm: some View {
+    VStack(spacing: 10) {
+      communityCodeField
+      emailField
+      passwordFields
+      inviteTermsBlock
+    }
+    .padding(.horizontal)
+  }
+
+  @ViewBuilder
+  private var inviteTermsBlock: some View {
+    VStack(alignment: .leading, spacing: 4) {
+      HStack(alignment: .top, spacing: 8) {
+        Button {
+          hasAgreedToTerms.toggle()
+        } label: {
+          Image(systemName: hasAgreedToTerms ? "checkmark.square.fill" : "square")
+            .font(.title3.weight(.semibold))
+            .foregroundColor(hasAgreedToTerms ? .blue : .white)
+        }
+        .buttonStyle(.plain)
+
+        VStack(alignment: .leading, spacing: 4) {
+          Text("By checking this box, I agree to the terms & conditions.")
+            .font(.footnote)
+            .foregroundColor(.white)
+            .fixedSize(horizontal: false, vertical: true)
+
+          Button {
+            showTermsSheet = true
+          } label: {
+            Text("View Terms & Conditions")
+              .font(.footnote.weight(.semibold))
+              .underline()
+              .foregroundColor(.blue)
+          }
+          .buttonStyle(.plain)
+        }
+      }
+    }
+    .padding(.top, 2)
+  }
+
+  @ViewBuilder
+  private var inviteRegisterButtonBar: some View {
+    VStack {
+      Button {
+        Task { await createInviteAccountTapped() }
+      } label: {
+        HStack {
+          if isBusy { ProgressView() }
+          Text(isBusy ? "Registering…" : "Register")
+            .font(.headline.bold())
+        }
+        .frame(maxWidth: .infinity)
+        .frame(height: 44)
+        .background(
+          RoundedRectangle(cornerRadius: 12)
+            .fill(canRegisterInvite ? Color.blue : Color.blue.opacity(0.4))
+        )
+        .foregroundColor(.white)
+        .padding(.horizontal)
+      }
+      .disabled(!canRegisterInvite)
+      .padding(.top, 4)
+      .padding(.bottom, 10)
+    }
+    .background(Color.black.ignoresSafeArea(edges: .bottom))
+  }
+
+  // MARK: - Full Registration Path (existing)
+
+  @ViewBuilder
+  private var fullRegistrationContent: some View {
     VStack(spacing: 0) {
       ScrollView {
         // Platform branding — MadThinker logo (not community-specific)
@@ -310,7 +501,7 @@ struct GuideRegistrationView: View {
   private var licenseNumberField: some View {
     fieldBackground(
       TextField("License Number", text: $anglerNumber)
-        .keyboardType(.numberPad)
+        .keyboardType(.asciiCapable)
         .textInputAutocapitalization(.never)
         .accessibilityIdentifier("anglerNumber_registration")
     )
@@ -540,6 +731,43 @@ struct GuideRegistrationView: View {
 
   // MARK: - Actions
 
+  /// Invite-based registration (Path A): only community code, email, password
+  private func createInviteAccountTapped() async {
+    guard hasAgreedToTerms else {
+      errorText = "Please agree to the Terms and Conditions before registering."
+      return
+    }
+    guard !email.isEmpty, !password.isEmpty else {
+      errorText = "Please enter email and password."
+      return
+    }
+    guard password == confirm else {
+      errorText = "Passwords don't match."
+      return
+    }
+    guard isCommunityCodeValid else {
+      errorText = "Please enter a valid 6-character community code."
+      return
+    }
+
+    let code = communityCode.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
+
+    errorText = nil
+    isBusy = true
+    do {
+      try await auth.signUpWithInvite(
+        email: email.trimmingCharacters(in: .whitespaces),
+        password: password,
+        communityCode: code
+      )
+      dismiss()
+    } catch {
+      errorText = error.localizedDescription
+    }
+    isBusy = false
+  }
+
+  /// Full registration (Path B): all fields required
   private func createAccountTapped() async {
     guard hasAgreedToTerms else {
       errorText = "Please agree to the Terms and Conditions before registering."
@@ -551,7 +779,7 @@ struct GuideRegistrationView: View {
       return
     }
     guard password == confirm else {
-      errorText = "Passwords don’t match."
+      errorText = "Passwords don't match."
       return
     }
 
@@ -590,7 +818,6 @@ struct GuideRegistrationView: View {
           licenseStateProvince: licenseStateProvince.isEmpty ? nil : licenseStateProvince,
           licenseExpirationDate: df.string(from: licenseExpirationDate)
         )
-        // ✅ For guides: just dismiss. AppRootView + LandingView handle onboarding + navigation.
         dismiss()
       } catch {
         errorText = error.localizedDescription
@@ -607,9 +834,9 @@ struct GuideRegistrationView: View {
       errorText = "Enter your first and last name, or scan your license."
       return
     }
-    let isAnglerValid = trimmedAngler.range(of: #"^\d{5,10}$"#, options: .regularExpression) != nil
+    let isAnglerValid = trimmedAngler.range(of: #"^[A-Za-z0-9\-]{3,20}$"#, options: .regularExpression) != nil
     guard isAnglerValid else {
-      errorText = "Angler number must be 5–10 digits."
+      errorText = "Angler number must be 3-20 characters (letters, digits, or hyphens)."
       return
     }
 
@@ -789,7 +1016,7 @@ struct GuideRegistrationView: View {
     return (parts.first ?? "", parts.dropFirst().joined(separator: " "))
   }
 
-  // MARK: - Reset on role toggle
+  // MARK: - Reset helpers
 
   private func resetFormForRoleChange() {
     firstName = ""
@@ -813,5 +1040,10 @@ struct GuideRegistrationView: View {
     showScanLibrary = false
 
     communityCode = ""
+  }
+
+  private func resetAllFields() {
+    resetFormForRoleChange()
+    userType = .guide
   }
 }

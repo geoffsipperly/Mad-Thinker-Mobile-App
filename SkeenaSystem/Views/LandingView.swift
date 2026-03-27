@@ -19,7 +19,6 @@ struct LandingView: View {
 
   // Path-based nav for guide toolbar navigation
   @State private var navPath = NavigationPath()
-  @State private var pendingDestination: GuideDestination?
 
   // One-time camera/location onboarding for guides
   @AppStorage("hasSeenGuideCameraLocationOnboarding")
@@ -64,12 +63,6 @@ struct LandingView: View {
           ObservationsListView()
             .environment(\.userRole, .guide)
             .environment(\.guideNavigateTo, handleGuideNavigateTo)
-        }
-      }
-      .onChange(of: navPath.count) { newCount in
-        if newCount == 0, let dest = pendingDestination {
-          pendingDestination = nil
-          DispatchQueue.main.async { applyGuideDestination(dest) }
         }
       }
       .toolbar {
@@ -232,22 +225,15 @@ struct LandingView: View {
   private func handleGuideNavigateTo(_ destination: GuideDestination?) {
     guard let destination else {
       // Home — pop to root
-      pendingDestination = nil
       navPath = NavigationPath()
       return
     }
 
-    if navPath.isEmpty {
-      applyGuideDestination(destination)
-    } else {
-      // Pop to root first, then navigate after stack settles
-      pendingDestination = destination
-      navPath = NavigationPath()
-    }
-  }
-
-  private func applyGuideDestination(_ dest: GuideDestination) {
-    navPath.append(dest)
+    // Replace the entire path with the new destination in one step
+    // to avoid flashing the landing screen.
+    var newPath = NavigationPath()
+    newPath.append(destination)
+    navPath = newPath
   }
 
   // MARK: - Feature Tile

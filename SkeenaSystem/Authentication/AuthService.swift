@@ -143,8 +143,8 @@ final class AuthService: ObservableObject {
       guard let ang = anglerNumber, !ang.isEmpty else {
         throw InputValidationError.invalidInput("Angler number is required for anglers.")
       }
-      let ok = ang.range(of: #"^\d{5,10}$"#, options: .regularExpression) != nil
-      guard ok else { throw InputValidationError.invalidInput("Angler number must be 5–10 digits.") }
+      let ok = ang.range(of: #"^[A-Za-z0-9\-]{3,20}$"#, options: .regularExpression) != nil
+      guard ok else { throw InputValidationError.invalidInput("Angler number must be 3–20 characters (letters, digits, or hyphens).") }
     }
 
     AppLogging.log("signUp -> email=\(email) type=\(userType.rawValue) name=\(firstName) \(lastName) communityCode=\(commCode) angler=\(anglerNumber ?? "<nil>")", level: .info, category: .auth)
@@ -192,6 +192,64 @@ final class AuthService: ObservableObject {
       let msg = String(data: data, encoding: .utf8) ?? "<no body>"
       AppLogging.log("[ERROR] signUp failed status=\(code) body=\(msg)", level: .error, category: .auth)
       throw AuthError.http(code: code, message: msg)
+    }
+  }
+
+  /// Invite-Based Sign Up (Path A):
+  /// Only email, password, and community_code are sent. The server populates the
+  /// user's profile from a pending invite matching the email + community.
+  func signUpWithInvite(
+    email: String,
+    password: String,
+    communityCode: String
+  ) async throws {
+    let commCode = communityCode.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
+    guard !commCode.isEmpty else { throw InputValidationError.invalidInput("Community code is required.") }
+    let codeValid = commCode.range(of: #"^[A-Z0-9]{6}$"#, options: .regularExpression) != nil
+    guard codeValid else { throw InputValidationError.invalidInput("Community code must be 6 alphanumeric characters.") }
+
+    AppLogging.log("signUpWithInvite -> email=\(email) communityCode=\(commCode)", level: .info, category: .auth)
+
+    let url = projectURL.appendingPathComponent("/auth/v1/signup")
+    var req = URLRequest(url: url)
+    req.httpMethod = "POST"
+    req.setValue("application/json", forHTTPHeaderField: "Content-Type")
+    req.setValue(anonPublicKey, forHTTPHeaderField: "apikey")
+
+    let body: [String: Any] = [
+      "email": email,
+      "password": password,
+      "data": ["community_code": commCode]
+    ]
+    req.httpBody = try JSONSerialization.data(withJSONObject: body, options: [])
+
+    let (data, resp) = try await session.data(for: req)
+    let code = (resp as? HTTPURLResponse)?.statusCode ?? -1
+
+    if (200 ..< 300).contains(code) {
+      AppLogging.log("signUpWithInvite success (status \(code)).", level: .info, category: .auth)
+
+      // Try immediate sign-in; signIn will populate currentUserType from JWT metadata
+      do {
+        try await signIn(email: email, password: password)
+      } catch {
+        AppLogging.log("signUpWithInvite completed but signIn failed (possibly email confirmation required). error=\(error)", level: .error, category: .auth)
+        throw error
+      }
+    } else {
+      // Parse user-friendly error message from response body
+      let rawBody = String(data: data, encoding: .utf8) ?? "<no body>"
+      AppLogging.log("[ERROR] signUpWithInvite failed status=\(code) body=\(rawBody)", level: .error, category: .auth)
+
+      // Extract the message field from the JSON response for display
+      var displayMessage = "Signup failed (\(code))."
+      if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
+        if let msg = json["msg"] as? String { displayMessage = msg }
+        else if let msg = json["message"] as? String { displayMessage = msg }
+        else if let msg = json["error_description"] as? String { displayMessage = msg }
+        else if let msg = json["error"] as? String { displayMessage = msg }
+      }
+      throw AuthError.http(code: code, message: displayMessage)
     }
   }
 
@@ -450,10 +508,17 @@ final class AuthService: ObservableObject {
           }
         }
 
+        // Log raw user_metadata for debugging
+        if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
+          let metaRaw = json["user_metadata"] ?? "<missing>"
+          AppLogging.log("[Profile][RAW] user_metadata = \(metaRaw)", level: .info, category: .auth)
+        }
+
         let profile = try JSONDecoder().decode(UserProfile.self, from: data)
 
+        AppLogging.log("[Profile][PARSED] first_name=\(profile.user_metadata?.first_name ?? "<nil>") last_name=\(profile.user_metadata?.last_name ?? "<nil>") user_type=\(profile.user_metadata?.user_type ?? "<nil>") angler_number=\(profile.user_metadata?.angler_number ?? "<nil>")", level: .info, category: .auth)
+
         await MainActor.run {
-          // Removed setting currentUserId here as per instructions
           if let md = profile.user_metadata {
             self.currentFirstName = md.first_name
             self.currentLastName = md.last_name
@@ -837,7 +902,6 @@ final class AuthService: ObservableObject {
         self.currentUserType = nil
         self.currentFirstName = nil
         self.currentAnglerNumber = nil
-        // Removed resetting currentUserId here as per instructions
       }
     }
 

@@ -104,7 +104,7 @@ final class CommunityService: ObservableObject {
         // Build URL: GET /rest/v1/user_communities with nested joins for branding, geography + feature flags
         var comps = URLComponents(url: projectURL.appendingPathComponent("/rest/v1/user_communities"), resolvingAgainstBaseURL: false)!
         comps.queryItems = [
-            URLQueryItem(name: "select", value: "id,community_id,role,communities(id,name,code,is_active,community_type_id,logo_url,logo_asset_name,tagline,display_name,geography,community_types(id,name,feature_flags))")
+            URLQueryItem(name: "select", value: "id,community_id,role,communities(id,name,code,is_active,community_type_id,logo_url,logo_asset_name,tagline,display_name,learn_url,geography,community_types(id,name,feature_flags))")
         ]
 
         var request = URLRequest(url: comps.url!)

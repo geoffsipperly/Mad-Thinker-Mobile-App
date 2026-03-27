@@ -92,7 +92,14 @@ enum AnglerAPI {
       throw AnglerLookupError.badRequest("Enter a name or number to look up.")
     }
 
-    var comps = URLComponents(url: endpoint, resolvingAgainstBaseURL: false)!
+    // Re-resolve endpoint at call time (not static init) in case AppEnvironment wasn't ready
+    let resolvedEndpoint = AppEnvironment.shared.anglerProfileURL
+    AppLogging.log("[AnglerLookup] endpoint: \(resolvedEndpoint.absoluteString)", level: .debug, category: .trip)
+
+    guard var comps = URLComponents(url: resolvedEndpoint, resolvingAgainstBaseURL: false) else {
+      AppLogging.log("[AnglerLookup] URLComponents failed for: \(resolvedEndpoint)", level: .debug, category: .trip)
+      throw AnglerLookupError.badRequest("Invalid lookup URL configuration.")
+    }
     var items: [URLQueryItem] = []
     if let n = anglerNumber?.trimmingCharacters(in: .whitespaces), !n.isEmpty {
       items.append(URLQueryItem(name: "anglerNumber", value: n))
@@ -102,13 +109,20 @@ enum AnglerAPI {
     }
     comps.queryItems = items
 
-    var req = URLRequest(url: comps.url!)
+    guard let finalURL = comps.url else {
+      AppLogging.log("[AnglerLookup] Failed to build final URL from components", level: .debug, category: .trip)
+      throw AnglerLookupError.badRequest("Failed to build lookup URL.")
+    }
+    AppLogging.log("[AnglerLookup] GET \(finalURL.absoluteString)", level: .debug, category: .trip)
+
+    var req = URLRequest(url: finalURL)
     req.httpMethod = "GET"
     req.setValue("Bearer \(jwt)", forHTTPHeaderField: "Authorization")
     req.setValue(anonKey, forHTTPHeaderField: "apikey")
 
     let (data, resp) = try await URLSession.shared.data(for: req)
     guard let http = resp as? HTTPURLResponse else { throw AnglerLookupError.unknown }
+    AppLogging.log("[AnglerLookup] HTTP \(http.statusCode), body: \(String(data: data, encoding: .utf8)?.prefix(300) ?? "<nil>")", level: .debug, category: .trip)
 
     switch http.statusCode {
     case 200:
@@ -536,7 +550,7 @@ struct TripFormView: View {
         Text("Required").font(.caption).foregroundColor(.red)
       }
 
-      TextField("ODFW ID", text: vm.licenseNumberBinding(for: index))
+      TextField("Angler Number", text: vm.licenseNumberBinding(for: index))
         .textInputAutocapitalization(.characters)
         .disableAutocorrection(true)
         .keyboardType(.asciiCapable)
@@ -544,7 +558,84 @@ struct TripFormView: View {
       if vm.clients[index].licenseNumber.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
         Text("Required").font(.caption).foregroundColor(.red)
       }
+
+      // Lookup button
+      Button {
+        vm.lookupAngler(for: index)
+      } label: {
+        HStack(spacing: 6) {
+          if vm.clients[index].isLookingUp {
+            ProgressView()
+              .scaleEffect(0.7)
+              .tint(.blue)
+          } else {
+            Image(systemName: "magnifyingglass")
+          }
+          Text("Look Up Angler")
+            .font(.subheadline.weight(.medium))
+        }
+        .foregroundColor(.blue)
+      }
+      .buttonStyle(.plain)
+      .disabled(vm.clients[index].isLookingUp ||
+        (vm.clients[index].name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty &&
+         vm.clients[index].licenseNumber.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty))
+
+      if let error = vm.clients[index].lookupError {
+        Text(error)
+          .font(.caption)
+          .foregroundColor(.orange)
+      }
+
+      // Show licences if populated via lookup
+      if !vm.clients[index].licences.isEmpty {
+        licencesList(for: index)
+      }
     }
+    .sheet(isPresented: $vm.showCandidatePicker) {
+      candidatePickerSheet
+    }
+  }
+
+  // MARK: - Candidate Picker (multiple lookup results)
+
+  private var candidatePickerSheet: some View {
+    NavigationStack {
+      ZStack {
+        Color.black.ignoresSafeArea()
+        List(vm.candidateProfiles) { profile in
+          Button {
+            vm.pickCandidate(profile)
+          } label: {
+            VStack(alignment: .leading, spacing: 4) {
+              Text(profile.anglerName)
+                .font(.headline)
+                .foregroundColor(.white)
+              Text("# \(profile.anglerNumber)")
+                .font(.caption)
+                .foregroundColor(.gray)
+              if !profile.classifiedWatersLicenses.isEmpty {
+                Text("\(profile.classifiedWatersLicenses.count) licence(s)")
+                  .font(.caption2)
+                  .foregroundColor(.blue)
+              }
+            }
+            .padding(.vertical, 4)
+          }
+          .listRowBackground(Color.black)
+        }
+        .listStyle(.plain)
+      }
+      .navigationTitle("Select Angler")
+      .navigationBarTitleDisplayMode(.inline)
+      .toolbar {
+        ToolbarItem(placement: .navigationBarTrailing) {
+          Button("Cancel") { vm.showCandidatePicker = false }
+            .foregroundColor(.white)
+        }
+      }
+    }
+    .preferredColorScheme(.dark)
   }
 
   @ViewBuilder

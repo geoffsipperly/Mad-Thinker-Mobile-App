@@ -179,7 +179,7 @@ struct ReportChatView: View {
     }
     .alert("Enter Your Angler License #", isPresented: $showSoloAnglerPrompt) {
       TextField("License number", text: $soloAnglerNumberInput)
-        .keyboardType(.numberPad)
+        .keyboardType(.asciiCapable)
       Button("Save") {
         Task { await saveSoloAnglerNumber() }
       }
@@ -770,6 +770,7 @@ struct ReportChatView: View {
     let tripIdString = trip?.tripId?.uuidString
 
     let communityName = isSoloMode ? CommunityService.shared.activeCommunityName : trip?.lodge?.community?.name
+    let communityId = CommunityService.shared.activeCommunityId
     let lodgeName = isSoloMode ? nil : trip?.lodge?.name
     let loggedInGuide = (AuthService.shared.currentFirstName ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
     let guideName = loggedInGuide.isEmpty ? snapshot.guideName : loggedInGuide
@@ -805,6 +806,7 @@ struct ReportChatView: View {
       tripEndDate: trip?.endDate,
       guideName: guideName,
       community: communityName,
+      communityId: communityId,
       lodge: lodgeName,
       initialRiverName: snapshot.initialRiverName,
       initialSpecies: snapshot.initialSpecies,

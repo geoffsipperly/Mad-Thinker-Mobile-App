@@ -1,6 +1,7 @@
 // Bend Fly Shop
 // AnglerCatchMapView.swift — Mapbox Outdoors map plotting angler catch locations
 
+import CoreLocation
 import MapboxMaps
 import SwiftUI
 
@@ -19,6 +20,7 @@ struct AnglerCatchAnnotation: Identifiable {
 struct AnglerCatchMapView: View {
   let reports: [CatchReportDTO]
 
+  @StateObject private var locationManager = LocationManager()
   @State private var selectedAnnotation: AnglerCatchAnnotation?
 
   private var annotations: [AnglerCatchAnnotation] {
@@ -39,14 +41,35 @@ struct AnglerCatchMapView: View {
     }
   }
 
+  /// Map center fallback chain:
+  /// 1. Most recent catch location
+  /// 2. Community geography (server-side default_map_latitude/longitude)
+  /// 3. User's current GPS location
+  /// 4. xcconfig DEFAULT_MAP_LATITUDE/LONGITUDE
   private var initialViewport: Viewport {
+    // 1. Most recent catch
     if let latest = annotations.sorted(by: { $0.createdAt > $1.createdAt }).first {
       return .camera(center: latest.coordinate, zoom: 10, bearing: 0, pitch: 0)
     }
-    // Fallback: default map center from community config
+
+    // 2. Community geography
     let config = CommunityService.shared.activeCommunityConfig
+    if let lat = config.resolvedDefaultMapLatitude,
+       let lon = config.resolvedDefaultMapLongitude {
+      return .camera(
+        center: CLLocationCoordinate2D(latitude: lat, longitude: lon),
+        zoom: 8, bearing: 0, pitch: 0
+      )
+    }
+
+    // 3. User's current location
+    if let userLocation = locationManager.lastLocation {
+      return .camera(center: userLocation.coordinate, zoom: 8, bearing: 0, pitch: 0)
+    }
+
+    // 4. xcconfig default
     return .camera(
-      center: CLLocationCoordinate2D(latitude: config.resolvedDefaultMapLatitude ?? 45.4562, longitude: config.resolvedDefaultMapLongitude ?? -123.8426),
+      center: CLLocationCoordinate2D(latitude: AppEnvironment.shared.defaultMapLatitude, longitude: AppEnvironment.shared.defaultMapLongitude),
       zoom: 8, bearing: 0, pitch: 0
     )
   }
@@ -71,6 +94,13 @@ struct AnglerCatchMapView: View {
       }
     }
     .navigationTitle("Catch Map")
+    .onAppear {
+      locationManager.request()
+      locationManager.start()
+    }
+    .onDisappear {
+      locationManager.stop()
+    }
   }
 
   // MARK: - Map content

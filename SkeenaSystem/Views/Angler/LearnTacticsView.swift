@@ -4,10 +4,15 @@ import SwiftUI
 import WebKit
 
 struct LearnTacticsView: View {
-  private let lessonsURL = URL(string: "https://howtoflyfish.orvis.com/video-lessons")!
+  @EnvironmentObject private var communityService: CommunityService
 
   @Environment(\.dismiss) private var dismiss
   @Environment(\.navigateTo) private var navigateTo
+
+  private var lessonsURL: URL {
+    URL(string: communityService.activeCommunityConfig.resolvedLearnUrl)
+      ?? URL(string: AppEnvironment.shared.defaultLearnURL)!
+  }
 
   var body: some View {
     DarkPageTemplate(bottomToolbar: {
@@ -40,6 +45,8 @@ struct LearnTacticsView: View {
 struct WebView: UIViewRepresentable {
   let url: URL
 
+  func makeCoordinator() -> Coordinator { Coordinator() }
+
   func makeUIView(context: Context) -> WKWebView {
     let prefs = WKWebpagePreferences()
     prefs.allowsContentJavaScript = true
@@ -54,13 +61,30 @@ struct WebView: UIViewRepresentable {
     webView.scrollView.backgroundColor = .black
     webView.scrollView.indicatorStyle = .white
     webView.isOpaque = false
+    webView.navigationDelegate = context.coordinator
     return webView
   }
 
   func updateUIView(_ webView: WKWebView, context: Context) {
     // Only load if not already at the target URL
     if webView.url == nil || webView.url?.absoluteString != url.absoluteString {
+      print("[WebView] Loading URL: \(url.absoluteString)")
       webView.load(URLRequest(url: url))
+    }
+  }
+
+  class Coordinator: NSObject, WKNavigationDelegate {
+    func webView(_ webView: WKWebView, didStartProvisionalNavigation navigation: WKNavigation!) {
+      print("[WebView] Started loading: \(webView.url?.absoluteString ?? "<nil>")")
+    }
+    func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
+      print("[WebView] Finished loading: \(webView.url?.absoluteString ?? "<nil>")")
+    }
+    func webView(_ webView: WKWebView, didFail navigation: WKNavigation!, withError error: Error) {
+      print("[WebView][ERROR] Navigation failed: \(error.localizedDescription)")
+    }
+    func webView(_ webView: WKWebView, didFailProvisionalNavigation navigation: WKNavigation!, withError error: Error) {
+      print("[WebView][ERROR] Provisional navigation failed: \(error.localizedDescription)")
     }
   }
 }

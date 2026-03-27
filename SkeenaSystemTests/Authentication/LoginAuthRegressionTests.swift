@@ -209,11 +209,100 @@ final class LoginAuthRegressionTests: XCTestCase {
   func testSignUp_anglerNumber_invalidFormat_throwsValidationError() async throws {
     let auth = AuthService.shared
     do {
-      try await auth.signUp(email: "angler@x", password: "p", firstName: "A", lastName: "B", userType: .angler, communityCode: "ABC123", anglerNumber: "12ab")
+      try await auth.signUp(email: "angler@x", password: "p", firstName: "A", lastName: "B", userType: .angler, communityCode: "ABC123", anglerNumber: "12-ab!@")
       XCTFail("Expected validation error for invalid angler number")
     } catch {
       XCTAssert(error is AuthService.InputValidationError)
     }
+  }
+
+  func testSignUp_anglerNumber_alphanumericWithHyphen_succeeds() async throws {
+    // NYSDE-281901 format should now be accepted
+    let signupResponse = Data("{}".utf8)
+    let tokenJSON: [String: Any] = [
+      "access_token":"hyphen-token",
+      "refresh_token":"hyphen-refresh",
+      "expires_in":3600,
+      "token_type":"bearer"
+    ]
+    let tokenData = try JSONSerialization.data(withJSONObject: tokenJSON, options: [])
+    let userJSON: [String: Any] = [
+      "id":"a-hyp",
+      "email":"hyp@example.com",
+      "user_metadata":["first_name":"H","user_type":"angler","angler_number":"NYSDE-281901"]
+    ]
+    let userData = try JSONSerialization.data(withJSONObject: userJSON, options: [])
+
+    MockURLProtocol.requestHandler = { req in
+      guard let url = req.url else { throw URLError(.badURL) }
+      if url.path.contains("/auth/v1/signup") {
+        return (HTTPURLResponse(url: url, statusCode: 201, httpVersion: nil, headerFields: nil)!, signupResponse)
+      } else if url.path.contains("/auth/v1/token") {
+        return (HTTPURLResponse(url: url, statusCode: 200, httpVersion: nil, headerFields: nil)!, tokenData)
+      } else if url.path.contains("/auth/v1/user") {
+        return (HTTPURLResponse(url: url, statusCode: 200, httpVersion: nil, headerFields: nil)!, userData)
+      }
+      return (HTTPURLResponse(url: url, statusCode: 404, httpVersion: nil, headerFields: nil)!, nil)
+    }
+
+    let auth = AuthService.shared
+    try await auth.signUp(email: "hyp@example.com", password: "pw", firstName: "H", lastName: "P", userType: .angler, communityCode: "ABC123", anglerNumber: "NYSDE-281901")
+    XCTAssertTrue(auth.isAuthenticated)
+    XCTAssertEqual(auth.currentAnglerNumber, "NYSDE-281901")
+  }
+
+  func testSignUp_anglerNumber_tooShort_throwsValidationError() async throws {
+    let auth = AuthService.shared
+    do {
+      try await auth.signUp(email: "angler@x", password: "p", firstName: "A", lastName: "B", userType: .angler, communityCode: "ABC123", anglerNumber: "AB")
+      XCTFail("Expected validation error for too-short angler number")
+    } catch {
+      XCTAssert(error is AuthService.InputValidationError)
+    }
+  }
+
+  func testSignUp_anglerNumber_tooLong_throwsValidationError() async throws {
+    let auth = AuthService.shared
+    do {
+      try await auth.signUp(email: "angler@x", password: "p", firstName: "A", lastName: "B", userType: .angler, communityCode: "ABC123", anglerNumber: "ABCDEFGHIJKLMNOPQRSTU")
+      XCTFail("Expected validation error for too-long angler number (21 chars)")
+    } catch {
+      XCTAssert(error is AuthService.InputValidationError)
+    }
+  }
+
+  func testSignUp_anglerNumber_pureDigits_succeeds() async throws {
+    // Traditional digit-only format should still work
+    let signupResponse = Data("{}".utf8)
+    let tokenJSON: [String: Any] = [
+      "access_token":"digits-token",
+      "refresh_token":"digits-refresh",
+      "expires_in":3600,
+      "token_type":"bearer"
+    ]
+    let tokenData = try JSONSerialization.data(withJSONObject: tokenJSON, options: [])
+    let userJSON: [String: Any] = [
+      "id":"a-dig",
+      "email":"dig@example.com",
+      "user_metadata":["first_name":"D","user_type":"angler","angler_number":"12345678"]
+    ]
+    let userData = try JSONSerialization.data(withJSONObject: userJSON, options: [])
+
+    MockURLProtocol.requestHandler = { req in
+      guard let url = req.url else { throw URLError(.badURL) }
+      if url.path.contains("/auth/v1/signup") {
+        return (HTTPURLResponse(url: url, statusCode: 201, httpVersion: nil, headerFields: nil)!, signupResponse)
+      } else if url.path.contains("/auth/v1/token") {
+        return (HTTPURLResponse(url: url, statusCode: 200, httpVersion: nil, headerFields: nil)!, tokenData)
+      } else if url.path.contains("/auth/v1/user") {
+        return (HTTPURLResponse(url: url, statusCode: 200, httpVersion: nil, headerFields: nil)!, userData)
+      }
+      return (HTTPURLResponse(url: url, statusCode: 404, httpVersion: nil, headerFields: nil)!, nil)
+    }
+
+    let auth = AuthService.shared
+    try await auth.signUp(email: "dig@example.com", password: "pw", firstName: "D", lastName: "G", userType: .angler, communityCode: "ABC123", anglerNumber: "12345678")
+    XCTAssertTrue(auth.isAuthenticated)
   }
 
   func testSignUp_duplicateEmail_returnsHttpError() async throws {

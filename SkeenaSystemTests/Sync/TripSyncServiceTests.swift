@@ -21,9 +21,32 @@ final class TripSyncServiceTests: XCTestCase {
     persistenceController = PersistenceController(inMemory: true)
     context = persistenceController.container.viewContext
 
+    // Seed a Community + Lodge so relationship tests have data to work with
+    seedTestCommunityAndLodge()
+
     // Register mock URL protocol
     URLProtocol.registerClass(MockURLProtocol.self)
     MockURLProtocol.requestHandler = nil
+  }
+
+  /// Seeds a Community and Lodge matching AppEnvironment.shared.communityName
+  /// into the in-memory context (mirrors PersistenceController.seedCommunityIfNeeded).
+  private func seedTestCommunityAndLodge() {
+    let communityName = AppEnvironment.shared.communityName
+    let displayName = AppEnvironment.shared.appDisplayName
+
+    let community = Community(context: context)
+    community.communityId = UUID()
+    community.name = communityName
+    community.createdAt = Date()
+
+    let lodge = Lodge(context: context)
+    lodge.lodgeId = UUID()
+    lodge.name = displayName
+    lodge.createdAt = Date()
+    lodge.community = community
+
+    try? context.save()
   }
 
   override func tearDown() {
@@ -198,12 +221,12 @@ final class TripSyncServiceTests: XCTestCase {
   // MARK: - Trip-Lodge Relationship Tests
 
   func testTripCanBeLinkToLodge() {
-    // Fetch the seeded Emerald Waters Angler lodge
+    let displayName = AppEnvironment.shared.appDisplayName
     let lodgeFetch: NSFetchRequest<Lodge> = Lodge.fetchRequest()
-    lodgeFetch.predicate = NSPredicate(format: "name == %@", "Emerald Waters Angler")
+    lodgeFetch.predicate = NSPredicate(format: "name == %@", displayName)
 
     guard let lodge = try? context.fetch(lodgeFetch).first else {
-      XCTFail("Emerald Waters Angler lodge should exist from seed data")
+      XCTFail("\(displayName) lodge should exist from seed data")
       return
     }
 
@@ -214,21 +237,23 @@ final class TripSyncServiceTests: XCTestCase {
     trip.lodge = lodge
 
     XCTAssertNoThrow(try context.save(), "Should be able to save trip with lodge")
-    XCTAssertEqual(trip.lodge?.name, "Emerald Waters Angler")
+    XCTAssertEqual(trip.lodge?.name, displayName)
   }
 
   func testLodgeHasCommunityAfterTripLink() {
+    let displayName = AppEnvironment.shared.appDisplayName
+    let communityName = AppEnvironment.shared.communityName
     let lodgeFetch: NSFetchRequest<Lodge> = Lodge.fetchRequest()
-    lodgeFetch.predicate = NSPredicate(format: "name == %@", "Emerald Waters Angler")
+    lodgeFetch.predicate = NSPredicate(format: "name == %@", displayName)
 
     guard let lodge = try? context.fetch(lodgeFetch).first else {
-      XCTFail("Emerald Waters Angler lodge should exist from seed data")
+      XCTFail("\(displayName) lodge should exist from seed data")
       return
     }
 
     // Lodge should already have community from seed
     XCTAssertNotNil(lodge.community, "Lodge should have community")
-    XCTAssertEqual(lodge.community?.name, "Emerald Waters Angler", "Lodge should belong to Emerald Waters Angler")
+    XCTAssertEqual(lodge.community?.name, communityName, "Lodge should belong to \(communityName)")
   }
 
   // MARK: - Upsert Logic Tests (Unit Tests)
@@ -376,19 +401,20 @@ final class TripSyncServiceTests: XCTestCase {
   // MARK: - Lodge Lookup Tests
 
   func testLodgeLookup_caseInsensitive() {
+    let displayName = AppEnvironment.shared.appDisplayName
     let fetch: NSFetchRequest<Lodge> = Lodge.fetchRequest()
-    fetch.predicate = NSPredicate(format: "name ==[c] %@", AppEnvironment.shared.communityName.lowercased())
+    fetch.predicate = NSPredicate(format: "name ==[c] %@", displayName.lowercased())
     fetch.fetchLimit = 1
 
     let lodge = try? context.fetch(fetch).first
 
     XCTAssertNotNil(lodge, "Should find lodge with case-insensitive search")
-    XCTAssertEqual(lodge?.name, AppEnvironment.shared.communityName)
+    XCTAssertEqual(lodge?.name, displayName)
   }
 
   func testLodgeLookup_allSeededLodges() {
     let expectedLodges = [
-      AppEnvironment.shared.communityName
+      AppEnvironment.shared.appDisplayName
     ]
 
     for lodgeName in expectedLodges {

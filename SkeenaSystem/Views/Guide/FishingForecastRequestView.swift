@@ -98,7 +98,7 @@ struct FishingForecastRequestView: View {
           // Water body rows — rivers + water bodies, stacked vertically
           let rivers = CommunityService.shared.activeCommunityConfig.resolvedLodgeRivers
           let waterBodies = CommunityService.shared.activeCommunityConfig.resolvedLodgeWaterBodies
-          let allWaterSources = rivers + waterBodies
+          let allWaterSources = (rivers + waterBodies).sorted()
 
           if allWaterSources.isEmpty {
             VStack(spacing: 12) {

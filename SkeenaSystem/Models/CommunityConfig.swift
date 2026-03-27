@@ -18,6 +18,7 @@ struct CommunityConfig: Codable, Equatable {
     let logoAssetName: String?
     let tagline: String?
     let displayName: String?
+    let learnUrl: String?
 
     // MARK: - Feature flags (from community_types.feature_flags JSONB)
 
@@ -50,6 +51,13 @@ struct CommunityConfig: Codable, Equatable {
     var resolvedDisplayName: String {
         if let d = displayName, !d.isEmpty { return d }
         return AppEnvironment.shared.appDisplayName
+    }
+
+    // MARK: - Resolved learn URL (falls back to xcconfig DEFAULT_LEARN_URL)
+
+    var resolvedLearnUrl: String {
+        if let u = learnUrl, !u.isEmpty { return u }
+        return AppEnvironment.shared.defaultLearnURL
     }
 
     // MARK: - Resolved geography (no xcconfig fallback — empty means not configured)
@@ -97,6 +105,7 @@ struct CommunityConfig: Codable, Equatable {
         logoAssetName: nil,
         tagline: nil,
         displayName: nil,
+        learnUrl: nil,
         featureFlags: [:],
         geography: .empty
     )
