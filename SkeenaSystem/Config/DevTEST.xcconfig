@@ -27,6 +27,7 @@ E_SELF_ASSESSMENT = true
 E_CATCH_CAROUSEL = true
 E_THE_BUZZ = true
 E_CATCH_MAP = true
+E_MANAGE_OPS = false
 
 // ──────────────────────────────────────────────
 // MARK: - API Endpoints (Edge Functions)
@@ -51,6 +52,7 @@ DEFAULT_LEARN_HOST = howtoflyfish.orvis.com/video-lessons
 NOTES_UPLOAD_URL = /functions/v1/notes
 TRIP_ROSTER_URL = /functions/v1/trip-roster
 OBSERVATIONS_URL = /functions/v1/observations
+OPS_TICKETS_URL = /functions/v1/ops-tickets
 
 // DevTEST-only endpoints
 STAE_BIOS = /functions/v1/staff-bios

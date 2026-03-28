@@ -49,6 +49,7 @@ public final class AppEnvironment {
     public var overrideProficiencyURL: URL?
     public var overrideGearURL: URL?
     public var overrideObservationsURL: URL?
+    public var overrideOpsTicketsURL: URL?
     public var overrideForecastLocation: String?
     public var overrideDefaultMapLatitude: Double?
     public var overrideDefaultMapLongitude: Double?
@@ -332,6 +333,17 @@ public final class AppEnvironment {
             return projectURL.appendingPathComponent(path)
         }
         return projectURL.appendingPathComponent("functions/v1/observations")
+    }
+
+    /// Ops tickets endpoint (functions/v1/ops-tickets).
+    public var opsTicketsURL: URL {
+        if let v = overrideOpsTicketsURL { return v }
+        if let raw = stringFromInfo("OPS_TICKETS_URL")?.trimmingCharacters(in: .whitespacesAndNewlines), !raw.isEmpty {
+            if let url = URL(string: raw), url.scheme != nil { return url }
+            let path = raw.hasPrefix("/") ? String(raw.dropFirst()) : raw
+            return projectURL.appendingPathComponent(path)
+        }
+        return projectURL.appendingPathComponent("functions/v1/ops-tickets")
     }
 
     // MARK: - Location configuration

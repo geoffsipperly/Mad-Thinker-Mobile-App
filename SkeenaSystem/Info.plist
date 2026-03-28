@@ -46,6 +46,8 @@
 	<string>$(E_GEAR_CHECKLIST)</string>
 	<key>E_MANAGE_LICENSES</key>
 	<string>$(E_MANAGE_LICENSES)</string>
+	<key>E_MANAGE_OPS</key>
+	<string>$(E_MANAGE_OPS)</string>
 	<key>E_MEET_STAFF</key>
 	<string>$(E_MEET_STAFF)</string>
 	<key>E_SELF_ASSESSMENT</key>
@@ -104,6 +106,8 @@
 	<string>$(NOTES_UPLOAD_URL)</string>
 	<key>OBSERVATIONS_URL</key>
 	<string>$(OBSERVATIONS_URL)</string>
+	<key>OPS_TICKETS_URL</key>
+	<string>$(OPS_TICKETS_URL)</string>
 	<key>PROFICIENCY_URL</key>
 	<string>$(PROFICIENCY_URL)</string>
 	<key>DEFAULT_LEARN_HOST</key>

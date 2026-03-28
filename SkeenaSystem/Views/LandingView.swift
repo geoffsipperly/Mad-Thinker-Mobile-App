@@ -9,6 +9,10 @@ import SwiftUI
 struct LandingView: View {
   @Environment(\.managedObjectContext) private var context
   @StateObject private var auth = AuthService.shared
+  @ObservedObject private var communityService = CommunityService.shared
+
+  // Reactive entitlement — driven by backend config with xcconfig fallback
+  private var E_MANAGE_OPS: Bool { communityService.activeCommunityConfig.flag("E_MANAGE_OPS") }
   @State private var goToAssistant = false
   @State private var showRecordObservation = false
 
@@ -179,6 +183,23 @@ struct LandingView: View {
         }
         .accessibilityIdentifier("recordObservationTile")
 
+        // Manage tickets tile (entitlement-gated)
+        if E_MANAGE_OPS {
+          Spacer().frame(height: 12)
+
+          NavigationLink {
+            OpsTicketsListView()
+          } label: {
+            featureTile(
+              icon: "ticket",
+              title: "Manage tickets",
+              subtitle: nil,
+              isPrimary: false
+            )
+          }
+          .accessibilityIdentifier("manageTicketsTile")
+        }
+
       }
       .padding(.horizontal, 16)
 
@@ -197,7 +218,7 @@ struct LandingView: View {
       guideName: auth.currentFirstName ?? "Guide",
       lat: locationManager.lastLocation?.coordinate.latitude,
       lon: locationManager.lastLocation?.coordinate.longitude,
-      anglerNumber: nil
+      memberId: nil
     )
 
     FarmedReportStore.shared.add(report)
