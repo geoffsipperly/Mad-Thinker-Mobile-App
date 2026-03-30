@@ -29,7 +29,7 @@ struct FarmedReportsListView: View {
         ZStack(alignment: .bottom) {
           if store.reports.isEmpty {
             VStack {
-              Text("No farmed reports yet.")
+              Text("No no-catch reports yet.")
                 .multilineTextAlignment(.center)
                 .foregroundColor(.secondary)
                 .padding()
@@ -48,6 +48,7 @@ struct FarmedReportsListView: View {
             .listStyle(.plain)
             .background(Color.black)
             .modifier(FarmedHideListBackground())
+            .padding(.top, 12)
           }
 
           // Upload progress overlay
@@ -56,7 +57,7 @@ struct FarmedReportsListView: View {
               ProgressView(value: uploadProgress, total: 1.0)
                 .progressViewStyle(LinearProgressViewStyle())
                 .padding(.horizontal)
-              Text("Uploading farmed reports… \(Int(uploadProgress * 100))%")
+              Text("Uploading no-catch reports… \(Int(uploadProgress * 100))%")
                 .font(.caption)
                 .foregroundColor(.secondary)
             }
@@ -67,7 +68,7 @@ struct FarmedReportsListView: View {
         .frame(maxHeight: .infinity)
       }
     }
-    .navigationTitle("No-Catch Reports")
+    .navigationTitle("No Catch Reports")
     .navigationBarTitleDisplayMode(.inline)
     .navigationBarBackButtonHidden(true)
     .toolbar {
@@ -83,12 +84,7 @@ struct FarmedReportsListView: View {
       }
       ToolbarItem(placement: .navigationBarTrailing) {
         Button(action: startUpload) {
-          VStack(spacing: 2) {
-            Image(systemName: "arrow.up.circle")
-              .font(.title3)
-            Text("Upload")
-              .font(.caption2)
-          }
+          Label("Upload", systemImage: "arrow.up.circle")
         }
         .disabled(isUploading || pendingReports.isEmpty)
       }
@@ -132,7 +128,7 @@ struct FarmedReportsListView: View {
       guard let jwt = AuthStore.shared.jwt, !jwt.isEmpty else {
         await MainActor.run {
           self.isUploading = false
-          self.uploadErrorMessage = "You must be signed in to upload farmed reports."
+          self.uploadErrorMessage = "You must be signed in to upload no-catch reports."
           self.showErrorAlert = true
         }
         return
@@ -264,23 +260,9 @@ private struct NoCatchEventTypeChip: View {
       .clipShape(Capsule())
   }
 
-  private var background: Color {
-    switch eventType {
-    case .active:    return Color.orange.opacity(0.12)
-    case .farmed:    return Color.purple.opacity(0.12)
-    case .promising: return Color.yellow.opacity(0.12)
-    case .passed:    return Color.gray.opacity(0.12)
-    }
-  }
+  private var background: Color { Color.gray.opacity(0.15) }
 
-  private var foreground: Color {
-    switch eventType {
-    case .active:    return .orange
-    case .farmed:    return .purple
-    case .promising: return .yellow
-    case .passed:    return .gray
-    }
-  }
+  private var foreground: Color { .gray }
 }
 
 // MARK: - List background helper

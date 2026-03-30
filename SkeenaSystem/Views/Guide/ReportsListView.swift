@@ -404,7 +404,7 @@ struct ReportsListViewPicMemo: View {
               VStack(spacing: 2) {
                 Image(systemName: "leaf.arrow.circlepath")
                   .font(.title3)
-                Text("Farmed")
+                Text("No Catch")
                   .font(.caption2)
               }
               .frame(maxWidth: .infinity)

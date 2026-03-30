@@ -41,6 +41,7 @@ final class UploadFarmedReports {
     let latitude: Double
     let longitude: Double
     let eventType: String
+    let communityId: String?
     let memberId: String?
     let guideName: String?
     let river: String
@@ -171,6 +172,8 @@ final class UploadFarmedReports {
     let appVersion = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "0.0.0"
     let device = "\(UIDevice.current.model) \(UIDevice.current.systemVersion)"
 
+    let communityId = CommunityService.shared.activeCommunityId
+
     let dtos: [NoCatchReportDTO] = withGPS.map { report in
       let river = Self.resolveRiverName(lat: report.lat!, lon: report.lon!)
       return NoCatchReportDTO(
@@ -179,6 +182,7 @@ final class UploadFarmedReports {
         latitude: report.lat!,
         longitude: report.lon!,
         eventType: report.eventType.rawValue,
+        communityId: communityId,
         memberId: report.memberId,
         guideName: report.guideName,
         river: river,

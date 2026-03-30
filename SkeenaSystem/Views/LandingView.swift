@@ -18,7 +18,7 @@ struct LandingView: View {
 
   // Farmed button state
   @StateObject private var locationManager = LocationManager()
-  @State private var showFarmedSaved = false
+  @State private var savedEventType: NoCatchEventType? = nil
   @State private var showFarmedList = false
 
   // Path-based nav for guide toolbar navigation
@@ -132,31 +132,34 @@ struct LandingView: View {
 
       // FEATURE TILES: evenly distributed
       VStack(spacing: 0) {
-        // No-catch event tiles
-        HStack(spacing: 8) {
+        // Landed + No-catch event tiles
+        HStack(spacing: 6) {
+          Button { goToAssistant = true } label: {
+            VStack(spacing: 6) {
+              Image(systemName: "fish.fill")
+                .font(.title3)
+                .foregroundColor(.blue)
+              Text("Landed")
+                .font(.caption.weight(.semibold))
+                .foregroundColor(.blue)
+                .lineLimit(1)
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 12)
+            .background(Color.white.opacity(0.08), in: RoundedRectangle(cornerRadius: 12))
+          }
+          .accessibilityIdentifier("landedTile")
+
           ForEach(NoCatchEventType.allCases, id: \.self) { eventType in
             Button { logNoCatchReport(eventType: eventType) } label: {
               noCatchTile(eventType: eventType)
             }
-            .disabled(showFarmedSaved)
+            .disabled(savedEventType != nil)
             .accessibilityIdentifier("\(eventType.rawValue)Tile")
           }
         }
 
-        Spacer().frame(height: 12)
-
-        // Record a Catch tile (assistant)
-        Button { goToAssistant = true } label: {
-          featureTile(
-            icon: "ellipsis.bubble",
-            title: "Record a catch",
-            subtitle: nil,
-            isPrimary: false
-          )
-        }
-        .accessibilityIdentifier("myAssistantTile")
-
-        Spacer().frame(height: 12)
+        Spacer().frame(height: 24)
 
         // Get Current Conditions tile
         Button { handleGuideNavigateTo(.conditions) } label: {
@@ -223,10 +226,10 @@ struct LandingView: View {
 
     FarmedReportStore.shared.add(report)
 
-    // Brief visual confirmation, then reset
-    showFarmedSaved = true
+    // Brief visual confirmation on the tapped tile only
+    savedEventType = eventType
     DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
-      showFarmedSaved = false
+      savedEventType = nil
     }
   }
 
@@ -243,7 +246,7 @@ struct LandingView: View {
       Image(systemName: icon)
         .font(.title3)
         .foregroundColor(.white)
-      Text(showFarmedSaved ? "Saved!" : eventType.displayName)
+      Text(savedEventType == eventType ? "Saved!" : eventType.displayName)
         .font(.caption.weight(.semibold))
         .foregroundColor(.white)
         .lineLimit(1)
