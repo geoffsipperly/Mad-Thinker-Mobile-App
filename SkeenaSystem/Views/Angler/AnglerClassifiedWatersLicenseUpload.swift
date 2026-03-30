@@ -844,7 +844,7 @@ struct BuyLicensesPage: View {
 
 struct CWLicenseDTO: Codable, Identifiable, Hashable {
   let id: String
-  let angler_id: String
+  let member_id: String
   let license_number: String
   let river_name: String
   let start_date: String // "yyyy-MM-dd" UTC

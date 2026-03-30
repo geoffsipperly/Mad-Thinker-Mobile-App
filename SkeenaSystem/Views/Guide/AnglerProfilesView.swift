@@ -14,16 +14,16 @@ struct RosterTripDTO: Decodable, Identifiable {
   var id: String { trip_id }
 }
 struct RosterAnglerDTO: Decodable, Identifiable, Hashable, Equatable {
-  let angler_id: String
+  let member_id: String
   let last_name: String
   let first_name: String
-  let member_id: String
-  var id: String { angler_id }
+  let member_number: String
+  var id: String { member_id }
 }
 
 extension RosterAnglerDTO {
-  static func == (lhs: RosterAnglerDTO, rhs: RosterAnglerDTO) -> Bool { lhs.angler_id == rhs.angler_id }
-  func hash(into hasher: inout Hasher) { hasher.combine(angler_id) }
+  static func == (lhs: RosterAnglerDTO, rhs: RosterAnglerDTO) -> Bool { lhs.member_id == rhs.member_id }
+  func hash(into hasher: inout Hasher) { hasher.combine(member_id) }
 }
 
 struct PreferencesDTO: Decodable {
@@ -61,8 +61,8 @@ struct GearDTO: Decodable {
 
 // New detailed DTOs for Angler Details API
 struct AnglerDetailsResponse: Decodable {
-  let angler_id: String
   let member_id: String
+  let member_number: String
   let first_name: String
   let last_name: String
   let preferences: PreferencesDTO?
@@ -264,7 +264,7 @@ struct AnglerProfilesView: View {
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else {
                 List(vm.anglers, id: \.id) { a in
-                    NavigationLink(destination: AnglerDetailsSheetView(anglerID: a.angler_id, displayName: "\(a.first_name) \(a.last_name)", memberId: a.member_id, community: vm.community, lodge: vm.lodge)) {
+                    NavigationLink(destination: AnglerDetailsSheetView(anglerID: a.member_id, displayName: "\(a.first_name) \(a.last_name)", memberNumber: a.member_number, community: vm.community, lodge: vm.lodge)) {
                         Text("\(a.last_name), \(a.first_name)")
                             .foregroundColor(.white)
                     }
@@ -330,16 +330,16 @@ final class AnglerDetailsVM: ObservableObject {
 struct AnglerDetailsSheetView: View {
   let anglerID: String
   let displayName: String
-  let memberId: String
+  let memberNumber: String
   let community: String
   let lodge: String
 
   @StateObject private var vm: AnglerDetailsVM
 
-  init(anglerID: String, displayName: String, memberId: String, community: String, lodge: String) {
+  init(anglerID: String, displayName: String, memberNumber: String, community: String, lodge: String) {
     self.anglerID = anglerID
     self.displayName = displayName
-    self.memberId = memberId
+    self.memberNumber = memberNumber
     self.community = community
     self.lodge = lodge
     _vm = StateObject(wrappedValue: AnglerDetailsVM(anglerID: anglerID, community: community, lodge: lodge))

@@ -27,10 +27,12 @@ struct TripDetailView: View {
     let iso = ISO8601DateFormatter()
     iso.formatOptions = [.withInternetDateTime]
     guard let sStr = startStr, let s = iso.date(from: sStr) else { return .notStarted }
-    if s > now { return .notStarted }
     let startOfToday = Calendar.current.startOfDay(for: now)
+    // Compare start date at day granularity so a trip starting "today" is always in-progress
+    let startDay = Calendar.current.startOfDay(for: s)
+    if startDay > startOfToday { return .notStarted }
     let end = endStr.flatMap { iso.date(from: $0) }
-    let inProgress = (s <= now) && (end == nil || (end ?? now) >= startOfToday)
+    let inProgress = (startDay <= startOfToday) && (end == nil || (end ?? now) >= startOfToday)
     return inProgress ? .inProgress : .completed
   }
 
@@ -97,7 +99,7 @@ struct TripDetailView: View {
                 AnglerDetailsSheetView(
                   anglerID: angler.id,
                   displayName: displayName.isEmpty ? "(Unnamed)" : displayName,
-                  memberId: angler.memberId,
+                  memberNumber: angler.memberId,
                   community: community,
                   lodge: lodge
                 )
@@ -155,7 +157,7 @@ struct TripDetailView: View {
         .foregroundColor(.white)
 
       if !angler.memberId.isEmpty {
-        Text("Mad Thinker ID: \(angler.memberId)")
+        Text("Member Number: \(angler.memberId)")
           .font(.caption)
           .foregroundColor(.secondary)
       }

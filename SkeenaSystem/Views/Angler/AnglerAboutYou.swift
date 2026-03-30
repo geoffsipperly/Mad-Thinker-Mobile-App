@@ -375,7 +375,7 @@ struct AnglerAboutYou: View {
 
     do {
       struct ProficiencyBody: Encodable {
-        let angler_id: String
+        let member_id: String
         let species_id: String
         let tactic_id: String
         let lodge_id: String
@@ -398,7 +398,7 @@ struct AnglerAboutYou: View {
       AppLogging.log("AnglerAboutYou POST — Headers: Authorization=Bearer <redacted>, apikey prefix=\(auth.publicAnonKey.prefix(8))…", level: .debug, category: .angler)
 
       let body = ProficiencyBody(
-        angler_id: anglerId,
+        member_id: anglerId,
         species_id: speciesId,
         tactic_id: tacticId,
         lodge_id: lodgeId,

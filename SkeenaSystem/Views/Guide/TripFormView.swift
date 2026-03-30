@@ -550,7 +550,7 @@ struct TripFormView: View {
         Text("Required").font(.caption).foregroundColor(.red)
       }
 
-      TextField("Mad Thinker ID", text: vm.licenseNumberBinding(for: index))
+      TextField("Member Number", text: vm.licenseNumberBinding(for: index))
         .textInputAutocapitalization(.characters)
         .disableAutocorrection(true)
         .keyboardType(.asciiCapable)

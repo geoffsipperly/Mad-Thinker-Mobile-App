@@ -178,7 +178,7 @@ struct ReportChatView: View {
       .padding(.horizontal)
     }
     .alert("Enter Your Angler License #", isPresented: $showSoloAnglerPrompt) {
-      TextField("Mad Thinker ID", text: $soloMemberIdInput)
+      TextField("Member Number", text: $soloMemberIdInput)
         .keyboardType(.asciiCapable)
       Button("Save") {
         Task { await saveSoloMemberId() }
@@ -550,8 +550,10 @@ struct ReportChatView: View {
   private func loadTrips() {
     let now = Date()
     let startOfToday = Calendar.current.startOfDay(for: now)
+    // Compare at end-of-day so trips starting "today" are included regardless of stored time
+    let endOfToday = Calendar.current.date(byAdding: .day, value: 1, to: startOfToday)! as NSDate
 
-    let startedPredicate = NSPredicate(format: "startDate <= %@", now as NSDate)
+    let startedPredicate = NSPredicate(format: "startDate < %@", endOfToday)
     let openOrRecentlyEndedPredicate = NSPredicate(
       format: "endDate == nil OR endDate >= %@", startOfToday as NSDate
     )

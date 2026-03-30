@@ -34,7 +34,7 @@ struct PicMemoCalloutView: View {
         .font(.caption)
         .foregroundColor(.primary)
 
-      Text("Mad Thinker ID: \(memberId)")
+      Text("Member Number: \(memberId)")
         .font(.caption)
         .foregroundColor(.primary)
 

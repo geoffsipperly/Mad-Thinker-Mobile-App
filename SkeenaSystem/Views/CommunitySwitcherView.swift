@@ -16,29 +16,27 @@ struct CommunityToolbarButton: View {
     @State private var showSwitcher = false
 
     var body: some View {
-        if communityService.hasMultipleCommunities {
-            Button {
-                showSwitcher = true
-            } label: {
-                HStack(spacing: 6) {
-                    Image(systemName: "person.3")
-                        .font(.subheadline)
-                    Text(communityService.activeCommunityName)
-                        .font(.caption.weight(.semibold))
-                        .lineLimit(1)
-                    Image(systemName: "chevron.down")
-                        .font(.caption2)
-                }
-                .foregroundColor(.white)
-                .padding(.horizontal, 10)
-                .padding(.vertical, 6)
-                .background(Color.black, in: Capsule())
+        Button {
+            showSwitcher = true
+        } label: {
+            HStack(spacing: 6) {
+                Image(systemName: "person.3")
+                    .font(.subheadline)
+                Text(communityService.activeCommunityName)
+                    .font(.caption.weight(.semibold))
+                    .lineLimit(1)
+                Image(systemName: "chevron.down")
+                    .font(.caption2)
             }
-            .buttonStyle(.plain)
-            .sheet(isPresented: $showSwitcher) {
-                CommunitySwitcherSheet()
-                    .preferredColorScheme(.dark)
-            }
+            .foregroundColor(.white)
+            .padding(.horizontal, 10)
+            .padding(.vertical, 6)
+            .background(Color.black, in: Capsule())
+        }
+        .buttonStyle(.plain)
+        .sheet(isPresented: $showSwitcher) {
+            CommunitySwitcherSheet()
+                .preferredColorScheme(.dark)
         }
     }
 }
@@ -91,30 +89,32 @@ struct CommunitySwitcherSheet: View {
                             .buttonStyle(.plain)
                         }
 
-                        // Update default community
-                        Button {
-                            communityService.clearActiveCommunity()
-                            dismiss()
-                        } label: {
-                            HStack {
-                                Image(systemName: "star.circle")
-                                Text("Update Default Community")
-                                    .font(.subheadline.weight(.semibold))
+                        // Update default community (only relevant with multiple communities)
+                        if communityService.hasMultipleCommunities {
+                            Button {
+                                communityService.clearActiveCommunity()
+                                dismiss()
+                            } label: {
+                                HStack {
+                                    Image(systemName: "star.circle")
+                                    Text("Update Default Community")
+                                        .font(.subheadline.weight(.semibold))
+                                }
+                                .foregroundColor(.blue)
+                                .frame(maxWidth: .infinity)
+                                .padding()
+                                .background(Color.white.opacity(0.05), in: RoundedRectangle(cornerRadius: 12))
                             }
-                            .foregroundColor(.blue)
-                            .frame(maxWidth: .infinity)
-                            .padding()
-                            .background(Color.white.opacity(0.05), in: RoundedRectangle(cornerRadius: 12))
+                            .buttonStyle(.plain)
                         }
-                        .buttonStyle(.plain)
 
-                        // Join another community
+                        // Join a community
                         Button {
                             showJoinCommunity = true
                         } label: {
                             HStack {
                                 Image(systemName: "plus.circle")
-                                Text("Join Another Community")
+                                Text(communityService.hasMultipleCommunities ? "Join Another Community" : "Join a Community")
                                     .font(.subheadline.weight(.semibold))
                             }
                             .foregroundColor(.blue)

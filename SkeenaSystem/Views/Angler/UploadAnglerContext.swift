@@ -28,7 +28,7 @@ enum UploadAnglerContext {
 
     // Ensure scores are within 1..100 as required by API
     let body: [String: Any] = [
-      "angler_id": anglerId,
+      "member_id": anglerId,
       "species": species,
       "tactic_name": tacticName,
       "casting": max(1, min(100, casting)),

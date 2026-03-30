@@ -525,7 +525,7 @@ struct GearChecklist: View {
     }
 
     struct GearBody: Encodable {
-      let angler_id: String
+      let member_id: String
       let lodge_name: String?
       let waders: Bool?
       let boots: Bool?
@@ -551,7 +551,7 @@ struct GearChecklist: View {
     req.setValue(AppEnvironment.shared.anonKey, forHTTPHeaderField: "apikey")
 
     let body = GearBody(
-      angler_id: anglerId,
+      member_id: anglerId,
       lodge_name: AppEnvironment.shared.appDisplayName,
       waders: hasWaders,
       boots: hasBoots,

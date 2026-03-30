@@ -665,7 +665,7 @@ private struct PicMemoRow: View {
         .lineLimit(1)
         .truncationMode(.tail)
 
-      Text("Mad Thinker ID: \(report.memberId)")
+      Text("Member Number: \(report.memberId)")
         .font(.footnote)
         .foregroundColor(.secondary)
         .lineLimit(1)
@@ -1007,7 +1007,7 @@ private struct PicMemoDetailView: View {
         set: { report.guideName = $0 }
       ))
 
-      editableTextField(title: "Mad Thinker ID", text: Binding(
+      editableTextField(title: "Member Number", text: Binding(
         get: { report.memberId },
         set: { report.memberId = $0 }
       ))

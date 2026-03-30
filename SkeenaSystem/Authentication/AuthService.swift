@@ -569,7 +569,7 @@ final class AuthService: ObservableObject {
   func updateMemberId(_ id: String) async throws {
     let trimmed = id.trimmingCharacters(in: .whitespacesAndNewlines)
     guard !trimmed.isEmpty else {
-      throw InputValidationError.invalidInput("Mad Thinker ID cannot be empty.")
+      throw InputValidationError.invalidInput("Member Number cannot be empty.")
     }
 
     guard let token = await currentAccessToken() else {

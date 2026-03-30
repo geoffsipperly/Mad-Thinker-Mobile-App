@@ -46,8 +46,9 @@ struct ReportFormView: View {
     // instead of vanishing once the calendar date rolls over.
     let startOfYesterday = Calendar.current.date(byAdding: .day, value: -1, to: startOfToday)!
 
-    // Break the predicate into simple parts so the compiler is happy
-    let started = NSPredicate(format: "startDate <= %@", now as NSDate)
+    // Compare at end-of-day so trips starting "today" are included regardless of stored time
+    let endOfToday = Calendar.current.date(byAdding: .day, value: 1, to: startOfToday)! as NSDate
+    let started = NSPredicate(format: "startDate < %@", endOfToday)
     let openOrRecentlyEnded = NSPredicate(
       format: "endDate == nil OR endDate >= %@", startOfYesterday as NSDate
     )

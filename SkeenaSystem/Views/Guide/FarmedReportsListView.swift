@@ -207,7 +207,7 @@ private struct FarmedReportRow: View {
         .lineLimit(1)
 
       if let angler = report.memberId, !angler.isEmpty {
-        Text("Mad Thinker ID: \(angler)")
+        Text("Member Number: \(angler)")
           .font(.footnote)
           .foregroundColor(.secondary)
           .lineLimit(1)

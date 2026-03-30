@@ -151,9 +151,11 @@ private struct ServerTripItem: Identifiable {
   var status: TripRowStatus {
     let now = Date()
     guard let s = startDate else { return .notStarted }
-    if s > now { return .notStarted }
     let startOfToday = Calendar.current.startOfDay(for: now)
-    let inProgress = (s <= now) && (endDate == nil || (endDate ?? now) >= startOfToday)
+    // Compare start date at day granularity so a trip starting "today" is always in-progress
+    let startDay = Calendar.current.startOfDay(for: s)
+    if startDay > startOfToday { return .notStarted }
+    let inProgress = (startDay <= startOfToday) && (endDate == nil || (endDate ?? now) >= startOfToday)
     return inProgress ? .inProgress : .completed
   }
 }
