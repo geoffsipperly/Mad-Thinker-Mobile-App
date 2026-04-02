@@ -587,8 +587,9 @@ struct TripFormView: View {
           .foregroundColor(.orange)
       }
 
-      // Show licences if populated via lookup
-      if !vm.clients[index].licences.isEmpty {
+      // Show licences if populated via lookup (gated by entitlement)
+      if CommunityService.shared.activeCommunityConfig.flag("E_MANAGE_LICENSES"),
+         !vm.clients[index].licences.isEmpty {
         licencesList(for: index)
       }
     }
@@ -614,7 +615,8 @@ struct TripFormView: View {
               Text("# \(profile.memberId)")
                 .font(.caption)
                 .foregroundColor(.gray)
-              if !profile.classifiedWatersLicenses.isEmpty {
+              if CommunityService.shared.activeCommunityConfig.flag("E_MANAGE_LICENSES"),
+                 !profile.classifiedWatersLicenses.isEmpty {
                 Text("\(profile.classifiedWatersLicenses.count) licence(s)")
                   .font(.caption2)
                   .foregroundColor(.blue)

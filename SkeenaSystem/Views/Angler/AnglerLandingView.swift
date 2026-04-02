@@ -2,6 +2,7 @@
 // AnglerLandingView.swift
 // Bend Fly Shop – iOS 15+ nav-bar button + pinned footer
 
+import CoreLocation
 import SwiftUI
 import Foundation
 
@@ -87,7 +88,7 @@ private enum AnglerLandingAPI {
 /// Hashable enum so we can push views onto a `NavigationPath`.
 /// Also used by the `navigateTo` environment key for cross-view toolbar navigation.
 enum AnglerDestination: Hashable {
-  case conditions, learn, community, profile, trip
+  case conditions, learn, community, profile, trip, explore
 }
 
 // MARK: - View
@@ -107,10 +108,37 @@ struct AnglerLandingView: View {
   @State private var isLoading = false
   @State private var errorText: String?
 
+  // Map reports (same data source as guide LandingView)
+  @State private var mapReports: [MapReportDTO] = []
+
   // The Buzz state
   @State private var buzzCategory: ForumCategory?
   @State private var buzzThreads: [ForumThread] = []
   @State private var buzzLoading = false
+
+  // Location (for weather)
+  @StateObject private var locationManager = LocationManager()
+
+  // Live weather
+  private struct LiveWeather {
+    let locationName: String
+    let condition: String
+    let icon: String
+    let temp: Int
+    let windDir: String
+    let windSpeed: Int
+    let pressureVal: Int
+    let pressureTrend: WeatherPressureTrend
+    struct HourlySlot: Identifiable {
+      var id: String { hour }
+      let hour: String
+      let icon: String
+      let temp: Int
+      let precipChance: Int
+    }
+    let hourly: [HourlySlot]
+  }
+  @State private var liveWeather: LiveWeather? = nil
 
   // Navigation path (enables pop-to-root)
   @State private var navPath = NavigationPath()
@@ -158,14 +186,11 @@ struct AnglerLandingView: View {
         ToolbarTab(icon: "suitcase", label: "My Trip") {
           showTripPrep = true
         }
-        ToolbarTab(icon: "cloud.sun", label: "Conditions") {
-          navPath.append(AnglerDestination.conditions)
-        }
-        ToolbarTab(icon: "book", label: "Learn") {
-          navPath.append(AnglerDestination.learn)
-        }
         ToolbarTab(icon: "message", label: "Social") {
           navPath.append(AnglerDestination.community)
+        }
+        ToolbarTab(icon: "safari", label: "Explore") {
+          navPath.append(AnglerDestination.explore)
         }
       }) {
         content
@@ -174,7 +199,15 @@ struct AnglerLandingView: View {
         ManageProfileView().environmentObject(auth)
       }
       .navigationDestination(isPresented: $goToCatchMap) {
-        AnglerCatchMapView(reports: reports)
+        DarkPageTemplate {
+          VStack(spacing: 4) {
+            GuideLandingMapView(reports: mapReports)
+              .ignoresSafeArea(edges: .bottom)
+            GuideLandingMapLegend()
+              .padding(.bottom, 8)
+          }
+        }
+        .navigationTitle("Catch Map")
       }
       .navigationDestination(for: AnglerDestination.self) { dest in
         switch dest {
@@ -195,6 +228,10 @@ struct AnglerLandingView: View {
         case .trip:
           // Trip is shown as an overlay, not a pushed view — should not appear here
           EmptyView()
+        case .explore:
+          ExploreView()
+            .environment(\.userRole, .angler)
+            .environment(\.navigateTo, handleNavigateTo)
         }
       }
       .toolbar {
@@ -205,7 +242,7 @@ struct AnglerLandingView: View {
                 .font(.title3.weight(.semibold))
                 .foregroundColor(.white)
             }
-            CommunityToolbarButton()
+            CommunitySwitcherChevron()
           }
         }
         ToolbarItem(placement: .navigationBarTrailing) {
@@ -224,10 +261,17 @@ struct AnglerLandingView: View {
     .environmentObject(auth)
     .task {
       if reports.isEmpty { await fetchReports() }
+      await fetchMapReports()
       await fetchBuzz()
     }
     .onAppear {
+      locationManager.request()
+      locationManager.start()
       AppLogging.log("[AnglerLandingView] onAppear; authId=\(ObjectIdentifier(auth).hashValue)", level: .debug, category: .auth)
+    }
+    .onChange(of: locationManager.lastLocation) { loc in
+      guard liveWeather == nil, let loc else { return }
+      Task { await fetchWeather(location: loc) }
     }
     .onDisappear {
       AppLogging.log("[AnglerLandingView] onDisappear", level: .debug, category: .auth)
@@ -261,121 +305,190 @@ struct AnglerLandingView: View {
 
   private var content: some View {
     ScrollView {
-      VStack(spacing: 0) {
-        // Greeting
-        Text("Welcome, \(auth.currentFirstName ?? "Angler")")
-          .font(.headline)
-          .foregroundColor(.white)
-          .frame(maxWidth: .infinity, alignment: .leading)
+      VStack(spacing: 8) {
+
+        // ── Header: name → logo ──────────────────────────────
+        VStack(spacing: 0) {
+          // User name — left aligned
+          Text("\(auth.currentFirstName ?? "") \(auth.currentLastName ?? "")")
+            .font(.caption.weight(.semibold))
+            .foregroundColor(.white)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.horizontal, 20)
+
+          // Community logo — centred
+          CommunityLogoView(config: communityService.activeCommunityConfig, size: 160)
+            .frame(maxWidth: .infinity)
+        }
+        .padding(.top, 12)
+
+        // ── Weather tile ───────────────────────────────────────────────
+        VStack(spacing: 0) {
+          // Current conditions row: location | temp | wind | pressure
+          HStack(spacing: 0) {
+            Text(liveWeather?.locationName ?? "\u{2013}")
+              .font(.system(size: 11, weight: .semibold))
+              .foregroundColor(.white)
+              .lineLimit(1)
+              .frame(maxWidth: .infinity, alignment: .leading)
+
+            HStack(spacing: 3) {
+              Image(systemName: liveWeather?.icon ?? "thermometer")
+                .font(.caption)
+                .foregroundColor(weatherIconColor(liveWeather?.icon))
+              Text(liveWeather.map { "\(communityService.activeCommunityConfig.temperature(Double($0.temp)))\(communityService.activeCommunityConfig.tempUnit)" } ?? "\u{2013}")
+                .font(.caption.weight(.bold))
+                .foregroundColor(.white)
+            }
+            .frame(width: 56, alignment: .center)
+
+            HStack(spacing: 3) {
+              Image(systemName: "wind")
+                .font(.caption2)
+                .foregroundColor(.gray)
+              Text(liveWeather.map { "\($0.windDir) \(communityService.activeCommunityConfig.windSpeed(Double($0.windSpeed)))" } ?? "\u{2013}")
+                .font(.caption2.weight(.medium))
+                .foregroundColor(.white)
+            }
+            .frame(width: 56, alignment: .center)
+
+            HStack(spacing: 3) {
+              Image(systemName: "barometer")
+                .font(.caption2)
+                .foregroundColor(.gray)
+              Text(liveWeather.map { "\($0.pressureVal)" } ?? "\u{2013}")
+                .font(.caption2.weight(.medium))
+                .foregroundColor(.white)
+              Image(systemName: liveWeather?.pressureTrend.sfSymbol ?? "minus")
+                .font(.system(size: 8))
+                .foregroundColor(pressureTrendColor(liveWeather?.pressureTrend))
+            }
+            .frame(width: 64, alignment: .center)
+          }
+          .padding(.horizontal, 14)
+          .padding(.top, 8)
+          .padding(.bottom, 6)
+
+          // Hourly strip
+          if let hourly = liveWeather?.hourly, !hourly.isEmpty {
+            Rectangle()
+              .fill(Color.white.opacity(0.12))
+              .frame(height: 0.5)
+              .padding(.horizontal, 14)
+
+            HStack(spacing: 0) {
+              ForEach(hourly) { slot in
+                VStack(alignment: .center, spacing: 2) {
+                  Text(slot.hour)
+                    .font(.system(size: 9))
+                    .foregroundColor(.gray)
+                  Image(systemName: slot.icon)
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: 16, height: 16)
+                    .foregroundColor(weatherIconColor(slot.icon))
+                  Text("\(communityService.activeCommunityConfig.temperature(Double(slot.temp)))\u{00B0}")
+                    .font(.system(size: 9, weight: .semibold))
+                    .foregroundColor(.white)
+                  Text(slot.precipChance > 0 ? "\(slot.precipChance)%" : " ")
+                    .font(.system(size: 9))
+                    .foregroundColor(.cyan)
+                }
+                .frame(maxWidth: .infinity)
+              }
+            }
+            .padding(.horizontal, 6)
+            .padding(.vertical, 6)
+          }
+        }
+        .background(Color.white.opacity(0.08), in: RoundedRectangle(cornerRadius: 12))
+        .padding(.horizontal, 16)
+
+        // ── Fisheries Conditions ───────────────────────────────────────
+        Button { navPath.append(AnglerDestination.conditions) } label: {
+          HStack(spacing: 8) {
+            Image(systemName: "water.waves")
+              .font(.caption)
+              .foregroundColor(.white)
+            Text("Fisheries Conditions")
+              .font(.caption.weight(.semibold))
+              .foregroundColor(.white)
+            Spacer()
+            Image(systemName: "chevron.right")
+              .font(.caption.weight(.semibold))
+              .foregroundColor(.white.opacity(0.4))
+          }
           .padding(.horizontal, 16)
-          .padding(.top, 16)
+          .padding(.vertical, 10)
+          .background(Color.white.opacity(0.08), in: RoundedRectangle(cornerRadius: 14))
+        }
+        .buttonStyle(.plain)
+        .padding(.horizontal, 16)
+        .padding(.bottom, 8)
+        .accessibilityIdentifier("fishingForecastTile")
 
-        // Header
-        AppHeader(onMapTapped: E_CATCH_MAP ? {
-          goToCatchMap = true
-        } : nil)
-          .padding(.top, 12)
-          .padding(.bottom, 20)
+        // Section divider
+        Rectangle()
+          .fill(Color.white.opacity(0.12))
+          .frame(height: 0.5)
+          .padding(.vertical, 2)
 
-        // Error banner (compact)
+        // Catch photo carousel
+        if E_CATCH_CAROUSEL {
+          VStack(alignment: .leading, spacing: 8) {
+            // Header row — "Your recent activity" + map icon
+            HStack(alignment: .center) {
+              Text("Your recent activity")
+                .font(.subheadline.weight(.semibold))
+                .foregroundColor(.white)
+              Spacer()
+              if E_CATCH_MAP {
+                Button { goToCatchMap = true } label: {
+                  Image(systemName: "map")
+                    .font(.subheadline)
+                    .foregroundColor(.white.opacity(0.7))
+                }
+                .buttonStyle(.plain)
+              }
+            }
+            .padding(.horizontal, 16)
+
+            if isLoading, sortedReports.isEmpty {
+              ProgressView().tint(.white)
+                .padding(.vertical, 30)
+                .frame(maxWidth: .infinity)
+            } else if sortedReports.isEmpty {
+              Text("No catch reports yet.")
+                .foregroundColor(.gray)
+                .font(.subheadline)
+                .padding(.vertical, 14)
+                .padding(.horizontal, 16)
+            } else {
+              ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 10) {
+                  ForEach(sortedReports) { r in
+                    NavigationLink(destination: CatchDetailView(report: r).environmentObject(auth)) {
+                      catchCard(r)
+                    }
+                    .buttonStyle(.plain)
+                  }
+                }
+                .padding(.horizontal, 16)
+              }
+            }
+          }
+        }
+
+        // Error banner
         if let err = errorText {
           Text(err)
             .foregroundColor(.red)
             .font(.footnote)
             .multilineTextAlignment(.center)
             .padding(.horizontal, 16)
-            .padding(.bottom, 6)
         }
 
-        // Catch photo carousel
-        if E_CATCH_CAROUSEL {
-          if isLoading, sortedReports.isEmpty {
-            ProgressView().tint(.white)
-              .padding(.vertical, 40)
-          } else if sortedReports.isEmpty {
-            Text("No catch reports yet.")
-              .foregroundColor(.gray)
-              .font(.subheadline)
-              .padding(.vertical, 14)
-          } else {
-            ScrollView(.horizontal, showsIndicators: false) {
-              HStack(spacing: 12) {
-                ForEach(sortedReports) { r in
-                  NavigationLink(destination: CatchDetailView(report: r).environmentObject(auth)) {
-                    catchCard(r)
-                  }
-                  .buttonStyle(.plain)
-                }
-              }
-              .padding(.horizontal, 16)
-            }
-          }
-        }
-
-        // The Buzz — latest forum threads
-        if E_THE_BUZZ, AppEnvironment.shared.buzzCategoryId != nil {
-          VStack(alignment: .leading, spacing: 10) {
-            Text("The Buzz")
-              .font(.title3.weight(.bold))
-              .foregroundColor(.blue)
-
-            if let desc = buzzCategory?.description, !desc.isEmpty {
-              Text(desc)
-                .font(.caption)
-                .foregroundColor(.white)
-                .lineLimit(3)
-                .padding(.top, -4)
-            }
-
-            if buzzLoading {
-              ProgressView().tint(.white)
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 12)
-            } else if buzzThreads.isEmpty {
-              Text("No posts yet.")
-                .font(.subheadline)
-                .foregroundColor(.gray)
-            } else {
-              ForEach(buzzThreads) { thread in
-                NavigationLink(destination: ThreadDetailView(thread: thread, categoryName: "The Buzz").environmentObject(auth)) {
-                  VStack(alignment: .leading, spacing: 6) {
-                    Text(thread.title)
-                      .font(.caption.weight(.semibold))
-                      .foregroundColor(.blue)
-                      .lineLimit(2)
-
-                    HStack(spacing: 4) {
-                      if let first = thread.author_first_name ?? thread.profiles?.first_name {
-                        Text(first)
-                      } else {
-                        Text("Anonymous")
-                      }
-                      Text("·")
-                      if let date = thread.created_at {
-                        Text(Self.fmtDate(date))
-                      }
-                    }
-                    .font(.caption)
-                    .foregroundColor(.gray)
-                  }
-                  .frame(maxWidth: .infinity, alignment: .leading)
-                  .padding(14)
-                  .background(Color.white.opacity(0.06))
-                  .clipShape(RoundedRectangle(cornerRadius: 14))
-                  .overlay(
-                    RoundedRectangle(cornerRadius: 14)
-                      .stroke(Color.white.opacity(0.12), lineWidth: 1)
-                  )
-                }
-                .buttonStyle(.plain)
-              }
-            }
-          }
-          .padding(.horizontal, 16)
-          .padding(.top, 20)
-        }
-
-        Spacer().frame(height: 16)
+        Spacer(minLength: 8)
       }
     }
   }
@@ -396,7 +509,6 @@ struct AnglerLandingView: View {
   @ViewBuilder
   private func catchCard(_ r: CatchReportDTO) -> some View {
     VStack(spacing: 0) {
-      // Photo — scaled to fill the card width, clipped to fixed height
       AsyncImage(url: r.photoURL) { phase in
         switch phase {
         case .empty:
@@ -414,14 +526,13 @@ struct AnglerLandingView: View {
           Color.white.opacity(0.08)
         }
       }
-      .frame(width: 170, height: 170)
+      .frame(width: 140, height: 140)
       .clipped()
 
-      // River + date below the photo
       HStack {
-        VStack(alignment: .leading, spacing: 2) {
+        VStack(alignment: .leading, spacing: 1) {
           Text(r.displayLocation)
-            .font(.caption.weight(.semibold))
+            .font(.caption2.weight(.semibold))
             .foregroundColor(.white)
             .lineLimit(1)
           Text(Self.fmtDate(r.createdAt))
@@ -431,13 +542,12 @@ struct AnglerLandingView: View {
         }
         Spacer()
       }
-      .padding(.horizontal, 10)
-      .padding(.vertical, 6)
+      .padding(.horizontal, 8)
+      .padding(.vertical, 5)
       .background(Color.white.opacity(0.06))
     }
-    .frame(width: 170)
-    .clipShape(RoundedRectangle(cornerRadius: 14))
-    .overlay(RoundedRectangle(cornerRadius: 14).stroke(Color.white.opacity(0.12), lineWidth: 1))
+    .frame(width: 140)
+    .clipShape(RoundedRectangle(cornerRadius: 10))
   }
 
   // MARK: - The Buzz
@@ -517,6 +627,83 @@ struct AnglerLandingView: View {
       AppLogging.log("[AnglerLanding] Network error fetching catches: \(error.localizedDescription)", level: .error, category: .catch)
       errorText = "Unable to load catch reports. Please check your connection and try again."
     }
+  }
+
+  // MARK: - Map reports
+
+  private func fetchMapReports() async {
+    guard let communityId = CommunityService.shared.activeCommunityId else { return }
+    do {
+      let reports = try await MapReportService.fetch(communityId: communityId)
+      await MainActor.run { mapReports = reports }
+    } catch {
+      AppLogging.log("[AnglerLanding] Map reports fetch failed: \(error.localizedDescription)", level: .error, category: .network)
+    }
+  }
+
+  // MARK: - Weather
+
+  private func fetchWeather(location: CLLocation) async {
+    let lat = location.coordinate.latitude
+    let lon = location.coordinate.longitude
+
+    // Reverse geocode for city name
+    let geocoder = CLGeocoder()
+    let locationName: String
+    if let placemark = try? await geocoder.reverseGeocodeLocation(location).first {
+      let city = placemark.locality
+        ?? placemark.subLocality
+        ?? placemark.subAdministrativeArea
+        ?? ""
+      let state = placemark.administrativeArea ?? ""
+      locationName = [city, state].filter { !$0.isEmpty }.joined(separator: ", ")
+    } else {
+      locationName = ""
+    }
+
+    do {
+      let response = try await WeatherSnapshotService.fetch(lat: lat, lon: lon)
+      let w = response.current
+      let slots = response.hourlyForecast.map { h in
+        LiveWeather.HourlySlot(
+          hour: WeatherSnapshotService.hourLabel(from: h.time),
+          icon: WeatherSnapshotService.conditionIcon(for: h.weatherCode),
+          temp: Int(h.temperature.rounded()),
+          precipChance: h.precipitationProbability
+        )
+      }
+      await MainActor.run {
+        liveWeather = LiveWeather(
+          locationName: locationName,
+          condition: WeatherSnapshotService.conditionText(for: w.weatherCode),
+          icon: WeatherSnapshotService.conditionIcon(for: w.weatherCode),
+          temp: Int(w.temperature.rounded()),
+          windDir: WeatherSnapshotService.windCardinal(from: w.windDirection),
+          windSpeed: Int(w.windSpeed.rounded()),
+          pressureVal: Int(w.pressure.rounded()),
+          pressureTrend: WeatherSnapshotService.pressureTrend(current: w.pressure, hourly: response.hourlyForecast),
+          hourly: slots
+        )
+      }
+    } catch {
+      AppLogging.log("[Weather] Fetch failed: \(error.localizedDescription)", level: .error, category: .network)
+    }
+  }
+
+  private func pressureTrendColor(_ trend: WeatherPressureTrend?) -> Color {
+    switch trend {
+    case .rising:  return .green
+    case .falling: return .red
+    default:       return .gray
+    }
+  }
+
+  private func weatherIconColor(_ icon: String?) -> Color {
+    guard let icon else { return .gray }
+    if icon.contains("sun") { return .yellow }
+    if icon.contains("snow") { return .cyan }
+    if icon.contains("bolt") { return .yellow }
+    return .gray
   }
 
   // MARK: - Actions

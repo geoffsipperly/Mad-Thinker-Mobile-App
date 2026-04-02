@@ -17,6 +17,9 @@ struct TripDetailView: View {
   let trip: TripAPI.TripSummary
 
   @Environment(\.dismiss) private var dismiss
+  @ObservedObject private var communityService = CommunityService.shared
+
+  private var E_MANAGE_LICENSES: Bool { communityService.activeCommunityConfig.flag("E_MANAGE_LICENSES") }
 
   // Freeze "now" while screen is visible so status doesn't flicker
   @State private var nowSnapshot: Date = .init()
@@ -162,39 +165,41 @@ struct TripDetailView: View {
           .foregroundColor(.secondary)
       }
 
-      let licenses = angler.licenses ?? []
-      if licenses.isEmpty {
-        Text("No Classified Waters licences.")
-          .font(.caption)
-          .foregroundColor(.secondary)
-      } else {
-        VStack(alignment: .leading, spacing: 6) {
-          Text("Classified Waters")
-            .font(.caption).fontWeight(.semibold)
+      if E_MANAGE_LICENSES {
+        let licenses = angler.licenses ?? []
+        if licenses.isEmpty {
+          Text("No Classified Waters licences.")
+            .font(.caption)
             .foregroundColor(.secondary)
+        } else {
+          VStack(alignment: .leading, spacing: 6) {
+            Text("Classified Waters")
+              .font(.caption).fontWeight(.semibold)
+              .foregroundColor(.secondary)
 
-          ForEach(licenses, id: \.id) { lic in
-            VStack(alignment: .leading, spacing: 2) {
-              Text("\(lic.riverName ?? "—") • \(lic.licenseNumber ?? "—")")
-                .font(.callout)
-                .foregroundColor(.white)
-              HStack(spacing: 8) {
-                if let from = lic.startDate {
-                  Text("From: \(formatDateString(from))")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-                }
-                if let to = lic.endDate {
-                  Text("To: \(formatDateString(to))")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
+            ForEach(licenses, id: \.id) { lic in
+              VStack(alignment: .leading, spacing: 2) {
+                Text("\(lic.riverName ?? "—") • \(lic.licenseNumber ?? "—")")
+                  .font(.callout)
+                  .foregroundColor(.white)
+                HStack(spacing: 8) {
+                  if let from = lic.startDate {
+                    Text("From: \(formatDateString(from))")
+                      .font(.caption)
+                      .foregroundColor(.secondary)
+                  }
+                  if let to = lic.endDate {
+                    Text("To: \(formatDateString(to))")
+                      .font(.caption)
+                      .foregroundColor(.secondary)
+                  }
                 }
               }
-            }
-            .padding(.vertical, 2)
+              .padding(.vertical, 2)
           }
         }
         .padding(.top, 2)
+        }
       }
     }
     .padding(.vertical, 6)

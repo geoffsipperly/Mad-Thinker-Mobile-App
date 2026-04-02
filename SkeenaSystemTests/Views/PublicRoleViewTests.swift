@@ -42,51 +42,50 @@ final class PublicRoleViewTests: XCTestCase {
 
   // MARK: - Public toolbar snapshot
 
-  func testSnapshot_publicToolbarTabs_fiveTabsNoTrips() {
-    // SNAPSHOT: Public toolbar — Home, Catches, Conditions, Social, Explore.
+  func testSnapshot_publicToolbarTabs_fourTabsNoTrips() {
+    // SNAPSHOT: Public toolbar — Home, Catches, Social, Explore.
+    // Conditions is accessed via landing page button, not toolbar.
     // Must NOT contain a Trips tab.
     let tabs: [(icon: String, label: String)] = [
       ("house", "Home"),
       ("camera.viewfinder", "Catches"),
-      ("cloud.sun", "Conditions"),
       ("message", "Social"),
       ("safari", "Explore")
     ]
-    XCTAssertEqual(tabs.count, 5,
-                   "SNAPSHOT: Public toolbar must have exactly 5 tabs")
+    XCTAssertEqual(tabs.count, 4,
+                   "SNAPSHOT: Public toolbar must have exactly 4 tabs")
     XCTAssertFalse(tabs.contains(where: { $0.label == "Trips" }),
                    "SNAPSHOT: Public toolbar must not contain a Trips tab")
+    XCTAssertFalse(tabs.contains(where: { $0.label == "Conditions" }),
+                   "SNAPSHOT: Public toolbar must not contain a Conditions tab")
     XCTAssertEqual(tabs[0].label, "Home",        "SNAPSHOT: Tab 1 is Home")
     XCTAssertEqual(tabs[1].label, "Catches",     "SNAPSHOT: Tab 2 is Catches")
-    XCTAssertEqual(tabs[2].label, "Conditions",  "SNAPSHOT: Tab 3 is Conditions")
-    XCTAssertEqual(tabs[3].label, "Social",      "SNAPSHOT: Tab 4 is Social")
-    XCTAssertEqual(tabs[4].label, "Explore",     "SNAPSHOT: Tab 5 is Explore")
+    XCTAssertEqual(tabs[2].label, "Social",      "SNAPSHOT: Tab 3 is Social")
+    XCTAssertEqual(tabs[3].label, "Explore",     "SNAPSHOT: Tab 4 is Explore")
   }
 
   func testSnapshot_publicToolbarTabs_iconsMatchDesign() {
     let tabs: [(icon: String, label: String)] = [
       ("house", "Home"),
       ("camera.viewfinder", "Catches"),
-      ("cloud.sun", "Conditions"),
       ("message", "Social"),
       ("safari", "Explore")
     ]
     XCTAssertEqual(tabs[0].icon, "house")
     XCTAssertEqual(tabs[1].icon, "camera.viewfinder")
-    XCTAssertEqual(tabs[2].icon, "cloud.sun")
-    XCTAssertEqual(tabs[3].icon, "message")
-    XCTAssertEqual(tabs[4].icon, "safari")
+    XCTAssertEqual(tabs[2].icon, "message")
+    XCTAssertEqual(tabs[3].icon, "safari")
   }
 
   func testSnapshot_publicToolbarDiffersFromGuideToolbar() {
     let guideTabs: Set<String>  = ["Home", "Trips", "Catches", "Community", "Observations"]
-    let publicTabs: Set<String> = ["Home", "Catches", "Conditions", "Social", "Explore"]
+    let publicTabs: Set<String> = ["Home", "Catches", "Social", "Explore"]
     XCTAssertNotEqual(guideTabs, publicTabs,
                       "Public and guide toolbars must be distinct tab sets")
     XCTAssertFalse(publicTabs.contains("Trips"),
                    "Public toolbar must not contain Trips")
-    XCTAssertTrue(publicTabs.contains("Conditions"),
-                  "Public toolbar must contain Conditions")
+    XCTAssertFalse(publicTabs.contains("Conditions"),
+                   "Public toolbar must not contain Conditions (accessed via landing page)")
     XCTAssertTrue(publicTabs.contains("Social"),
                   "Public toolbar must contain Social (maps to Community forum)")
     XCTAssertTrue(publicTabs.contains("Explore"),

@@ -182,16 +182,14 @@ final class DarkPageTemplateTests: XCTestCase {
     let tabs: [(icon: String, label: String)] = [
       ("house", "Home"),
       ("suitcase", "My Trip"),
-      ("cloud.sun", "Conditions"),
-      ("book", "Learn"),
-      ("bubble.left.and.bubble.right", "Community")
+      ("message", "Social"),
+      ("safari", "Explore")
     ]
-    XCTAssertEqual(tabs.count, 5, "SNAPSHOT: Angler toolbar has 5 tabs")
+    XCTAssertEqual(tabs.count, 4, "SNAPSHOT: Angler toolbar has 4 tabs")
     XCTAssertEqual(tabs[0].label, "Home", "SNAPSHOT: First tab is Home")
     XCTAssertEqual(tabs[1].label, "My Trip", "SNAPSHOT: Second tab is My Trip")
-    XCTAssertEqual(tabs[2].label, "Conditions", "SNAPSHOT: Third tab is Conditions")
-    XCTAssertEqual(tabs[3].label, "Learn", "SNAPSHOT: Fourth tab is Learn")
-    XCTAssertEqual(tabs[4].label, "Community", "SNAPSHOT: Fifth tab is Community")
+    XCTAssertEqual(tabs[2].label, "Social", "SNAPSHOT: Third tab is Social")
+    XCTAssertEqual(tabs[3].label, "Explore", "SNAPSHOT: Fourth tab is Explore")
   }
 
   /// Verify the Guide landing view toolbar tab configuration.

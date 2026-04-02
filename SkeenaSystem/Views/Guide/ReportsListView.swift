@@ -1012,10 +1012,12 @@ private struct PicMemoDetailView: View {
         set: { report.memberId = $0 }
       ))
 
-      editableTextField(title: "Classified Waters License", text: Binding(
-        get: { report.classifiedWatersLicenseNumber ?? "" },
-        set: { report.classifiedWatersLicenseNumber = $0 }
-      ))
+      if CommunityService.shared.activeCommunityConfig.flag("E_MANAGE_LICENSES") {
+        editableTextField(title: "Classified Waters License", text: Binding(
+          get: { report.classifiedWatersLicenseNumber ?? "" },
+          set: { report.classifiedWatersLicenseNumber = $0 }
+        ))
+      }
 
       infoRow(
         label: "Created",

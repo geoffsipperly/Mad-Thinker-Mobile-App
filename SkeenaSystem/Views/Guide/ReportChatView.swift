@@ -167,7 +167,9 @@ struct ReportChatView: View {
       if !isSoloMode {
         tripCard
         clientCard
-        licenceCard
+        if CommunityService.shared.activeCommunityConfig.flag("E_MANAGE_LICENSES") {
+          licenceCard
+        }
       }
     }
     .padding(.top, 6)

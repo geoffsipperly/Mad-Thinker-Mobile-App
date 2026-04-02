@@ -79,7 +79,7 @@ struct RoleAwareToolbar: View {
     }
   }
 
-  // MARK: Angler tabs — Home, My Trip, Conditions, Learn, Community
+  // MARK: Angler tabs — Home, My Trip, Social, Explore
   @ViewBuilder private var anglerToolbar: some View {
     ToolbarTab(icon: "house", label: "Home") {
       navigateTo(nil)
@@ -87,27 +87,21 @@ struct RoleAwareToolbar: View {
     ToolbarTab(icon: "suitcase", label: "My Trip") {
       navigateTo(.trip)
     }
-    ToolbarTab(icon: "cloud.sun", label: "Conditions") {
-      if activeTab != "conditions" { navigateTo(.conditions) }
-    }
-    ToolbarTab(icon: "book", label: "Learn") {
-      if activeTab != "learn" { navigateTo(.learn) }
-    }
     ToolbarTab(icon: "message", label: "Social") {
       if activeTab != "community" { navigateTo(.community) }
     }
+    ToolbarTab(icon: "safari", label: "Explore") {
+      if activeTab != "explore" { navigateTo(.explore) }
+    }
   }
 
-  // MARK: Public tabs — Home, Catches, Conditions, Social, Learn (no Trips)
+  // MARK: Public tabs — Home, Catches, Social, Explore (no Trips)
   @ViewBuilder private var publicToolbar: some View {
     ToolbarTab(icon: "house", label: "Home") {
       guideNavigateTo(nil)
     }
     ToolbarTab(icon: "camera.viewfinder", label: "Catches") {
       if activeTab != "catches" { guideNavigateTo(.catches) }
-    }
-    ToolbarTab(icon: "cloud.sun", label: "Conditions") {
-      if activeTab != "conditions" { guideNavigateTo(.conditions) }
     }
     ToolbarTab(icon: "message", label: "Social") {
       if activeTab != "community" { guideNavigateTo(.community) }

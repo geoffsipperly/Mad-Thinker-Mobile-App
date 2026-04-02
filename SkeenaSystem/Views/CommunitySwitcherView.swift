@@ -41,6 +41,33 @@ struct CommunityToolbarButton: View {
     }
 }
 
+// MARK: - Chevron-only toolbar button (no community name)
+
+/// A minimal community switcher button that shows only a dropdown chevron.
+/// Used when the community name is already visible elsewhere on the page.
+struct CommunitySwitcherChevron: View {
+    @State private var showSwitcher = false
+
+    var body: some View {
+        Button {
+            showSwitcher = true
+        } label: {
+            HStack(spacing: 4) {
+                Image(systemName: "person.3")
+                    .font(.subheadline)
+                Image(systemName: "chevron.down")
+                    .font(.caption2)
+            }
+            .foregroundColor(.white)
+        }
+        .buttonStyle(.plain)
+        .sheet(isPresented: $showSwitcher) {
+            CommunitySwitcherSheet()
+                .preferredColorScheme(.dark)
+        }
+    }
+}
+
 // MARK: - Full switcher sheet
 
 struct CommunitySwitcherSheet: View {
