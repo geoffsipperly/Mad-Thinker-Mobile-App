@@ -19,25 +19,27 @@ final class PublicRoleViewTests: XCTestCase {
     XCTAssertNotEqual(AppUserRole.public, .angler)
   }
 
-  func testAppUserRole_allThreeCasesAreDistinct() {
-    let roles: [AppUserRole] = [.guide, .angler, .public]
+  func testAppUserRole_allFourCasesAreDistinct() {
+    let roles: [AppUserRole] = [.guide, .angler, .public, .scientist]
     let unique = Set(roles)
-    XCTAssertEqual(unique.count, 3, "All three AppUserRole cases must be distinct")
+    XCTAssertEqual(unique.count, 4, "All four AppUserRole cases must be distinct")
   }
 
-  func testAppUserRole_public_existsInExhaustiveSwitch() {
+  func testAppUserRole_allCases_existInExhaustiveSwitch() {
     // If AppUserRole gains a new case without updating this switch,
     // the compiler will error — keeping this test exhaustive by design.
     func roleName(for role: AppUserRole) -> String {
       switch role {
-      case .guide:   return "guide"
-      case .angler:  return "angler"
-      case .public:  return "public"
+      case .guide:     return "guide"
+      case .angler:    return "angler"
+      case .public:    return "public"
+      case .scientist: return "scientist"
       }
     }
     XCTAssertEqual(roleName(for: .public), "public")
     XCTAssertEqual(roleName(for: .guide), "guide")
     XCTAssertEqual(roleName(for: .angler), "angler")
+    XCTAssertEqual(roleName(for: .scientist), "scientist")
   }
 
   // MARK: - Public toolbar snapshot
@@ -140,17 +142,22 @@ final class PublicRoleViewTests: XCTestCase {
   // MARK: - Routing exhaustiveness (mirrors AppRootView switch)
 
   func testRouting_allUserTypes_areHandled() {
-    func viewName(for type: AuthService.UserType) -> String {
+    func viewName(for type: AuthService.UserType, isConservation: Bool = false) -> String {
       switch type {
-      case .guide:   return "LandingView"
-      case .angler:  return "AnglerLandingView"
-      case .public:  return "PublicLandingView"
+      case .guide:     return "LandingView"
+      case .angler:    return "AnglerLandingView"
+      case .public:    return "PublicLandingView"
+      case .scientist: return isConservation ? "ScientistLandingView" : "PublicLandingView"
       }
     }
     XCTAssertEqual(viewName(for: .guide),   "LandingView")
     XCTAssertEqual(viewName(for: .angler),  "AnglerLandingView")
     XCTAssertEqual(viewName(for: .public),  "PublicLandingView",
                    "SNAPSHOT: .public must route to PublicLandingView")
+    XCTAssertEqual(viewName(for: .scientist, isConservation: true), "ScientistLandingView",
+                   "SNAPSHOT: .scientist + Conservation must route to ScientistLandingView")
+    XCTAssertEqual(viewName(for: .scientist, isConservation: false), "PublicLandingView",
+                   "SNAPSHOT: .scientist + non-Conservation must fall back to PublicLandingView")
   }
 
   func testRouting_nilUserType_defaultsToGuide_notPublic() {

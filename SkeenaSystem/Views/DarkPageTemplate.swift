@@ -74,7 +74,9 @@ struct RoleAwareToolbar: View {
       anglerToolbar
     case .guide:
       guideToolbar
-    case .public, .scientist:
+    case .public:
+      publicToolbar
+    case .scientist:
       publicToolbar
     }
   }

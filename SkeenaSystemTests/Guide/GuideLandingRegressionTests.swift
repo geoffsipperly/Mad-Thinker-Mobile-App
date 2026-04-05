@@ -245,9 +245,10 @@ final class GuideRegressionTests: XCTestCase {
     func landingViewName(for userType: AuthService.UserType?) -> String {
       guard let t = userType else { return "LoginView" }
       switch t {
-      case .guide:   return "LandingView"
-      case .angler:  return "AnglerLandingView"
-      case .public:  return "PublicLandingView"
+      case .guide:     return "LandingView"
+      case .angler:    return "AnglerLandingView"
+      case .public:    return "PublicLandingView"
+      case .scientist: return "ScientistLandingView"
       }
     }
     XCTAssertEqual(landingViewName(for: auth.currentUserType), "LandingView")

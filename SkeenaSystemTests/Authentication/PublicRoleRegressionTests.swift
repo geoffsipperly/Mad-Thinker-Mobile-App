@@ -123,14 +123,15 @@ final class PublicRoleRegressionTests: XCTestCase {
     XCTAssertNotEqual(AuthService.UserType.public, .angler)
   }
 
-  func testUserType_allThreeCasesHaveDistinctRawValues() {
+  func testUserType_allFourCasesHaveDistinctRawValues() {
     let rawValues = [
       AuthService.UserType.guide.rawValue,
       AuthService.UserType.angler.rawValue,
-      AuthService.UserType.public.rawValue
+      AuthService.UserType.public.rawValue,
+      AuthService.UserType.scientist.rawValue
     ]
     let unique = Set(rawValues)
-    XCTAssertEqual(unique.count, 3, "All three UserType cases must have distinct raw values")
+    XCTAssertEqual(unique.count, 4, "All four UserType cases must have distinct raw values")
   }
 
   func testUserType_unknownRawValue_returnsNil() {
@@ -372,7 +373,8 @@ final class PublicRoleRegressionTests: XCTestCase {
 
     try await AuthService.shared.signIn(email: "river@publicwaters.com", password: "password")
 
-    let cachedType = UserDefaults.standard.string(forKey: "EW.cachedUserType")
+    // Key must match `AuthService.kCachedUserType` — see `loadUserProfile()`.
+    let cachedType = UserDefaults.standard.string(forKey: "CachedUserType")
     XCTAssertEqual(cachedType, "public",
                    "SNAPSHOT: 'public' user type must be cached in UserDefaults for offline resumption")
   }
@@ -381,11 +383,14 @@ final class PublicRoleRegressionTests: XCTestCase {
 
   func testRouting_publicUserType_mapsToPublicLandingView() {
     // Verifies the routing switch is exhaustive and maps .public correctly.
-    func landingViewName(for userType: AuthService.UserType) -> String {
+    // Scientist routing depends on community type (Conservation → ScientistLandingView,
+    // other → PublicLandingView), so this test covers the base role→view mapping.
+    func landingViewName(for userType: AuthService.UserType, isConservation: Bool = false) -> String {
       switch userType {
-      case .guide:   return "LandingView"
-      case .angler:  return "AnglerLandingView"
-      case .public:  return "PublicLandingView"
+      case .guide:     return "LandingView"
+      case .angler:    return "AnglerLandingView"
+      case .public:    return "PublicLandingView"
+      case .scientist: return isConservation ? "ScientistLandingView" : "PublicLandingView"
       }
     }
     XCTAssertEqual(landingViewName(for: .public), "PublicLandingView",
@@ -394,6 +399,10 @@ final class PublicRoleRegressionTests: XCTestCase {
                    "Existing guide routing must be unaffected")
     XCTAssertEqual(landingViewName(for: .angler), "AnglerLandingView",
                    "Existing angler routing must be unaffected")
+    XCTAssertEqual(landingViewName(for: .scientist, isConservation: true), "ScientistLandingView",
+                   "SNAPSHOT: .scientist in Conservation community must route to ScientistLandingView")
+    XCTAssertEqual(landingViewName(for: .scientist, isConservation: false), "PublicLandingView",
+                   "SNAPSHOT: .scientist in non-Conservation community must fall back to PublicLandingView")
   }
 
   func testRouting_nilUserType_fallsBackToGuide() {

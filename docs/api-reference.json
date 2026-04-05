@@ -1,0 +1,962 @@
+{
+  "version": "2026-04-05",
+  "generated": "2026-04-05T17:56:49.760Z",
+  "key_concepts": {
+    "member_id": "UUID foreign key reference to a member record",
+    "member_number": "Human-readable string identifier (e.g., mtsip6385a)",
+    "entitlements": "Per-community-type feature toggles with E_ prefix",
+    "roles": "Community-scoped: angler, guide, admin, public, scientist",
+    "units": "Community-level: imperial or metric",
+    "auth_headers": "Authorization: Bearer <token> + apikey: <anon_key>"
+  },
+  "endpoints": [
+    {
+      "name": "Sign Up (Invite-Based)",
+      "path": "/auth/v1/signup",
+      "method": "POST",
+      "description": "Register with a community code. Profile is auto-populated from pending invite.",
+      "auth": "none",
+      "body": {
+        "email": {
+          "type": "string",
+          "required": true,
+          "description": "User email"
+        },
+        "password": {
+          "type": "string",
+          "required": true,
+          "description": "User password"
+        },
+        "data.community_code": {
+          "type": "string",
+          "required": true,
+          "description": "6-char community code from guide/admin"
+        }
+      },
+      "notes": [
+        "Email must match the invite email exactly.",
+        "first_name, last_name, role populated from invite.",
+        "member_id (member_number) populated from claimed member record."
+      ]
+    },
+    {
+      "name": "Sign Up (Full Registration)",
+      "path": "/auth/v1/signup",
+      "method": "POST",
+      "description": "Register without a community code. All profile fields required.",
+      "auth": "none",
+      "body": {
+        "email": {
+          "type": "string",
+          "required": true,
+          "description": "User email"
+        },
+        "password": {
+          "type": "string",
+          "required": true,
+          "description": "User password"
+        },
+        "data.first_name": {
+          "type": "string",
+          "required": true,
+          "description": "First name"
+        },
+        "data.last_name": {
+          "type": "string",
+          "required": true,
+          "description": "Last name"
+        },
+        "data.user_type": {
+          "type": "string",
+          "required": true,
+          "description": "Role: angler, guide, public, scientist"
+        },
+        "data.member_id": {
+          "type": "string",
+          "required": true,
+          "description": "Auto-generated or provided member identifier"
+        },
+        "data.date_of_birth": {
+          "type": "string",
+          "required": true,
+          "description": "YYYY-MM-DD"
+        },
+        "data.sex": {
+          "type": "string",
+          "required": true,
+          "description": "male, female, or other"
+        },
+        "data.mailing_address": {
+          "type": "string",
+          "required": true,
+          "description": "Full mailing address"
+        },
+        "data.telephone_number": {
+          "type": "string",
+          "required": true,
+          "description": "Phone number"
+        },
+        "data.residency": {
+          "type": "string",
+          "required": true,
+          "description": "US, CA, or other"
+        }
+      },
+      "notes": [
+        "User is not associated with a community until they join one."
+      ]
+    },
+    {
+      "name": "Sign In",
+      "path": "/auth/v1/token?grant_type=password",
+      "method": "POST",
+      "description": "Authenticate and receive access token.",
+      "auth": "none",
+      "body": {
+        "email": {
+          "type": "string",
+          "required": true,
+          "description": "User email"
+        },
+        "password": {
+          "type": "string",
+          "required": true,
+          "description": "User password"
+        }
+      },
+      "response": {
+        "access_token": "JWT token for Authorization header"
+      }
+    },
+    {
+      "name": "Password Reset Request",
+      "path": "/auth/v1/recover",
+      "method": "POST",
+      "description": "Send a password reset email.",
+      "auth": "none",
+      "body": {
+        "email": {
+          "type": "string",
+          "required": true,
+          "description": "User email"
+        }
+      }
+    },
+    {
+      "name": "My Profile",
+      "path": "/functions/v1/my-profile",
+      "method": "GET",
+      "description": "Returns the authenticated user's profile, communities, and memberships.",
+      "auth": "required",
+      "response": {
+        "userId": "UUID",
+        "email": "string",
+        "memberId": "string (maps to member_number)",
+        "firstName": "string",
+        "lastName": "string",
+        "communities": "array of { id, name, code, role, memberNumber, entitlements, units }"
+      }
+    },
+    {
+      "name": "My Profile — Update",
+      "path": "/functions/v1/my-profile",
+      "method": "PUT",
+      "description": "Update the authenticated user's profile fields.",
+      "auth": "required",
+      "body": {
+        "first_name": {
+          "type": "string",
+          "required": false,
+          "description": "First name"
+        },
+        "last_name": {
+          "type": "string",
+          "required": false,
+          "description": "Last name"
+        },
+        "date_of_birth": {
+          "type": "string",
+          "required": false,
+          "description": "YYYY-MM-DD"
+        },
+        "sex": {
+          "type": "string",
+          "required": false,
+          "description": "male, female, or other"
+        },
+        "mailing_address": {
+          "type": "string",
+          "required": false,
+          "description": "Mailing address"
+        },
+        "telephone_number": {
+          "type": "string",
+          "required": false,
+          "description": "Phone number"
+        }
+      }
+    },
+    {
+      "name": "Angler Profile",
+      "path": "/functions/v1/angler-profile",
+      "method": "GET",
+      "description": "Get profile info for a specific member by member_id.",
+      "auth": "required",
+      "parameters": {
+        "member_id": {
+          "type": "uuid",
+          "required": true,
+          "description": "Member UUID (also accepts legacy angler_id)"
+        }
+      }
+    },
+    {
+      "name": "Member Details",
+      "path": "/functions/v1/member-details",
+      "method": "GET",
+      "description": "Returns member profile with preferences, proficiencies, and gear. Sources from community_field_definitions + member_field_values with legacy fallback.",
+      "auth": "required",
+      "parameters": {
+        "member_id": {
+          "type": "uuid",
+          "required": true,
+          "description": "Member UUID (also accepts legacy angler_id)"
+        },
+        "community_id": {
+          "type": "uuid",
+          "required": false,
+          "description": "Community UUID (auto-detected if omitted)"
+        }
+      },
+      "response": {
+        "member_id": "uuid",
+        "member_number": "string",
+        "first_name": "string",
+        "last_name": "string",
+        "preferences": "array of field objects or legacy format",
+        "proficiencies": "array of field objects or legacy format",
+        "gear": "array of field objects or legacy format"
+      }
+    },
+    {
+      "name": "Member Profile Fields — GET",
+      "path": "/functions/v1/member-profile-fields",
+      "method": "GET",
+      "description": "Returns community field definitions with the current member's saved values merged in.",
+      "auth": "required",
+      "parameters": {
+        "community_id": {
+          "type": "uuid",
+          "required": true,
+          "description": "Community UUID"
+        },
+        "category": {
+          "type": "string",
+          "required": false,
+          "description": "Filter: gear, preference, or proficiency"
+        }
+      }
+    },
+    {
+      "name": "Member Profile Fields — POST",
+      "path": "/functions/v1/member-profile-fields",
+      "method": "POST",
+      "description": "Upsert member field values. Accepts array of objects with field_name or field_definition_id.",
+      "auth": "required",
+      "body": {
+        "community_id": {
+          "type": "uuid",
+          "required": true,
+          "description": "Community UUID"
+        },
+        "fields": {
+          "type": "array",
+          "required": true,
+          "description": "Array of { field_name|field_definition_id, value }"
+        }
+      }
+    },
+    {
+      "name": "Upload Catch Reports v4",
+      "path": "/functions/v1/upload-catch-reports-v4",
+      "method": "POST",
+      "description": "Upload catch reports. Requires tripId. Auto-creates Solo Fishing Trip if tripId doesn't exist.",
+      "auth": "required",
+      "body": {
+        "reportId": {
+          "type": "uuid",
+          "required": true,
+          "description": "Client-generated report UUID"
+        },
+        "createdAt": {
+          "type": "iso8601",
+          "required": true,
+          "description": "Catch timestamp"
+        },
+        "catch.memberId": {
+          "type": "string",
+          "required": true,
+          "description": "Member number (human-readable)"
+        },
+        "catch.species": {
+          "type": "string",
+          "required": true,
+          "description": "Species name"
+        },
+        "catch.lengthInches": {
+          "type": "number",
+          "required": true,
+          "description": "Fish length in inches"
+        },
+        "catch.river": {
+          "type": "string",
+          "required": false,
+          "description": "River name"
+        },
+        "catch.sex": {
+          "type": "string",
+          "required": false,
+          "description": "Fish sex"
+        },
+        "catch.origin": {
+          "type": "string",
+          "required": false,
+          "description": "Wild or Hatchery"
+        },
+        "catch.girthInches": {
+          "type": "number",
+          "required": false,
+          "description": "Girth measurement"
+        },
+        "catch.weightLbs": {
+          "type": "number",
+          "required": false,
+          "description": "Weight in pounds"
+        },
+        "catch.weightEstimation": {
+          "type": "object",
+          "required": false,
+          "description": "Weight estimation metadata (method, formula, etc.)"
+        },
+        "catch.tactic": {
+          "type": "string",
+          "required": false,
+          "description": "Fishing tactic used"
+        },
+        "catch.quality": {
+          "type": "string",
+          "required": false,
+          "description": "Catch quality"
+        },
+        "catch.notes": {
+          "type": "string",
+          "required": false,
+          "description": "Notes"
+        },
+        "catch.location.lat": {
+          "type": "number",
+          "required": false,
+          "description": "Latitude"
+        },
+        "catch.location.lon": {
+          "type": "number",
+          "required": false,
+          "description": "Longitude"
+        },
+        "catch.photo.filename": {
+          "type": "string",
+          "required": false,
+          "description": "Photo filename"
+        },
+        "catch.photo.mimeType": {
+          "type": "string",
+          "required": false,
+          "description": "Photo MIME type"
+        },
+        "catch.photo.data_base64": {
+          "type": "string",
+          "required": false,
+          "description": "Base64 encoded photo data"
+        },
+        "trip.tripId": {
+          "type": "uuid",
+          "required": true,
+          "description": "Trip UUID"
+        },
+        "trip.tripName": {
+          "type": "string",
+          "required": false,
+          "description": "Trip name"
+        },
+        "trip.guideName": {
+          "type": "string",
+          "required": false,
+          "description": "Guide name"
+        },
+        "meta.appVersion": {
+          "type": "string",
+          "required": true,
+          "description": "App version string"
+        },
+        "meta.communityId": {
+          "type": "uuid",
+          "required": false,
+          "description": "Community UUID"
+        }
+      },
+      "notes": [
+        "If tripId doesn't exist, a 'Solo Fishing Trip' is auto-created.",
+        "Supports girthInches, weightLbs, and weightEstimation for scientist role."
+      ]
+    },
+    {
+      "name": "Download Catch Reports",
+      "path": "/functions/v1/download-catch-reports",
+      "method": "GET",
+      "description": "Download catch reports as JSON for a community or member.",
+      "auth": "required",
+      "parameters": {
+        "community_id": {
+          "type": "uuid",
+          "required": false,
+          "description": "Filter by community"
+        },
+        "member_id": {
+          "type": "uuid",
+          "required": false,
+          "description": "Filter by member"
+        },
+        "from_date": {
+          "type": "string",
+          "required": false,
+          "description": "Start date YYYY-MM-DD"
+        },
+        "to_date": {
+          "type": "string",
+          "required": false,
+          "description": "End date YYYY-MM-DD"
+        }
+      }
+    },
+    {
+      "name": "Catch Report Media",
+      "path": "/functions/v1/catch-report-media",
+      "method": "POST",
+      "description": "Upload additional media to an existing catch report.",
+      "auth": "required",
+      "body": {
+        "catch_report_id": {
+          "type": "uuid",
+          "required": true,
+          "description": "Catch report UUID"
+        },
+        "files[]": {
+          "type": "array",
+          "required": true,
+          "description": "Array of { filename, mimeType, data_base64 }"
+        }
+      }
+    },
+    {
+      "name": "Catch Story",
+      "path": "/functions/v1/catch-story",
+      "method": "POST",
+      "description": "Generate an AI narrative for a catch report. Uses community-specific prompt if configured.",
+      "auth": "required",
+      "body": {
+        "catch_report_id": {
+          "type": "uuid",
+          "required": true,
+          "description": "Catch report UUID"
+        }
+      },
+      "response": {
+        "title": "string",
+        "summary": "string (AI-generated narrative)"
+      },
+      "notes": [
+        "Uses community-specific custom prompt if one exists for the 'catch_story' prompt_type."
+      ]
+    },
+    {
+      "name": "Upload No-Catch Reports",
+      "path": "/functions/v1/upload-no-catch-reports",
+      "method": "POST",
+      "description": "Report non-catch events (active fishing, farmed out, promising water, passed water).",
+      "auth": "required",
+      "body": {
+        "reportId": {
+          "type": "uuid",
+          "required": true,
+          "description": "Client-generated report UUID"
+        },
+        "createdAt": {
+          "type": "iso8601",
+          "required": true,
+          "description": "Event timestamp"
+        },
+        "eventType": {
+          "type": "string",
+          "required": true,
+          "description": "active, farmed, promising, or passed"
+        },
+        "communityId": {
+          "type": "uuid",
+          "required": true,
+          "description": "Community UUID"
+        },
+        "memberId": {
+          "type": "string",
+          "required": true,
+          "description": "Member number"
+        },
+        "river": {
+          "type": "string",
+          "required": false,
+          "description": "River name"
+        },
+        "guideName": {
+          "type": "string",
+          "required": false,
+          "description": "Guide name"
+        },
+        "location.lat": {
+          "type": "number",
+          "required": true,
+          "description": "Latitude"
+        },
+        "location.lon": {
+          "type": "number",
+          "required": true,
+          "description": "Longitude"
+        },
+        "meta.appVersion": {
+          "type": "string",
+          "required": true,
+          "description": "App version"
+        }
+      }
+    },
+    {
+      "name": "Map Reports",
+      "path": "/functions/v1/map-reports",
+      "method": "GET",
+      "description": "Unified catch and no-catch map pin data. Role-based: members see own data, guides/admins/scientists see all community data.",
+      "auth": "required",
+      "parameters": {
+        "community_id": {
+          "type": "uuid",
+          "required": true,
+          "description": "Community UUID"
+        },
+        "member_id": {
+          "type": "uuid",
+          "required": false,
+          "description": "Filter by member"
+        },
+        "from_date": {
+          "type": "string",
+          "required": false,
+          "description": "Start date YYYY-MM-DD"
+        },
+        "to_date": {
+          "type": "string",
+          "required": false,
+          "description": "End date YYYY-MM-DD"
+        }
+      },
+      "response": {
+        "reports": "array of { type, lat, lon, river, created_at, species?, lengthInches?, eventType? }"
+      },
+      "notes": [
+        "type is one of: catch, active, farmed, promising, passed"
+      ]
+    },
+    {
+      "name": "Manage Trip",
+      "path": "/functions/v1/manage-trip",
+      "method": "GET | POST | PUT | DELETE",
+      "description": "CRUD operations for trips scoped to a community.",
+      "auth": "required",
+      "parameters": {
+        "community_id": {
+          "type": "uuid",
+          "required": true,
+          "description": "Community UUID (GET)"
+        },
+        "trip_id": {
+          "type": "uuid",
+          "required": false,
+          "description": "Trip UUID (GET single, PUT, DELETE)"
+        }
+      }
+    },
+    {
+      "name": "Trip Roster",
+      "path": "/functions/v1/trip-roster",
+      "method": "GET | POST | DELETE",
+      "description": "Manage trip roster assignments. Returns member_id (UUID) without legacy angler_id aliases.",
+      "auth": "required",
+      "parameters": {
+        "trip_id": {
+          "type": "uuid",
+          "required": true,
+          "description": "Trip UUID"
+        }
+      }
+    },
+    {
+      "name": "Join Community",
+      "path": "/functions/v1/join-community",
+      "method": "POST",
+      "description": "Join a community using its code.",
+      "auth": "required",
+      "body": {
+        "community_code": {
+          "type": "string",
+          "required": true,
+          "description": "6-char community code"
+        }
+      }
+    },
+    {
+      "name": "Manage Community",
+      "path": "/functions/v1/manage-community",
+      "method": "GET",
+      "description": "Get community details including is_active status.",
+      "auth": "required",
+      "parameters": {
+        "community_id": {
+          "type": "uuid",
+          "required": true,
+          "description": "Community UUID"
+        }
+      },
+      "notes": [
+        "Response includes is_active: false for inactive communities; app must handle this state."
+      ]
+    },
+    {
+      "name": "Community Members",
+      "path": "/functions/v1/community-members",
+      "method": "GET | POST | PUT | DELETE",
+      "description": "Manage community membership. Uses 'members' table with member_number identifier.",
+      "auth": "required",
+      "parameters": {
+        "community_id": {
+          "type": "uuid",
+          "required": true,
+          "description": "Community UUID"
+        }
+      }
+    },
+    {
+      "name": "Angler Context",
+      "path": "/functions/v1/angler-context",
+      "method": "GET",
+      "description": "Get contextual information for AI-powered features.",
+      "auth": "required",
+      "parameters": {
+        "member_id": {
+          "type": "uuid",
+          "required": true,
+          "description": "Member UUID"
+        },
+        "community_id": {
+          "type": "uuid",
+          "required": false,
+          "description": "Community UUID"
+        }
+      }
+    },
+    {
+      "name": "Angler Forecast",
+      "path": "/functions/v1/angler-forecast",
+      "method": "GET",
+      "description": "Get AI-powered fishing forecast.",
+      "auth": "required",
+      "parameters": {
+        "member_id": {
+          "type": "uuid",
+          "required": true,
+          "description": "Member UUID"
+        }
+      }
+    },
+    {
+      "name": "Data Enrichment (Catch)",
+      "path": "/functions/v1/enrich-catch-report",
+      "method": "POST",
+      "description": "Enrich a catch report with weather, tide, moon phase, and environmental data.",
+      "auth": "required",
+      "body": {
+        "catch_report_id": {
+          "type": "uuid",
+          "required": true,
+          "description": "Catch report UUID"
+        }
+      },
+      "response": {
+        "air_temperature": "number | null",
+        "water_temperature": "number | null",
+        "wind_speed": "number | null",
+        "humidity": "number | null",
+        "atmospheric_pressure": "number | null",
+        "cloud_cover": "number | null",
+        "precipitation_24h": "number | null",
+        "moon_phase": "string | null",
+        "flow_rate_cfs": "number | null",
+        "water_level": "number | null",
+        "is_tidal_river": "boolean | null",
+        "sunrise_time": "string | null",
+        "sunset_time": "string | null",
+        "sunshine_hours": "number | null",
+        "dew_point": "number | null",
+        "uv_index": "number | null",
+        "tidal_data": "object | null (next/previous high/low tide times and heights)"
+      }
+    },
+    {
+      "name": "Data Enrichment (No-Catch)",
+      "path": "/functions/v1/enrich-no-catch-report",
+      "method": "POST",
+      "description": "Enrich a no-catch report with environmental data.",
+      "auth": "required",
+      "body": {
+        "no_catch_report_id": {
+          "type": "uuid",
+          "required": true,
+          "description": "No-catch report UUID"
+        }
+      }
+    },
+    {
+      "name": "Weather Snapshot",
+      "path": "/functions/v1/weather-snapshot",
+      "method": "GET",
+      "description": "Current conditions and 8-hour hourly forecast based on GPS coordinates.",
+      "auth": "required",
+      "parameters": {
+        "lat": {
+          "type": "number",
+          "required": true,
+          "description": "Latitude"
+        },
+        "lon": {
+          "type": "number",
+          "required": true,
+          "description": "Longitude"
+        }
+      }
+    },
+    {
+      "name": "Water Conditions",
+      "path": "/functions/v1/river-conditions",
+      "method": "GET",
+      "description": "Get river/water conditions from configured stations.",
+      "auth": "required",
+      "parameters": {
+        "community_id": {
+          "type": "uuid",
+          "required": true,
+          "description": "Community UUID"
+        },
+        "station_id": {
+          "type": "string",
+          "required": false,
+          "description": "Specific station ID"
+        }
+      }
+    },
+    {
+      "name": "Water Conditions Batch",
+      "path": "/functions/v1/river-conditions-batch",
+      "method": "GET",
+      "description": "Get conditions for multiple stations at once.",
+      "auth": "required",
+      "parameters": {
+        "community_id": {
+          "type": "uuid",
+          "required": true,
+          "description": "Community UUID"
+        }
+      }
+    },
+    {
+      "name": "Gear",
+      "path": "/functions/v1/gear",
+      "method": "GET | POST | PUT",
+      "description": "Manage member gear preferences. Accepts angler_id as legacy input alias.",
+      "auth": "required",
+      "parameters": {
+        "member_id": {
+          "type": "uuid",
+          "required": true,
+          "description": "Member UUID (also accepts angler_id)"
+        }
+      }
+    },
+    {
+      "name": "Proficiency",
+      "path": "/functions/v1/proficiency",
+      "method": "GET | POST | PUT",
+      "description": "Manage member proficiency ratings. Accepts angler_id as legacy input alias.",
+      "auth": "required",
+      "parameters": {
+        "member_id": {
+          "type": "uuid",
+          "required": true,
+          "description": "Member UUID (also accepts angler_id)"
+        }
+      }
+    },
+    {
+      "name": "Observations",
+      "path": "/functions/v1/observations",
+      "method": "GET | POST",
+      "description": "Voice memo observations with transcripts.",
+      "auth": "required",
+      "parameters": {
+        "community_id": {
+          "type": "uuid",
+          "required": false,
+          "description": "Filter by community"
+        }
+      }
+    },
+    {
+      "name": "Transcript Insights",
+      "path": "/functions/v1/transcript-insights",
+      "method": "POST",
+      "description": "AI-powered analysis of observation transcripts.",
+      "auth": "required",
+      "body": {
+        "observation_id": {
+          "type": "uuid",
+          "required": true,
+          "description": "Observation UUID"
+        }
+      }
+    },
+    {
+      "name": "Flight Details",
+      "path": "/functions/v1/flight-details",
+      "method": "GET | POST",
+      "description": "Manage flight itineraries and segments.",
+      "auth": "required"
+    },
+    {
+      "name": "Flight Status",
+      "path": "/functions/v1/flight-status",
+      "method": "GET",
+      "description": "Check real-time flight status.",
+      "auth": "required",
+      "parameters": {
+        "flight_number": {
+          "type": "string",
+          "required": true,
+          "description": "Flight number"
+        },
+        "date": {
+          "type": "string",
+          "required": true,
+          "description": "Flight date YYYY-MM-DD"
+        }
+      }
+    },
+    {
+      "name": "Staff Bios",
+      "path": "/functions/v1/staff-bios",
+      "method": "GET",
+      "description": "List staff bios for a community.",
+      "auth": "required",
+      "parameters": {
+        "community_id": {
+          "type": "uuid",
+          "required": true,
+          "description": "Community UUID"
+        }
+      }
+    },
+    {
+      "name": "Staff Bio Detail",
+      "path": "/functions/v1/staff-bio-detail",
+      "method": "GET",
+      "description": "Get detailed staff bio.",
+      "auth": "required",
+      "parameters": {
+        "staff_id": {
+          "type": "uuid",
+          "required": true,
+          "description": "Staff UUID"
+        }
+      }
+    },
+    {
+      "name": "Tactics Recommendations",
+      "path": "/functions/v1/tactics-recommendations",
+      "method": "GET",
+      "description": "AI-powered tactics recommendations based on conditions.",
+      "auth": "required",
+      "parameters": {
+        "community_id": {
+          "type": "uuid",
+          "required": true,
+          "description": "Community UUID"
+        },
+        "member_id": {
+          "type": "uuid",
+          "required": false,
+          "description": "Member UUID for personalization"
+        }
+      }
+    },
+    {
+      "name": "Classified Licenses",
+      "path": "/functions/v1/classified-licenses",
+      "method": "GET | POST | PUT | DELETE",
+      "description": "Manage classified waters fishing licenses.",
+      "auth": "required",
+      "parameters": {
+        "member_id": {
+          "type": "uuid",
+          "required": true,
+          "description": "Member UUID"
+        }
+      }
+    },
+    {
+      "name": "Forum Posts",
+      "path": "/functions/v1/forum-posts",
+      "method": "GET | POST | PUT | DELETE",
+      "description": "Community forum threads and posts.",
+      "auth": "required",
+      "parameters": {
+        "community_id": {
+          "type": "uuid",
+          "required": true,
+          "description": "Community UUID"
+        },
+        "thread_id": {
+          "type": "uuid",
+          "required": false,
+          "description": "Thread UUID"
+        }
+      }
+    },
+    {
+      "name": "Ops Tickets",
+      "path": "/functions/v1/ops-tickets",
+      "method": "GET | POST | PUT | DELETE",
+      "description": "Kanban-based operations task management.",
+      "auth": "required",
+      "parameters": {
+        "community_id": {
+          "type": "uuid",
+          "required": true,
+          "description": "Community UUID"
+        }
+      }
+    }
+  ]
+}

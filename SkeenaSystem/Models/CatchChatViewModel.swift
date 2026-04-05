@@ -493,25 +493,12 @@ final class CatchChatViewModel: ObservableObject {
   }
 
   /// Maps internal model labels to user-facing species names.
-  /// Add entries here when a model class name doesn't match the display name.
+  /// Keys must match the lowercased, underscore-stripped output of `speciesLabels`
+  /// in `CatchPhotoAnalyzer.swift`. When adding a species, update both in lockstep
+  /// (see the `/new-species` slash command in `.claude/commands/`).
   private static let speciesDisplayNames: [String: String] = [
-    "articchar": "Arctic Char",
-    "atlantic salmon": "Atlantic Salmon",
-    "brook": "Brook Trout",
-    "brook trout": "Brook Trout",
-    "brown trout": "Brown Trout",
-    "chinook salmon": "Chinook Salmon",
-    "chum salmon": "Chum Salmon",
-    "coho salmon": "Coho Salmon",
-    "cutthroat trout": "Cutthroat Trout",
-    "largemouth bass": "Largemouth Bass",
-    "northern pike": "Northern Pike",
-    "pink salmon": "Pink Salmon",
-    "rainbow": "Rainbow Trout",
-    "rainbow lake": "Rainbow Trout (Lake)",
     "sea run trout": "Sea-Run Trout",
-    "smallmouth bass": "Smallmouth Bass",
-    "sockeye salmon": "Sockeye Salmon",
+    "steelhead": "Steelhead",
   ]
 
   private func splitSpecies(_ raw: String?) -> (species: String, stage: String?) {

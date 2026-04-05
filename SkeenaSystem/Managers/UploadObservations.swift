@@ -49,8 +49,15 @@ extension UploadResultDTO: Decodable {
 }
 
 // MARK: - Upload service for standalone observations
+//
+// Explicitly `nonisolated`: the project sets SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor,
+// which would otherwise make this class `@MainActor`. That routes its deinit through
+// `swift_task_deinitOnExecutorMainActorBackDeploy`, which hits a TaskLocal scope
+// double-free in iOS 26.2 simruntime when the enclosing SwiftUI View is destroyed.
+// The class has no stored properties and no main-thread-only resources, so nonisolated
+// is also the semantically correct choice.
 
-final class UploadObservations {
+nonisolated final class UploadObservations {
 
   // MARK: - Error types
 

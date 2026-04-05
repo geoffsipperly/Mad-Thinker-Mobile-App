@@ -192,6 +192,23 @@ final class DarkPageTemplateTests: XCTestCase {
     XCTAssertEqual(tabs[3].label, "Explore", "SNAPSHOT: Fourth tab is Explore")
   }
 
+  /// Verify the Scientist toolbar tab configuration (currently mirrors public).
+  func testSnapshot_scientistToolbarTabs() {
+    let tabs: [(icon: String, label: String)] = [
+      ("house", "Home"),
+      ("camera.viewfinder", "Catches"),
+      ("message", "Social"),
+      ("safari", "Explore")
+    ]
+    XCTAssertEqual(tabs.count, 4, "SNAPSHOT: Scientist toolbar has 4 tabs (same as public)")
+    XCTAssertEqual(tabs[0].label, "Home", "SNAPSHOT: First tab is Home")
+    XCTAssertEqual(tabs[1].label, "Catches", "SNAPSHOT: Second tab is Catches")
+    XCTAssertEqual(tabs[2].label, "Social", "SNAPSHOT: Third tab is Social")
+    XCTAssertEqual(tabs[3].label, "Explore", "SNAPSHOT: Fourth tab is Explore")
+    XCTAssertFalse(tabs.contains(where: { $0.label == "Trips" }),
+                   "SNAPSHOT: Scientist toolbar must not contain Trips")
+  }
+
   /// Verify the Guide landing view toolbar tab configuration.
   func testSnapshot_guideToolbarTabs() {
     let tabs: [(icon: String, label: String)] = [

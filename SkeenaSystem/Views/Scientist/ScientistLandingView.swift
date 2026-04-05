@@ -3,9 +3,9 @@
 import CoreLocation
 import SwiftUI
 
-// MARK: - API config (mirrors AnglerLandingView's URL composition)
+// MARK: - API config (mirrors PublicLandingView's URL composition)
 
-private enum PublicLandingAPI {
+private enum ScientistLandingAPI {
   private static let rawBaseURLString: String = {
     (Bundle.main.object(forInfoDictionaryKey: "API_BASE_URL") as? String)?
       .trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
@@ -26,7 +26,7 @@ private enum PublicLandingAPI {
 
   private static func makeURL(path: String, queryItems: [URLQueryItem] = []) throws -> URL {
     guard let base = URL(string: baseURLString), let scheme = base.scheme, let host = base.host else {
-      throw NSError(domain: "PublicLanding", code: -1000, userInfo: [
+      throw NSError(domain: "ScientistLanding", code: -1000, userInfo: [
         NSLocalizedDescriptionKey: "Invalid API_BASE_URL (raw: '\(rawBaseURLString)', normalized: '\(baseURLString)')"
       ])
     }
@@ -42,7 +42,7 @@ private enum PublicLandingAPI {
     let merged = existing + queryItems
     comps.queryItems = merged.isEmpty ? nil : merged
     guard let url = comps.url else {
-      throw NSError(domain: "PublicLanding", code: -1001, userInfo: [
+      throw NSError(domain: "ScientistLanding", code: -1001, userInfo: [
         NSLocalizedDescriptionKey: "Failed to build URL for path: \(path)"
       ])
     }
@@ -58,16 +58,13 @@ private enum PublicLandingAPI {
   }
 }
 
-// MARK: - PublicLandingView
+// MARK: - ScientistLandingView
 //
-// Landing screen for users with the "public" community role.
-// Identical to LandingView except:
-//   - No trip sync on appear (public users have no trip concept)
-//   - No trip navigation destination
-//   - ReportChatView opened in alwaysSolo mode
-//   - userRole environment is .public (toolbar shows no Trips tab)
+// Landing screen for users with the "scientist" community role.
+// Forked from PublicLandingView to allow independent evolution of
+// scientist-specific features (species display, data collection, etc.).
 
-struct PublicLandingView: View {
+struct ScientistLandingView: View {
   @StateObject private var auth = AuthService.shared
   @ObservedObject private var communityService = CommunityService.shared
 
@@ -129,7 +126,7 @@ struct PublicLandingView: View {
       }
       .navigationDestination(isPresented: $showRecordActivity) {
         RecordActivityView()
-          .environment(\.userRole, .public)
+          .environment(\.userRole, .scientist)
           .environment(\.guideNavigateTo, handleNavigateTo)
           .environmentObject(auth)
       }
@@ -148,32 +145,32 @@ struct PublicLandingView: View {
         switch dest {
         case .conditions:
           FishingForecastRequestView()
-            .environment(\.userRole, .public)
+            .environment(\.userRole, .scientist)
             .environment(\.guideNavigateTo, handleNavigateTo)
         case .community:
           CommunityForumView()
-            .environment(\.userRole, .public)
+            .environment(\.userRole, .scientist)
             .environment(\.guideNavigateTo, handleNavigateTo)
             .environmentObject(auth)
         case .catches:
           ReportsListViewPicMemo()
-            .environment(\.userRole, .public)
+            .environment(\.userRole, .scientist)
             .environment(\.guideNavigateTo, handleNavigateTo)
         case .observations:
           ObservationsListView()
-            .environment(\.userRole, .public)
+            .environment(\.userRole, .scientist)
             .environment(\.guideNavigateTo, handleNavigateTo)
         case .trips:
-          // Public users have no trips — should never be reached
+          // Scientists have no trips — should never be reached
           EmptyView()
         case .learn:
           LearnTacticsView()
-            .environment(\.userRole, .public)
+            .environment(\.userRole, .scientist)
             .environment(\.guideNavigateTo, handleNavigateTo)
             .environmentObject(communityService)
         case .explore:
           ExploreView()
-            .environment(\.userRole, .public)
+            .environment(\.userRole, .scientist)
             .environment(\.guideNavigateTo, handleNavigateTo)
         }
       }
@@ -206,7 +203,7 @@ struct PublicLandingView: View {
         Task { await fetchWeather(location: loc) }
       }
     }
-    .environment(\.userRole, .public)
+    .environment(\.userRole, .scientist)
     .environment(\.guideNavigateTo, handleNavigateTo)
     .environmentObject(auth)
   }
@@ -455,7 +452,7 @@ struct PublicLandingView: View {
 
       HStack {
         VStack(alignment: .leading, spacing: 1) {
-          Text(r.displayLocation)
+          Text(r.species ?? "Unknown Species")
             .font(.caption2.weight(.semibold))
             .foregroundColor(.white)
             .lineLimit(1)
@@ -491,9 +488,9 @@ struct PublicLandingView: View {
 
     let url: URL
     do {
-      url = try PublicLandingAPI.downloadCatchURL()
+      url = try ScientistLandingAPI.downloadCatchURL()
     } catch {
-      AppLogging.log("[PublicLanding] Failed to build download URL: \(error.localizedDescription)", level: .error, category: .catch)
+      AppLogging.log("[ScientistLanding] Failed to build download URL: \(error.localizedDescription)", level: .error, category: .catch)
       errorText = "Unable to load catch reports. Please try again later."
       return
     }
@@ -519,7 +516,7 @@ struct PublicLandingView: View {
       let decoded = try JSONDecoder().decode(DownloadResponse.self, from: data)
       withAnimation { reports = decoded.catch_reports }
     } catch {
-      AppLogging.log("[PublicLanding] Network error fetching catches: \(error.localizedDescription)", level: .error, category: .catch)
+      AppLogging.log("[ScientistLanding] Network error fetching catches: \(error.localizedDescription)", level: .error, category: .catch)
       errorText = "Unable to load catch reports. Please check your connection and try again."
     }
   }
@@ -532,7 +529,7 @@ struct PublicLandingView: View {
       let reports = try await MapReportService.fetch(communityId: communityId, memberId: auth.currentMemberId)
       await MainActor.run { mapReports = reports }
     } catch {
-      AppLogging.log("[PublicLanding] Map reports fetch failed: \(error.localizedDescription)", level: .error, category: .network)
+      AppLogging.log("[ScientistLanding] Map reports fetch failed: \(error.localizedDescription)", level: .error, category: .network)
     }
   }
 

@@ -19,6 +19,7 @@ final class CommunityService: ObservableObject {
     @Published var activeCommunityId: String?
     @Published private(set) var activeRole: String?  // "guide", "angler", or "public"
     @Published private(set) var activeCommunityTypeId: String?
+    @Published private(set) var activeCommunityTypeName: String?
     @Published private(set) var activeCommunityConfig: CommunityConfig = .default
     /// The user's chosen default community. Survives logout so subsequent logins
     /// auto-select this community and skip the picker. Cleared only when the user
@@ -28,11 +29,16 @@ final class CommunityService: ObservableObject {
     /// wait for this before rendering community-dependent content.
     @Published private(set) var hasFetchedMemberships = false
 
+    /// Whether the active community is a Conservation-type community.
+    /// Used to gate scientist-specific views and features.
+    var isConservation: Bool { activeCommunityTypeName == "Conservation" }
+
     // MARK: - Persistence keys
 
     private let kActiveCommunityId = "CommunityService.activeCommunityId"
     private let kActiveRole = "CommunityService.activeRole"
     private let kActiveCommunityTypeId = "CommunityService.activeCommunityTypeId"
+    private let kActiveCommunityTypeName = "CommunityService.activeCommunityTypeName"
     private let kActiveCommunityConfig = "CommunityService.activeCommunityConfig"
     private let kDefaultCommunityId = "CommunityService.defaultCommunityId"
 
@@ -46,6 +52,7 @@ final class CommunityService: ObservableObject {
         activeCommunityId = UserDefaults.standard.string(forKey: kActiveCommunityId)
         activeRole = UserDefaults.standard.string(forKey: kActiveRole)
         activeCommunityTypeId = UserDefaults.standard.string(forKey: kActiveCommunityTypeId)
+        activeCommunityTypeName = UserDefaults.standard.string(forKey: kActiveCommunityTypeName)
         defaultCommunityId = UserDefaults.standard.string(forKey: kDefaultCommunityId)
 
         // Restore cached community config for instant cold-launch rendering
@@ -160,6 +167,7 @@ final class CommunityService: ObservableObject {
                         if let membership = fetched.first(where: { $0.communityId == cachedId }) {
                             self.activeRole = membership.role
                             self.activeCommunityTypeId = membership.communities.communityTypeId
+                            self.activeCommunityTypeName = membership.communities.communityTypes?.name
                             self.activeCommunityConfig = membership.communities.config
                             persistActiveState()
 
@@ -176,6 +184,7 @@ final class CommunityService: ObservableObject {
                         self.activeCommunityId = nil
                         self.activeRole = nil
                         self.activeCommunityTypeId = nil
+                        self.activeCommunityTypeName = nil
                         self.activeCommunityConfig = .default
                         persistActiveState()
                         AppLogging.log("[CommunityService] Cached community no longer valid — showing picker for \(fetched.count) communities", level: .info, category: .auth)
@@ -215,6 +224,7 @@ final class CommunityService: ObservableObject {
         let membership = memberships.first(where: { $0.communityId == id })
         activeRole = membership?.role
         activeCommunityTypeId = membership?.communities.communityTypeId
+        activeCommunityTypeName = membership?.communities.communityTypes?.name
         activeCommunityConfig = membership?.communities.config ?? .default
         persistActiveState()
 
@@ -252,6 +262,7 @@ final class CommunityService: ObservableObject {
         activeCommunityId = nil
         activeRole = nil
         activeCommunityTypeId = nil
+        activeCommunityTypeName = nil
         activeCommunityConfig = .default
         persistActiveState()
         AppLogging.log("[CommunityService] Active community cleared — showing picker", level: .info, category: .auth)
@@ -315,11 +326,13 @@ final class CommunityService: ObservableObject {
         activeCommunityId = nil
         activeRole = nil
         activeCommunityTypeId = nil
+        activeCommunityTypeName = nil
         activeCommunityConfig = .default
         hasFetchedMemberships = false
         UserDefaults.standard.removeObject(forKey: kActiveCommunityId)
         UserDefaults.standard.removeObject(forKey: kActiveRole)
         UserDefaults.standard.removeObject(forKey: kActiveCommunityTypeId)
+        UserDefaults.standard.removeObject(forKey: kActiveCommunityTypeName)
         UserDefaults.standard.removeObject(forKey: kActiveCommunityConfig)
     }
 
@@ -337,6 +350,7 @@ final class CommunityService: ObservableObject {
         UserDefaults.standard.set(activeCommunityId, forKey: kActiveCommunityId)
         UserDefaults.standard.set(activeRole, forKey: kActiveRole)
         UserDefaults.standard.set(activeCommunityTypeId, forKey: kActiveCommunityTypeId)
+        UserDefaults.standard.set(activeCommunityTypeName, forKey: kActiveCommunityTypeName)
         if let configData = try? JSONEncoder().encode(activeCommunityConfig) {
             UserDefaults.standard.set(configData, forKey: kActiveCommunityConfig)
         }

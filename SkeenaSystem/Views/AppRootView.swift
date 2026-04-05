@@ -46,8 +46,14 @@ struct AppRootView: View {
             LandingView()
           case .angler:
             AnglerLandingView()
-          case .public, .scientist:
+          case .public:
             PublicLandingView()
+          case .scientist:
+            if communityService.isConservation {
+              ScientistLandingView()
+            } else {
+              PublicLandingView()
+            }
           }
         }
       } else {
