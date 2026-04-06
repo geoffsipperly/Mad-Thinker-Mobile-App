@@ -95,16 +95,12 @@ struct TripDetailView: View {
               let displayName = [angler.firstName ?? "", angler.lastName ?? ""]
                 .filter { !$0.isEmpty }
                 .joined(separator: " ")
-              let community = CommunityService.shared.activeCommunityName
-              let lodge = CommunityService.shared.activeCommunityName
 
               NavigationLink {
                 AnglerDetailsSheetView(
-                  anglerID: angler.id,
+                  memberID: angler.id,
                   displayName: displayName.isEmpty ? "(Unnamed)" : displayName,
-                  memberNumber: angler.memberId,
-                  community: community,
-                  lodge: lodge
+                  memberNumber: angler.memberId
                 )
               } label: {
                 anglerRow(angler: angler)
