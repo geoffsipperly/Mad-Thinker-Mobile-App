@@ -15,7 +15,6 @@ struct AnglerTripPrepView: View {
   private var E_FLIGHT_INFO: Bool { communityService.activeCommunityConfig.flag("E_FLIGHT_INFO") }
   private var E_MEET_STAFF: Bool { communityService.activeCommunityConfig.flag("E_MEET_STAFF") }
   private var E_GEAR_CHECKLIST: Bool { communityService.activeCommunityConfig.flag("E_GEAR_CHECKLIST") }
-  private var E_MANAGE_LICENSES: Bool { communityService.activeCommunityConfig.flag("E_MANAGE_LICENSES") }
   private var E_SELF_ASSESSMENT: Bool { communityService.activeCommunityConfig.flag("E_SELF_ASSESSMENT") }
   private var E_PREFERENCES: Bool { communityService.activeCommunityConfig.flag("E_PREFERENCES") }
 
@@ -87,13 +86,6 @@ struct AnglerTripPrepView: View {
               }
             }
 
-            if E_MANAGE_LICENSES {
-              NavigationLink {
-                AnglerClassifiedWatersLicenseUpload()
-              } label: {
-                prepRow(icon: "doc.text.magnifyingglass", title: "Manage licenses")
-              }
-            }
 
             if E_SELF_ASSESSMENT {
               NavigationLink {

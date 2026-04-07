@@ -26,7 +26,6 @@ E_MANAGE_LICENSES = false
 E_SELF_ASSESSMENT = true
 E_PREFERENCES = true
 E_CATCH_CAROUSEL = true
-E_THE_BUZZ = true
 E_CATCH_MAP = true
 E_MANAGE_OPS = false
 
@@ -62,13 +61,6 @@ STAE_BIO_DETAIL = /functions/v1/staff-bio-detail
 FLIGHT_DETAILS = /functions/v1/flight-details
 FLIGHT_STATUS = /functions/v1/flight-status
 
-// ──────────────────────────────────────────────
-// MARK: - Forum / Community Feed
-// ──────────────────────────────────────────────
-
-FORUM_BASE = /rest/v1
-FORUM_API_KEY = $(SUPABASE_ANON_KEY)
-BUZZ_CATEGORY_ID = 5d33c4b7-966c-4d9e-a3ed-ed9eafae168f
 
 // ──────────────────────────────────────────────
 // MARK: - App Branding (compile-time fallback — overridden by communities table at runtime)

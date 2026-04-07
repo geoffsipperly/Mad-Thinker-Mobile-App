@@ -3,7 +3,7 @@
 //
 // Regression tests for AnglerOnboardingWizard and its trigger logic:
 //   - Onboarding gate: only Lodge, MultiLodge, FlyShop community types
-//   - UserDefaults key format: "anglerOnboarded_\(communityId)"
+//   - UserDefaults key format: "anglerOnboarded_\(memberId)_\(communityId)" (per-user, per-community)
 //   - Onboarding does NOT fire for Conservation or unknown types
 //   - Onboarding does NOT fire once the key is set
 //   - Notification.Name.onboardingStepSave exists for step save coordination

@@ -7,7 +7,6 @@ import os
 enum LogCategory: String, CaseIterable {
     case auth
     case network
-    case ocr
     case ml
     case catch
     case persistence

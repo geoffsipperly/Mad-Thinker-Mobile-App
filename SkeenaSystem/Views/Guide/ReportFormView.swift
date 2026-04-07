@@ -112,10 +112,7 @@ struct ReportFormView: View {
         Button {
           dismiss()
         } label: {
-          HStack(spacing: 4) {
-            Image(systemName: "chevron.backward")
-            Text("Back")
-          }
+          Image(systemName: "chevron.backward")
         }
       }
     }

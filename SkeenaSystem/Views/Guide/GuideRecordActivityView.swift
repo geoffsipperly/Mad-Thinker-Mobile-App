@@ -11,6 +11,7 @@ import SwiftUI
 
 struct GuideRecordActivityView: View {
   @StateObject private var auth = AuthService.shared
+  @Environment(\.guideNavigateTo) private var guideNavigateTo
   @Environment(\.dismiss) private var dismiss
 
   /// Called after a catch is successfully saved — used by LandingView to pop
@@ -30,11 +31,18 @@ struct GuideRecordActivityView: View {
     DarkPageTemplate {
       ScrollView {
         VStack(spacing: 12) {
-          // Record a Catch tile (blue)
-          Button { goToAssistant = true } label: {
-            actionTile(icon: "square.and.pencil", label: "Record a Catch")
+          // Action tiles — Record a Catch + Record Observation (blue)
+          LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
+            Button { goToAssistant = true } label: {
+              actionTile(icon: "square.and.pencil", label: "Record a Catch")
+            }
+            .accessibilityIdentifier("landedTile")
+
+            Button { guideNavigateTo(.observations) } label: {
+              actionTile(icon: "waveform", label: "Record Observation")
+            }
+            .accessibilityIdentifier("observationsTile")
           }
-          .accessibilityIdentifier("landedTile")
           .padding(.horizontal, 16)
           .padding(.top, 16)
 
@@ -126,15 +134,16 @@ struct GuideRecordActivityView: View {
   // MARK: - Tile views
 
   private func actionTile(icon: String, label: String) -> some View {
-    HStack(spacing: 10) {
+    VStack(spacing: 6) {
       Image(systemName: icon)
         .font(.title3)
         .foregroundColor(.blue)
       Text(label)
-        .font(.subheadline.weight(.semibold))
+        .font(.caption.weight(.semibold))
         .foregroundColor(.blue)
+        .lineLimit(1)
     }
-    .frame(maxWidth: .infinity, minHeight: 56)
+    .frame(maxWidth: .infinity, minHeight: 70)
     .background(Color.white.opacity(0.08), in: RoundedRectangle(cornerRadius: 16))
   }
 

@@ -108,6 +108,8 @@ struct PublicLandingView: View {
       let precipChance: Int
     }
     let hourly: [HourlySlot]
+    /// Backend weather provider: "open-meteo" or "weatherapi". Informational.
+    let source: String?
   }
   @State private var liveWeather: LiveWeather? = nil
 
@@ -151,10 +153,9 @@ struct PublicLandingView: View {
             .environment(\.userRole, .public)
             .environment(\.guideNavigateTo, handleNavigateTo)
         case .community:
-          CommunityForumView()
+          SocialFeedView()
             .environment(\.userRole, .public)
             .environment(\.guideNavigateTo, handleNavigateTo)
-            .environmentObject(auth)
         case .catches:
           ReportsListViewPicMemo()
             .environment(\.userRole, .public)
@@ -577,7 +578,8 @@ struct PublicLandingView: View {
           windSpeed: Int(w.windSpeed.rounded()),
           pressureVal: Int(w.pressure.rounded()),
           pressureTrend: WeatherSnapshotService.pressureTrend(current: w.pressure, hourly: response.hourlyForecast),
-          hourly: slots
+          hourly: slots,
+          source: response.source
         )
       }
     } catch {

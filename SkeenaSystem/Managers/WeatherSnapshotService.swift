@@ -7,6 +7,9 @@ import Foundation
 struct WeatherSnapshotResponse: Decodable {
   let current: WeatherCurrentDTO
   let hourlyForecast: [WeatherHourlyDTO]
+  /// Which backend weather provider was used: "open-meteo" or "weatherapi".
+  /// Informational — useful for diagnosing formatting differences between providers.
+  let source: String?
 }
 
 struct WeatherCurrentDTO: Decodable {
@@ -109,7 +112,9 @@ enum WeatherSnapshotService {
       AppLogging.log("[Weather] attempt \(attempt) — HTTP \(code): \(bodyStr.prefix(500))", level: .error, category: .network)
       throw URLError(.badServerResponse)
     }
-    return try JSONDecoder().decode(WeatherSnapshotResponse.self, from: data)
+    let decoded = try JSONDecoder().decode(WeatherSnapshotResponse.self, from: data)
+    AppLogging.log("[Weather] attempt \(attempt) — source: \(decoded.source ?? "unknown")", level: .debug, category: .network)
+    return decoded
   }
 
   // MARK: - Display helpers

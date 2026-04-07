@@ -43,6 +43,8 @@ struct LandingView: View {
       let precipChance: Int
     }
     let hourly: [HourlySlot]
+    /// Backend weather provider: "open-meteo" or "weatherapi". Informational.
+    let source: String?
   }
   @State private var liveWeather: LiveWeather? = nil
 
@@ -67,6 +69,7 @@ struct LandingView: View {
           showRecordActivity = false
           navPath = NavigationPath()
         })
+        .environment(\.guideNavigateTo, handleGuideNavigateTo)
         .environmentObject(auth)
       }
       .navigationDestination(isPresented: $showFarmedList) {
@@ -421,9 +424,10 @@ struct LandingView: View {
           windSpeed: Int(w.windSpeed.rounded()),
           pressureVal: Int(w.pressure.rounded()),
           pressureTrend: WeatherSnapshotService.pressureTrend(current: w.pressure, hourly: response.hourlyForecast),
-          hourly: slots
+          hourly: slots,
+          source: response.source
         )
-        AppLogging.log("[LandingView] liveWeather SET — locationName='\(locationName)', temp=\(Int(w.temperature.rounded()))", level: .debug, category: .network)
+        AppLogging.log("[LandingView] liveWeather SET — locationName='\(locationName)', temp=\(Int(w.temperature.rounded())), source=\(response.source ?? "unknown")", level: .debug, category: .network)
       }
     } catch {
       AppLogging.log("[LandingView] WeatherSnapshotService FAILED: \(error.localizedDescription)", level: .error, category: .network)

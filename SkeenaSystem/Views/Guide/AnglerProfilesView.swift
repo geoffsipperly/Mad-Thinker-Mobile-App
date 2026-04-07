@@ -429,7 +429,7 @@ struct AnglerProfilesView: View {
                 Button {
                     dismiss()
                 } label: {
-                    Label("Back", systemImage: "chevron.backward")
+                    Image(systemName: "chevron.backward")
                         .foregroundColor(.white)
                 }
             }

@@ -29,13 +29,9 @@ struct TermsAndConditionsView: View {
       .toolbar {
         ToolbarItem(placement: .navigationBarLeading) {
           Button(action: { dismiss() }) {
-            HStack(spacing: 4) {
-              Image(systemName: "chevron.left")
-                .font(.title3.weight(.semibold))
-              Text("Back")
-                .font(.subheadline)
-            }
-            .foregroundColor(.white)
+            Image(systemName: "chevron.left")
+              .font(.title3.weight(.semibold))
+              .foregroundColor(.white)
           }
         }
       }

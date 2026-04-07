@@ -6,6 +6,7 @@ import UIKit
 struct GuideRegistrationView: View {
   @Environment(\.dismiss) private var dismiss
   @StateObject private var auth = AuthService.shared
+  @StateObject private var communityService = CommunityService.shared
 
   // MARK: - Community Code
 
@@ -36,12 +37,7 @@ struct GuideRegistrationView: View {
   enum Sex: String, CaseIterable, Identifiable { case male, female, other; var id: String { rawValue } }
   enum Residency: String, CaseIterable, Identifiable { case US, CA, other; var id: String { rawValue } }
 
-  @State private var scannedDOB: Date?
-  @State private var scannedSex: Sex?
-  @State private var scannedMailingAddress: String?
   @State private var telephoneNumber: String = ""
-  @State private var scannedTelephone: String?
-  @State private var scannedResidency: Residency?
 
   // MARK: - UI state
 
@@ -49,10 +45,6 @@ struct GuideRegistrationView: View {
   @State private var errorText: String?
   @State private var showAnglerLanding = false
 
-  // OCR / Scan state
-  @State private var showScanChoice = false
-  @State private var showScanCamera = false
-  @State private var showScanLibrary = false
 
   // Terms & Conditions
   @State private var hasAgreedToTerms = false
@@ -153,28 +145,7 @@ struct GuideRegistrationView: View {
       AnglerLandingView()
         .preferredColorScheme(.dark)
     }
-    // Scan flow
-    .confirmationDialog(
-      "Scan Fishing License",
-      isPresented: $showScanChoice,
-      titleVisibility: .visible
-    ) {
-      if UIImagePickerController.isSourceTypeAvailable(.camera) {
-        Button("Camera") { showScanCamera = true }
-      }
-      Button("Photo Library") { showScanLibrary = true }
-      Button("Cancel", role: .cancel) {}
-    }
-    .sheet(isPresented: $showScanCamera) {
-      ImagePicker(source: .camera) { picked in
-        handleScannedImage(picked.image)
-      }
-    }
-    .sheet(isPresented: $showScanLibrary) {
-      ImagePicker(source: .library) { picked in
-        handleScannedImage(picked.image)
-      }
-    }
+
     // Terms sheet
     .sheet(isPresented: $showTermsSheet) {
       TermsAndConditionsView(
@@ -450,12 +421,6 @@ struct GuideRegistrationView: View {
     }
   }
 
-  // NOTE: OCR scan button hidden for now — member_id is auto-generated on backend.
-  // Scan functionality preserved in LicenseTextRecognizer for future reintroduction.
-  @ViewBuilder
-  private var scanButtonIfNeeded: some View {
-    EmptyView()
-  }
 
   @ViewBuilder
   private var nameFields: some View {
@@ -752,17 +717,26 @@ struct GuideRegistrationView: View {
         firstName: firstName,
         lastName: lastName,
         communityCode: code.isEmpty ? nil : code,
-        dob: scannedDOB,
-        sex: scannedSex,
-        mailingAddress: scannedMailingAddress,
-        telephone: telephoneNumber.trimmingCharacters(in: .whitespaces).isEmpty ? scannedTelephone : telephoneNumber.trimmingCharacters(in: .whitespaces),
-        residency: scannedResidency
+        dob: nil,
+        sex: nil,
+        mailingAddress: nil,
+        telephone: telephoneNumber.trimmingCharacters(in: .whitespaces).isEmpty ? nil : telephoneNumber.trimmingCharacters(in: .whitespaces),
+        residency: nil
       )
       try await auth.signIn(
         email: email.trimmingCharacters(in: .whitespaces),
         password: password
       )
+      AppLogging.log("[GuideRegistration] signIn complete — isAuthenticated=\(auth.isAuthenticated)", level: .info, category: .auth)
+
+      // Fetch memberships now so the community is auto-selected before the
+      // landing view appears. Without this, checkOnboarding() in
+      // AnglerLandingView fires before activeCommunityTypeName is set.
+      await communityService.fetchMemberships()
+      AppLogging.log("[GuideRegistration] fetchMemberships complete — activeCommunityId=\(communityService.activeCommunityId ?? "nil") typeName=\(communityService.activeCommunityTypeName ?? "nil") memberships=\(communityService.memberships.count)", level: .info, category: .auth)
+
       showAnglerLanding = true
+      AppLogging.log("[GuideRegistration] showAnglerLanding = true", level: .info, category: .auth)
     } catch {
       errorText = error.localizedDescription
     }
@@ -837,80 +811,6 @@ struct GuideRegistrationView: View {
     return nil
   }
 
-  // MARK: - OCR handling
-
-  private func handleScannedImage(_ image: UIImage?) {
-    guard userType == .angler, let img = image else { return }
-
-    let opts = FSELicenseTextRecognizer.Options(
-      recognitionLanguages: ["en-CA", "en-US"],
-      region: .bcNonTidal
-    )
-
-    FSELicenseTextRecognizer.recognize(in: img, options: opts) { result in
-      var didFill = false
-
-      // OCR license number extraction preserved for future use
-      if let _ = result.licenseNumber?.trimmingCharacters(in: .whitespacesAndNewlines), !result.licenseNumber!.isEmpty {
-        didFill = true
-      }
-      if let name = result.name?.trimmingCharacters(in: .whitespacesAndNewlines), !name.isEmpty {
-        let parts = splitName(name)
-        firstName = parts.first
-        lastName = parts.last
-        didFill = true
-      }
-
-      let ocrDOBString = result.dobISO8601
-      let ocrTelephone = result.telephone
-      let ocrResidencyString = result.residency
-
-      if let dobStr = ocrDOBString {
-        let df = DateFormatter()
-        df.calendar = Calendar(identifier: .gregorian)
-        df.locale = Locale(identifier: "en_US_POSIX")
-        df.dateFormat = "yyyy-MM-dd"
-        scannedDOB = df.date(from: dobStr)
-      }
-
-      if let tel = ocrTelephone, !tel.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-        scannedTelephone = tel
-        telephoneNumber = tel
-      }
-
-      if let res = ocrResidencyString?.lowercased() {
-        switch res {
-        case "b.c. resident", "bc resident", "british columbia resident":
-          scannedResidency = .CA
-        case "not a canadian resident":
-          scannedResidency = .US
-        default:
-          scannedResidency = .other
-        }
-      }
-
-      scannedSex = nil
-      scannedMailingAddress = nil
-
-      if !didFill {
-        errorText = "Couldn't read name or angler number. Try a clearer photo."
-      } else if errorText?.isEmpty == false {
-        errorText = nil
-      }
-    }
-  }
-
-  private func splitName(_ full: String) -> (first: String, last: String) {
-    let t = full.trimmingCharacters(in: .whitespacesAndNewlines)
-    if let comma = t.firstIndex(of: ",") {
-      let last = t[..<comma].trimmingCharacters(in: .whitespaces)
-      let first = t[t.index(after: comma)...].trimmingCharacters(in: .whitespaces)
-      return (first, last)
-    }
-    let parts = t.split(separator: " ").map(String.init)
-    guard parts.count >= 2 else { return (t, "") }
-    return (parts.first ?? "", parts.dropFirst().joined(separator: " "))
-  }
 
   // MARK: - Reset helpers
 
@@ -921,18 +821,8 @@ struct GuideRegistrationView: View {
     password = ""
     confirm = ""
 
-    scannedDOB = nil
-    scannedSex = nil
-    scannedMailingAddress = nil
-    scannedTelephone = nil
-    scannedResidency = nil
-
     hasAgreedToTerms = false
     errorText = nil
-
-    showScanChoice = false
-    showScanCamera = false
-    showScanLibrary = false
 
     communityCode = ""
   }

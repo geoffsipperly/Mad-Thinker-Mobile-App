@@ -113,7 +113,7 @@ struct RoleAwareToolbar: View {
     }
   }
 
-  // MARK: Guide tabs — Home, Trips, Catches, Community, Observations
+  // MARK: Guide tabs — Home, Trips, Catches, Community
   @ViewBuilder private var guideToolbar: some View {
     ToolbarTab(icon: "house", label: "Home") {
       guideNavigateTo(nil)
@@ -126,9 +126,6 @@ struct RoleAwareToolbar: View {
     }
     ToolbarTab(icon: "message", label: "Social") {
       if activeTab != "community" { guideNavigateTo(.community) }
-    }
-    ToolbarTab(icon: "waveform", label: "Observations") {
-      if activeTab != "observations" { guideNavigateTo(.observations) }
     }
   }
 }

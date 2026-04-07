@@ -100,7 +100,6 @@ struct AnglerLandingView: View {
 
   // Reactive entitlements — driven by backend config with xcconfig fallback
   private var E_CATCH_CAROUSEL: Bool { communityService.activeCommunityConfig.flag("E_CATCH_CAROUSEL") }
-  private var E_THE_BUZZ: Bool { communityService.activeCommunityConfig.flag("E_THE_BUZZ") }
   private var E_CATCH_MAP: Bool { communityService.activeCommunityConfig.flag("E_CATCH_MAP") }
 
   // Data state
@@ -111,10 +110,6 @@ struct AnglerLandingView: View {
   // Map reports (same data source as guide LandingView)
   @State private var mapReports: [MapReportDTO] = []
 
-  // The Buzz state
-  @State private var buzzCategory: ForumCategory?
-  @State private var buzzThreads: [ForumThread] = []
-  @State private var buzzLoading = false
 
   // Location (for weather)
   @StateObject private var locationManager = LocationManager()
@@ -137,6 +132,8 @@ struct AnglerLandingView: View {
       let precipChance: Int
     }
     let hourly: [HourlySlot]
+    /// Backend weather provider: "open-meteo" or "weatherapi". Informational.
+    let source: String?
   }
   @State private var liveWeather: LiveWeather? = nil
 
@@ -262,7 +259,6 @@ struct AnglerLandingView: View {
     .task {
       if reports.isEmpty { await fetchReports() }
       await fetchMapReports()
-      await fetchBuzz()
     }
     .onAppear {
       AppLogging.log("[AnglerLandingView] onAppear — requesting location, lastLocation=\(locationManager.lastLocation != nil), liveWeather=\(liveWeather != nil)", level: .debug, category: .network)
@@ -279,12 +275,17 @@ struct AnglerLandingView: View {
       AppLogging.log("[AnglerLandingView] onDisappear", level: .debug, category: .auth)
     }
     .onAppear {
+      AppLogging.log("[AnglerLandingView] onAppear — calling checkOnboarding", level: .info, category: .auth)
+      checkOnboarding()
+    }
+    .onChange(of: communityService.activeCommunityTypeName) { newValue in
+      AppLogging.log("[AnglerLandingView] onChange(activeCommunityTypeName) -> \(newValue ?? "nil") — calling checkOnboarding", level: .info, category: .auth)
       checkOnboarding()
     }
     .fullScreenCover(isPresented: $showOnboarding) {
       if let cid = communityService.activeCommunityId {
         AnglerOnboardingWizard(communityId: cid) {
-          UserDefaults.standard.set(true, forKey: "anglerOnboarded_\(cid)")
+          UserDefaults.standard.set(true, forKey: onboardingKey(cid: cid))
           showOnboarding = false
         }
       }
@@ -582,26 +583,6 @@ struct AnglerLandingView: View {
     .clipShape(RoundedRectangle(cornerRadius: 10))
   }
 
-  // MARK: - The Buzz
-
-  private func fetchBuzz() async {
-    guard let categoryId = AppEnvironment.shared.buzzCategoryId else { return }
-    buzzLoading = true
-    defer { buzzLoading = false }
-    do {
-      // Fetch category metadata (for description) and threads concurrently
-      async let categoriesTask = ForumAPI.fetchCategories()
-      async let threadsTask = ForumAPI.fetchThreads(categoryId: categoryId)
-
-      let categories = try await categoriesTask
-      let threads = try await threadsTask
-
-      buzzCategory = categories.first(where: { $0.id == categoryId })
-      buzzThreads = Array(threads.prefix(3))
-    } catch {
-      AppLogging.log("[AnglerLanding] fetchBuzz error: \(error.localizedDescription)", level: .error, category: .forum)
-    }
-  }
 
   // MARK: - Networking
 
@@ -724,9 +705,10 @@ struct AnglerLandingView: View {
           windSpeed: Int(w.windSpeed.rounded()),
           pressureVal: Int(w.pressure.rounded()),
           pressureTrend: WeatherSnapshotService.pressureTrend(current: w.pressure, hourly: response.hourlyForecast),
-          hourly: slots
+          hourly: slots,
+          source: response.source
         )
-        AppLogging.log("[AnglerLandingView] liveWeather SET — locationName='\(locationName)', temp=\(Int(w.temperature.rounded()))", level: .debug, category: .network)
+        AppLogging.log("[AnglerLandingView] liveWeather SET — locationName='\(locationName)', temp=\(Int(w.temperature.rounded())), source=\(response.source ?? "unknown")", level: .debug, category: .network)
       }
     } catch {
       AppLogging.log("[AnglerLandingView] WeatherSnapshotService FAILED: \(error.localizedDescription)", level: .error, category: .network)
@@ -754,12 +736,32 @@ struct AnglerLandingView: View {
   /// Community types that trigger the angler onboarding wizard.
   private static let onboardingCommunityTypes: Set<String> = ["Lodge", "MultiLodge", "FlyShop"]
 
+  /// Build a per-user, per-community onboarding key so each new member
+  /// gets their own wizard even on a shared simulator / device.
+  private func onboardingKey(cid: String) -> String {
+    if let mid = auth.currentMemberId {
+      return "anglerOnboarded_\(mid)_\(cid)"
+    }
+    return "anglerOnboarded_\(cid)"
+  }
+
   private func checkOnboarding() {
-    guard let cid = communityService.activeCommunityId,
-          let typeName = communityService.activeCommunityTypeName,
+    let cid = communityService.activeCommunityId
+    let typeName = communityService.activeCommunityTypeName
+    let hasFetched = communityService.hasFetchedMemberships
+    let key = cid.map { onboardingKey(cid: $0) }
+    let alreadyOnboarded = key.map { UserDefaults.standard.bool(forKey: $0) } ?? false
+    AppLogging.log("[AnglerLanding] checkOnboarding — cid=\(cid ?? "nil") typeName=\(typeName ?? "nil") hasFetched=\(hasFetched) alreadyOnboarded=\(alreadyOnboarded) key=\(key ?? "nil") memberId=\(auth.currentMemberId ?? "nil") showOnboarding=\(showOnboarding)", level: .info, category: .auth)
+
+    guard let cid,
+          let typeName,
           Self.onboardingCommunityTypes.contains(typeName),
-          !UserDefaults.standard.bool(forKey: "anglerOnboarded_\(cid)")
-    else { return }
+          !alreadyOnboarded
+    else {
+      AppLogging.log("[AnglerLanding] checkOnboarding — SKIPPED (guard failed)", level: .info, category: .auth)
+      return
+    }
+    AppLogging.log("[AnglerLanding] checkOnboarding — SHOWING onboarding for cid=\(cid) type=\(typeName)", level: .info, category: .auth)
     showOnboarding = true
   }
 

@@ -15,7 +15,7 @@ struct TripClientDraft: Identifiable, Hashable {
   var name: String = ""
   var licenseNumber: String = ""
   var licences: [ClassifiedLicenceDraft] = []
-  // Optional profile details (if available via OCR or lookup)
+  // Optional profile details (if available via lookup)
   var dateOfBirth: Date?
   var residency: String? // e.g., "US", "CA", "other"
   var sex: String? // "male", "female", "other"
@@ -358,10 +358,7 @@ struct TripFormView: View {
     .toolbar {
       ToolbarItem(placement: .navigationBarLeading) {
         Button { dismiss() } label: {
-          HStack(spacing: 4) {
-            Image(systemName: "chevron.backward")
-            Text("Back")
-          }
+          Image(systemName: "chevron.backward")
         }
       }
       ToolbarItem(placement: .navigationBarTrailing) {
@@ -861,10 +858,7 @@ private struct DatePickerSheet: View {
       .toolbar {
         ToolbarItem(placement: .navigationBarLeading) {
           Button(action: { dismiss() }) {
-            HStack(spacing: 4) {
-              Image(systemName: "chevron.backward")
-              Text("Back")
-            }
+            Image(systemName: "chevron.backward")
           }
         }
         ToolbarItem(placement: .navigationBarTrailing) {

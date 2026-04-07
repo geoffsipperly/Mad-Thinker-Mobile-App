@@ -26,7 +26,6 @@ E_MANAGE_LICENSES = true
 E_SELF_ASSESSMENT = true
 E_PREFERENCES = true
 E_CATCH_CAROUSEL = true
-E_THE_BUZZ = true
 E_CATCH_MAP = true
 E_MANAGE_OPS = true
 
@@ -56,13 +55,6 @@ TRIP_ROSTER_URL = /functions/v1/trip-roster
 OBSERVATIONS_URL = /functions/v1/observations
 OPS_TICKETS_URL = /functions/v1/ops-tickets
 
-// ──────────────────────────────────────────────
-// MARK: - Forum / Community Feed
-// ──────────────────────────────────────────────
-
-FORUM_BASE = /rest/v1
-FORUM_API_KEY = $(SUPABASE_ANON_KEY)
-BUZZ_CATEGORY_ID = d7f7900f-97b3-43a2-9c7e-03bab95b7002
 
 // ──────────────────────────────────────────────
 // MARK: - App Branding

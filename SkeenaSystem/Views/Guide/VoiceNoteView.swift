@@ -587,10 +587,7 @@ struct VoiceNoteView: View {
       Button {
         dismiss()
       } label: {
-        HStack(spacing: 6) {
-          Image(systemName: "chevron.left").font(.headline.weight(.bold))
-          Text("Back").font(.subheadline.weight(.semibold))
-        }
+        Image(systemName: "chevron.left").font(.headline.weight(.bold))
         .padding(.horizontal, 12).padding(.vertical, 8)
         .background(Color.white.opacity(0.12))
         .clipShape(Capsule())
@@ -876,10 +873,7 @@ struct NoteListView: View {
           Button {
             dismiss()
           } label: {
-            HStack(spacing: 6) {
-              Image(systemName: "chevron.left").font(.headline.weight(.bold))
-              Text("Back").font(.subheadline.weight(.semibold))
-            }
+            Image(systemName: "chevron.left").font(.headline.weight(.bold))
             .padding(.horizontal, 10)
             .padding(.vertical, 6)
             .background(Color.white.opacity(0.12))

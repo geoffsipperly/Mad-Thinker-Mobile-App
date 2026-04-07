@@ -3,7 +3,7 @@
 //  SkeenaSystem
 //
 //  Centralized configuration manager with environment‑specific settings
-//  (Supabase URLs, anon keys, function endpoints, forum base, logging level, etc.).
+//  (Supabase URLs, anon keys, function endpoints, logging level, etc.).
 //
 
 import Foundation
@@ -25,8 +25,6 @@ public final class AppEnvironment {
     // These can be set in tests or at runtime to temporarily override configuration values.
     public var overrideProjectURL: URL?
     public var overrideAnonKey: String?
-    public var overrideForumBase: String?
-    public var overrideForumApiKey: String?
     public var overrideAppDisplayName: String?
     public var overrideAppLogoAsset: String?
 
@@ -64,7 +62,6 @@ public final class AppEnvironment {
     public var overrideUseLengthRegressor: Bool?
     public var overrideSpeciesDetectionThreshold: Double?
     public var overrideLodgeRivers: [String]?
-    public var overrideBuzzCategoryId: String?
     public var overrideCommunityName: String?
     public var overrideCommunityTagline: String?
     public var overrideDefaultRiver: String?
@@ -112,20 +109,6 @@ public final class AppEnvironment {
         fatalError("SUPABASE_ANON_KEY not configured.")
     }
 
-    /// Forum REST base URL (e.g., https://.../rest/v1). Defaults to project URL + "/rest/v1".
-    public var forumBase: String {
-        if let v = overrideForumBase { return v }
-        if let v = stringFromInfo("FORUM_BASE") { return v }
-        // Default to projectURL host + /rest/v1
-        return "\(projectURL.scheme ?? "https")://\(projectURL.host ?? "")/rest/v1"
-    }
-
-    /// API key for Forum REST calls (defaults to anonKey).
-    public var forumApiKey: String {
-        if let v = overrideForumApiKey { return v }
-        if let v = stringFromInfo("FORUM_API_KEY") { return v }
-        return anonKey
-    }
 
     /// Display name for the app/community (used in UI).
     public var appDisplayName: String {
@@ -496,13 +479,4 @@ public final class AppEnvironment {
         return 0.70
     }
 
-    // MARK: - The Buzz configuration
-
-    /// Forum category ID used for "The Buzz" feed on the landing page.
-    /// Returns nil when not configured, allowing the UI to hide the section.
-    public var buzzCategoryId: String? {
-        if let v = overrideBuzzCategoryId { return v }
-        if let v = stringFromInfo("BUZZ_CATEGORY_ID"), !v.isEmpty { return v }
-        return nil
-    }
 }

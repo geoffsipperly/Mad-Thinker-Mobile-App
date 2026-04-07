@@ -121,10 +121,7 @@ struct TripDetailView: View {
           Button {
             dismiss()
           } label: {
-            HStack {
-              Image(systemName: "chevron.backward")
-              Text("Back")
-            }
+            Image(systemName: "chevron.backward")
           }
         }
       }
