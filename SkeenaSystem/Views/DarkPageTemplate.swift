@@ -1,7 +1,7 @@
 // Bend Fly Shop
 // DarkPageTemplate.swift — Shared dark-themed page styling components
 //
-// De-duplicated from AnglerLandingView.swift and LandingView.swift.
+// De-duplicated from AnglerLandingView.swift and GuideLandingView.swift.
 // Provides consistent nav-bar appearance, dark background, and a reusable header.
 
 import SwiftUI

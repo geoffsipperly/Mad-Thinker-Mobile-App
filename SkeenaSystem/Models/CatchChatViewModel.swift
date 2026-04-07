@@ -847,8 +847,15 @@ final class CatchChatViewModel: ObservableObject {
   private func performSave() {
     var lines: [String] = []
 
-    lines.append("Guide: \(guideName.isEmpty ? "-" : guideName)")
-    lines.append("Angler: \(currentAnglerName.isEmpty ? "-" : currentAnglerName)")
+    if isResearcherRole {
+      let first = AuthService.shared.currentFirstName ?? ""
+      let last = AuthService.shared.currentLastName ?? ""
+      let full = "\(first) \(last)".trimmingCharacters(in: .whitespaces)
+      lines.append("Researcher: \(full.isEmpty ? "-" : full)")
+    } else {
+      lines.append("Guide: \(guideName.isEmpty ? "-" : guideName)")
+      lines.append("Angler: \(currentAnglerName.isEmpty ? "-" : currentAnglerName)")
+    }
 
     if let a = currentAnalysis {
       let rawRiver = cleanedField(a.riverName ?? "")

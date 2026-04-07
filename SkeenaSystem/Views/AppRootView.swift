@@ -43,7 +43,7 @@ struct AppRootView: View {
         } else {
           switch auth.currentUserType ?? AuthService.UserType.guide {
           case .guide:
-            LandingView()
+            GuideLandingView()
           case .angler:
             if communityService.isConservation {
               ConservationLandingView()

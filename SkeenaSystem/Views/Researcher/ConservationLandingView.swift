@@ -80,7 +80,7 @@ struct ConservationLandingView: View {
   @State private var errorText: String?
   @State private var goToCatchMap = false
 
-  // Map reports (same data source as guide LandingView)
+  // Map reports (same data source as GuideLandingView)
   @State private var mapReports: [MapReportDTO] = []
 
   // Location (for weather)

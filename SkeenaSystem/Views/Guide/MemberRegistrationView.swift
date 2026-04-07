@@ -3,7 +3,7 @@
 import SwiftUI
 import UIKit
 
-struct GuideRegistrationView: View {
+struct MemberRegistrationView: View {
   @Environment(\.dismiss) private var dismiss
   @StateObject private var auth = AuthService.shared
   @StateObject private var communityService = CommunityService.shared
@@ -202,7 +202,7 @@ struct GuideRegistrationView: View {
             Image(systemName: "ticket")
             Text("Yes, I have a code")
           }
-          .font(.headline)
+          .font(.subheadline.weight(.semibold))
           .frame(maxWidth: .infinity)
           .frame(height: 48)
           .background(Color.blue, in: RoundedRectangle(cornerRadius: 12))
@@ -217,7 +217,7 @@ struct GuideRegistrationView: View {
             Image(systemName: "person.badge.plus")
             Text("No, continue without one")
           }
-          .font(.headline)
+          .font(.subheadline.weight(.semibold))
           .frame(maxWidth: .infinity)
           .frame(height: 48)
           .background(Color.white.opacity(0.12), in: RoundedRectangle(cornerRadius: 12))
@@ -727,16 +727,16 @@ struct GuideRegistrationView: View {
         email: email.trimmingCharacters(in: .whitespaces),
         password: password
       )
-      AppLogging.log("[GuideRegistration] signIn complete — isAuthenticated=\(auth.isAuthenticated)", level: .info, category: .auth)
+      AppLogging.log("[MemberRegistration] signIn complete — isAuthenticated=\(auth.isAuthenticated)", level: .info, category: .auth)
 
       // Fetch memberships now so the community is auto-selected before the
       // landing view appears. Without this, checkOnboarding() in
       // AnglerLandingView fires before activeCommunityTypeName is set.
       await communityService.fetchMemberships()
-      AppLogging.log("[GuideRegistration] fetchMemberships complete — activeCommunityId=\(communityService.activeCommunityId ?? "nil") typeName=\(communityService.activeCommunityTypeName ?? "nil") memberships=\(communityService.memberships.count)", level: .info, category: .auth)
+      AppLogging.log("[MemberRegistration] fetchMemberships complete — activeCommunityId=\(communityService.activeCommunityId ?? "nil") typeName=\(communityService.activeCommunityTypeName ?? "nil") memberships=\(communityService.memberships.count)", level: .info, category: .auth)
 
       showAnglerLanding = true
-      AppLogging.log("[GuideRegistration] showAnglerLanding = true", level: .info, category: .auth)
+      AppLogging.log("[MemberRegistration] showAnglerLanding = true", level: .info, category: .auth)
     } catch {
       errorText = error.localizedDescription
     }

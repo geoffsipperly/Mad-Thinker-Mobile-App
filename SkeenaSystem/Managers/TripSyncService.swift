@@ -3,7 +3,7 @@
 // TripSyncService.swift
 //
 // Fetches all trips from the server and hydrates them into Core Data.
-// Called at app launch (LandingView) so trips are available before the
+// Called at app launch (GuideLandingView) so trips are available before the
 // guide taps "Record a Catch".
 
 import CoreData
@@ -95,11 +95,12 @@ final class TripSyncService {
     local.name = dto.tripName
     local.guideName = dto.guideName
 
-    let iso = ISO8601DateFormatter()
-    iso.formatOptions = [.withInternetDateTime]
-    if let s = dto.startDate, let d = iso.date(from: s) { local.startDate = d }
-    if let e = dto.endDate, let d = iso.date(from: e) { local.endDate = d }
-    if let c = dto.createdAt, let d = iso.date(from: c) { local.createdAt = d }
+    let parsedStart = dto.startDate.flatMap { Self.parseDate($0) }
+    let parsedEnd = dto.endDate.flatMap { Self.parseDate($0) }
+    local.startDate = parsedStart
+    local.endDate = parsedEnd
+    AppLogging.log("[TripSyncService] upsert trip '\(dto.tripName ?? "-")' — raw startDate=\(dto.startDate ?? "nil") endDate=\(dto.endDate ?? "nil") → parsed start=\(parsedStart.map { "\($0)" } ?? "nil") end=\(parsedEnd.map { "\($0)" } ?? "nil") existing=\(existing != nil)", level: .info, category: .trip)
+    if let c = dto.createdAt, let d = Self.parseDate(c) { local.createdAt = d }
 
     // Lodge by name – also ensure Community link
     if let lodgeName = dto.lodge, !lodgeName.isEmpty {
@@ -166,6 +167,25 @@ final class TripSyncService {
     if removedCount > 0 {
       AppLogging.log("[TripSyncService] Removed \(removedCount) orphaned trip(s) not on server", level: .info, category: .trip)
     }
+  }
+
+  // MARK: - Date parsing
+
+  /// Parse ISO8601 (with or without fractional seconds) or date-only "yyyy-MM-dd".
+  private static func parseDate(_ s: String) -> Date? {
+    let iso = ISO8601DateFormatter()
+    iso.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+    if let d = iso.date(from: s) { return d }
+    iso.formatOptions = [.withInternetDateTime]
+    if let d = iso.date(from: s) { return d }
+    // Date-only strings represent a calendar day, not a UTC instant.
+    // Parse in the local timezone so "2026-04-07" becomes local midnight,
+    // matching Calendar.startOfDay used by predicates in loadTrips.
+    let df = DateFormatter()
+    df.dateFormat = "yyyy-MM-dd"
+    df.locale = Locale(identifier: "en_US_POSIX")
+    df.timeZone = .current
+    return df.date(from: s)
   }
 
   // MARK: - Community link helper

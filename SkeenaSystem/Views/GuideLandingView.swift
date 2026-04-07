@@ -1,12 +1,12 @@
 // Bend Fly Shop
-// LandingView.swift
+// GuideLandingView.swift
 // Bend Fly Shop – iOS 15+ nav-bar button + pinned footer
 import CoreLocation
 import SwiftUI
 
-// MARK: - LandingView
+// MARK: - GuideLandingView
 
-struct LandingView: View {
+struct GuideLandingView: View {
   @Environment(\.managedObjectContext) private var context
   @StateObject private var auth = AuthService.shared
   @ObservedObject private var communityService = CommunityService.shared
@@ -149,15 +149,15 @@ struct LandingView: View {
           showGuideLocationOnboarding = true
         }
         // Start location updates for farmed button
-        AppLogging.log("[LandingView] onAppear — requesting location, lastLocation=\(locationManager.lastLocation != nil), liveWeather=\(liveWeather != nil)", level: .debug, category: .network)
+        AppLogging.log("[GuideLandingView] onAppear — requesting location, lastLocation=\(locationManager.lastLocation != nil), liveWeather=\(liveWeather != nil)", level: .debug, category: .network)
         locationManager.request()
         locationManager.start()
       }
       // Fetch weather once location is available
       .onChange(of: locationManager.lastLocation) { loc in
-        AppLogging.log("[LandingView] onChange lastLocation — loc=\(loc != nil), liveWeather=\(liveWeather != nil)", level: .debug, category: .network)
+        AppLogging.log("[GuideLandingView] onChange lastLocation — loc=\(loc != nil), liveWeather=\(liveWeather != nil)", level: .debug, category: .network)
         guard liveWeather == nil, let loc else { return }
-        AppLogging.log("[LandingView] onChange — fetching weather for \(loc.coordinate.latitude), \(loc.coordinate.longitude)", level: .debug, category: .network)
+        AppLogging.log("[GuideLandingView] onChange — fetching weather for \(loc.coordinate.latitude), \(loc.coordinate.longitude)", level: .debug, category: .network)
         Task { await fetchWeather(location: loc) }
       }
       // Sync server trips into Core Data so they're available
@@ -376,7 +376,7 @@ struct LandingView: View {
   // MARK: - Weather
 
   private func fetchWeather(location: CLLocation) async {
-    AppLogging.log("[LandingView] fetchWeather called — \(location.coordinate.latitude), \(location.coordinate.longitude)", level: .debug, category: .network)
+    AppLogging.log("[GuideLandingView] fetchWeather called — \(location.coordinate.latitude), \(location.coordinate.longitude)", level: .debug, category: .network)
     let lat = location.coordinate.latitude
     let lon = location.coordinate.longitude
 
@@ -385,7 +385,7 @@ struct LandingView: View {
     let locationName: String
     do {
       let placemarks = try await geocoder.reverseGeocodeLocation(location)
-      AppLogging.log("[LandingView] geocoder returned \(placemarks.count) placemark(s)", level: .debug, category: .network)
+      AppLogging.log("[GuideLandingView] geocoder returned \(placemarks.count) placemark(s)", level: .debug, category: .network)
       if let placemark = placemarks.first {
         let city = placemark.locality
           ?? placemark.subLocality
@@ -397,14 +397,14 @@ struct LandingView: View {
         locationName = ""
       }
     } catch {
-      AppLogging.log("[LandingView] geocoder FAILED: \(error.localizedDescription)", level: .error, category: .network)
+      AppLogging.log("[GuideLandingView] geocoder FAILED: \(error.localizedDescription)", level: .error, category: .network)
       locationName = ""
     }
-    AppLogging.log("[LandingView] locationName='\(locationName)', calling WeatherSnapshotService.fetch", level: .debug, category: .network)
+    AppLogging.log("[GuideLandingView] locationName='\(locationName)', calling WeatherSnapshotService.fetch", level: .debug, category: .network)
 
     do {
       let response = try await WeatherSnapshotService.fetch(lat: lat, lon: lon)
-      AppLogging.log("[LandingView] WeatherSnapshotService returned — temp=\(response.current.temperature), code=\(response.current.weatherCode), hourly=\(response.hourlyForecast.count)", level: .debug, category: .network)
+      AppLogging.log("[GuideLandingView] WeatherSnapshotService returned — temp=\(response.current.temperature), code=\(response.current.weatherCode), hourly=\(response.hourlyForecast.count)", level: .debug, category: .network)
       let w = response.current
       let slots = response.hourlyForecast.map { h in
         LiveWeather.HourlySlot(
@@ -427,10 +427,10 @@ struct LandingView: View {
           hourly: slots,
           source: response.source
         )
-        AppLogging.log("[LandingView] liveWeather SET — locationName='\(locationName)', temp=\(Int(w.temperature.rounded())), source=\(response.source ?? "unknown")", level: .debug, category: .network)
+        AppLogging.log("[GuideLandingView] liveWeather SET — locationName='\(locationName)', temp=\(Int(w.temperature.rounded())), source=\(response.source ?? "unknown")", level: .debug, category: .network)
       }
     } catch {
-      AppLogging.log("[LandingView] WeatherSnapshotService FAILED: \(error.localizedDescription)", level: .error, category: .network)
+      AppLogging.log("[GuideLandingView] WeatherSnapshotService FAILED: \(error.localizedDescription)", level: .error, category: .network)
     }
   }
 

@@ -26,17 +26,32 @@ struct TripDetailView: View {
 
   // MARK: - Status
 
-  private func computeStatus(startStr: String?, endStr: String?, now: Date) -> TripStatus {
+  /// Parse an ISO8601 or date-only string into a Date.
+  private func parseDate(_ s: String?) -> Date? {
+    guard let s = s else { return nil }
     let iso = ISO8601DateFormatter()
+    iso.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+    if let d = iso.date(from: s) { return d }
     iso.formatOptions = [.withInternetDateTime]
-    guard let sStr = startStr, let s = iso.date(from: sStr) else { return .notStarted }
-    let startOfToday = Calendar.current.startOfDay(for: now)
-    // Compare start date at day granularity so a trip starting "today" is always in-progress
-    let startDay = Calendar.current.startOfDay(for: s)
+    if let d = iso.date(from: s) { return d }
+    let df = DateFormatter()
+    df.dateFormat = "yyyy-MM-dd"
+    df.locale = Locale(identifier: "en_US_POSIX")
+    return df.date(from: s)
+  }
+
+  private func computeStatus(startStr: String?, endStr: String?, now: Date) -> TripStatus {
+    let cal = Calendar.current
+    guard let s = parseDate(startStr) else { return .notStarted }
+    let startOfToday = cal.startOfDay(for: now)
+    let startDay = cal.startOfDay(for: s)
     if startDay > startOfToday { return .notStarted }
-    let end = endStr.flatMap { iso.date(from: $0) }
-    let inProgress = (startDay <= startOfToday) && (end == nil || (end ?? now) >= startOfToday)
-    return inProgress ? .inProgress : .completed
+    if let e = parseDate(endStr) {
+      let endDay = cal.startOfDay(for: e)
+      return endDay >= startOfToday ? .inProgress : .completed
+    }
+    // No end date — 1-day trip, in progress if today is the start day
+    return startDay == startOfToday ? .inProgress : .completed
   }
 
   private var status: TripStatus {
@@ -72,9 +87,9 @@ struct TripDetailView: View {
               .foregroundColor(.secondary)
           }
           HStack {
-            Text("Dates")
+            Text(trip.endDate != nil && dayString(trip.endDate) != dayString(trip.startDate) ? "Dates" : "Date")
             Spacer()
-            Text("\(dayString(trip.startDate)) – \(dayString(trip.endDate))")
+            Text(dateRangeString(start: trip.startDate, end: trip.endDate))
               .foregroundColor(.secondary)
           }
           HStack {
@@ -135,10 +150,24 @@ struct TripDetailView: View {
 
   private func dayString(_ isoStr: String?) -> String {
     guard let s = isoStr else { return "-" }
+    // Try full ISO8601 first, then date-only (yyyy-MM-dd)
     let iso = ISO8601DateFormatter()
+    iso.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+    if let d = iso.date(from: s) { return d.formatted(date: .abbreviated, time: .omitted) }
     iso.formatOptions = [.withInternetDateTime]
-    guard let d = iso.date(from: s) else { return "-" }
-    return d.formatted(date: .abbreviated, time: .omitted)
+    if let d = iso.date(from: s) { return d.formatted(date: .abbreviated, time: .omitted) }
+    let df = DateFormatter()
+    df.dateFormat = "yyyy-MM-dd"
+    df.locale = Locale(identifier: "en_US_POSIX")
+    if let d = df.date(from: s) { return d.formatted(date: .abbreviated, time: .omitted) }
+    return "-"
+  }
+
+  private func dateRangeString(start: String?, end: String?) -> String {
+    let s = dayString(start)
+    let e = dayString(end)
+    if e == "-" || e == s { return s }
+    return "\(s) – \(e)"
   }
 
   @ViewBuilder

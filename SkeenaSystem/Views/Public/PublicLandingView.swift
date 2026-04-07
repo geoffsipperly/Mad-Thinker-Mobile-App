@@ -61,7 +61,7 @@ private enum PublicLandingAPI {
 // MARK: - PublicLandingView
 //
 // Landing screen for users with the "public" community role.
-// Identical to LandingView except:
+// Identical to GuideLandingView except:
 //   - No trip sync on appear (public users have no trip concept)
 //   - No trip navigation destination
 //   - ReportChatView opened in alwaysSolo mode
@@ -84,7 +84,7 @@ struct PublicLandingView: View {
   @State private var errorText: String?
   @State private var goToCatchMap = false
 
-  // Map reports (same data source as guide LandingView)
+  // Map reports (same data source as GuideLandingView)
   @State private var mapReports: [MapReportDTO] = []
 
   // Location (for weather)

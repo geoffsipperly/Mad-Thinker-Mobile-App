@@ -5,7 +5,7 @@ import SwiftUI
 
 // MARK: - GuideRecordActivityView
 //
-// Pushed from LandingView when the guide taps "Record".
+// Pushed from GuideLandingView when the guide taps "Record".
 // Presents: Record a Catch (→ full trip/angler/chat flow) and the four
 // no-catch event tiles (Active, Farmed, Promising, Passed).
 
@@ -14,7 +14,7 @@ struct GuideRecordActivityView: View {
   @Environment(\.guideNavigateTo) private var guideNavigateTo
   @Environment(\.dismiss) private var dismiss
 
-  /// Called after a catch is successfully saved — used by LandingView to pop
+  /// Called after a catch is successfully saved — used by GuideLandingView to pop
   /// all the way back to root.
   var onCatchSaved: (() -> Void)? = nil
 
@@ -100,7 +100,7 @@ struct GuideRecordActivityView: View {
     .navigationDestination(isPresented: $goToAssistant) {
       ReportChatView(onSaved: {
         dismiss()              // pop GuideRecordActivityView
-        onCatchSaved?()        // let LandingView reset its nav stack
+        onCatchSaved?()        // let GuideLandingView reset its nav stack
       })
       .navigationBarTitleDisplayMode(.inline)
     }

@@ -595,6 +595,17 @@ struct ReportChatView: View {
     // Compare at end-of-day so trips starting "today" are included regardless of stored time
     let endOfToday = Calendar.current.date(byAdding: .day, value: 1, to: startOfToday)! as NSDate
 
+    AppLogging.log("[loadTrips] now=\(now) startOfToday=\(startOfToday) endOfToday=\(endOfToday)", level: .info, category: .trip)
+
+    // First: fetch ALL trips to see what's in Core Data
+    let allRequest: NSFetchRequest<Trip> = Trip.fetchRequest()
+    if let allTrips = try? context.fetch(allRequest) {
+      for t in allTrips {
+        AppLogging.log("[loadTrips] CoreData trip: name='\(t.name ?? "-")' startDate=\(t.startDate.map { "\($0)" } ?? "nil") endDate=\(t.endDate.map { "\($0)" } ?? "nil") tripId=\(t.tripId?.uuidString ?? "nil") createdAt=\(t.createdAt.map { "\($0)" } ?? "nil")", level: .info, category: .trip)
+      }
+      AppLogging.log("[loadTrips] Total trips in Core Data: \(allTrips.count)", level: .info, category: .trip)
+    }
+
     let startedPredicate = NSPredicate(format: "startDate < %@", endOfToday)
     let openOrRecentlyEndedPredicate = NSPredicate(
       format: "endDate == nil OR endDate >= %@", startOfToday as NSDate
@@ -620,11 +631,11 @@ struct ReportChatView: View {
         return "{id=\(id), label=\(label)}"
       }
       AppLogging.log({
-        "loadTrips fetched \(trips.count) trip(s): \n\(summaries.joined(separator: "\n"))"
-      }, level: .debug, category: .trip)
+        "[loadTrips] After predicate filter: \(trips.count) trip(s): \n\(summaries.joined(separator: "\n"))"
+      }, level: .info, category: .trip)
       setDefaultTripIfNeeded()
     } catch {
-      print("❌ Failed to fetch trips: \(error)")
+      AppLogging.log("[loadTrips] Fetch FAILED: \(error)", level: .error, category: .trip)
     }
   }
 
@@ -925,7 +936,7 @@ private struct CatchChatFullScreenView: View {
         // 1) dismiss the full-screen chat
         dismissCover()
 
-        // 2) then dismiss ReportChatView back to LandingView
+        // 2) then dismiss ReportChatView back to GuideLandingView
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
           onCatchSaved()
         }

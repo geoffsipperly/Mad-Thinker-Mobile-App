@@ -107,7 +107,7 @@ struct AnglerLandingView: View {
   @State private var isLoading = false
   @State private var errorText: String?
 
-  // Map reports (same data source as guide LandingView)
+  // Map reports (same data source as GuideLandingView)
   @State private var mapReports: [MapReportDTO] = []
 
 

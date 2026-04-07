@@ -8,7 +8,7 @@ import SwiftUI
 ///    land directly on "Record Catch Details", skipping the setup screen.
 ///
 /// 2. ObservationsListView toolbar + button — "Record observation" was
-///    moved from the LandingView / PublicLandingView content tiles to
+///    moved from the GuideLandingView / PublicGuideLandingView content tiles to
 ///    a + button in the Observations page toolbar.
 @MainActor
 final class CatchFlowRegressionTests: XCTestCase {
@@ -64,19 +64,19 @@ final class CatchFlowRegressionTests: XCTestCase {
                   "alwaysSolo + directToChat skips the setup screen")
   }
 
-  // MARK: - PublicLandingView uses alwaysSolo + directToChat
+  // MARK: - PublicGuideLandingView uses alwaysSolo + directToChat
 
-  func testPublicLandingView_landedButton_usesDirectToChat() {
-    // Verify the combination that PublicLandingView passes to ReportChatView
+  func testPublicGuideLandingView_landedButton_usesDirectToChat() {
+    // Verify the combination that PublicGuideLandingView passes to ReportChatView
     // when the user taps the Landed tile. Both flags must be true.
     let publicFlowView = ReportChatView(alwaysSolo: true, directToChat: true)
     XCTAssertTrue(publicFlowView.alwaysSolo,
-                  "SNAPSHOT: Landed button in PublicLandingView requires alwaysSolo = true")
+                  "SNAPSHOT: Landed button in PublicGuideLandingView requires alwaysSolo = true")
     XCTAssertTrue(publicFlowView.directToChat,
-                  "SNAPSHOT: Landed button in PublicLandingView requires directToChat = true — skips setup screen")
+                  "SNAPSHOT: Landed button in PublicGuideLandingView requires directToChat = true — skips setup screen")
   }
 
-  func testPublicLandingView_directToChat_notUsedByGuide() {
+  func testPublicGuideLandingView_directToChat_notUsedByGuide() {
     // Guide landing view still uses the default init — setup screen is shown
     let guideLandedView = ReportChatView()
     XCTAssertFalse(guideLandedView.directToChat,
@@ -123,8 +123,8 @@ final class CatchFlowRegressionTests: XCTestCase {
   // MARK: - Observation recording moved to ObservationsListView
 
   func testSnapshot_observationRecording_nowLivesOnObservationsPage() {
-    // SNAPSHOT: "Record observation" was removed from LandingView and
-    // PublicLandingView content tiles. It is now accessed via the + button
+    // SNAPSHOT: "Record observation" was removed from GuideLandingView and
+    // PublicGuideLandingView content tiles. It is now accessed via the + button
     // in the ObservationsListView toolbar. This is verified by confirming
     // that ObservationsListView can be instantiated (toolbar compiles) and
     // that RecordObservationSheet can be used from it.
@@ -144,19 +144,19 @@ final class CatchFlowRegressionTests: XCTestCase {
                    "onSaved must not fire on init")
   }
 
-  // MARK: - LandingView and PublicLandingView compile without observation tile
+  // MARK: - GuideLandingView and PublicGuideLandingView compile without observation tile
 
-  func testLandingView_instantiatesWithoutCrash() {
+  func testGuideLandingView_instantiatesWithoutCrash() {
     // If the "Record observation" tile removal broke something (e.g. a missing
     // state variable), this init will fail to compile or crash.
-    let view = LandingView()
+    let view = GuideLandingView()
     XCTAssertNotNil(view,
-                    "LandingView must instantiate without the Record observation tile")
+                    "GuideLandingView must instantiate without the Record observation tile")
   }
 
-  func testPublicLandingView_instantiatesWithoutCrash() {
-    let view = PublicLandingView()
+  func testPublicGuideLandingView_instantiatesWithoutCrash() {
+    let view = PublicGuideLandingView()
     XCTAssertNotNil(view,
-                    "PublicLandingView must instantiate without the Record observation tile")
+                    "PublicGuideLandingView must instantiate without the Record observation tile")
   }
 }

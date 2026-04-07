@@ -46,14 +46,11 @@ struct AnglerTripPrepView: View {
       ToolbarTab(icon: "suitcase", label: "My Trip") {
         // Already on My Trip — no-op
       }
-      ToolbarTab(icon: "cloud.sun", label: "Conditions") {
-        handleTab(.conditions)
-      }
-      ToolbarTab(icon: "book", label: "Learn") {
-        handleTab(.learn)
-      }
       ToolbarTab(icon: "message", label: "Social") {
         handleTab(.community)
+      }
+      ToolbarTab(icon: "safari", label: "Explore") {
+        handleTab(.explore)
       }
     }) {
       ScrollView {

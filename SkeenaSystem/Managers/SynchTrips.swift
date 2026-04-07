@@ -441,8 +441,8 @@ public final class SynchTrips {
         }
       }
 
-      if let s = serverTrip.startDate, let sd = parseISO8601(s: s) { localTrip.startDate = sd }
-      if let e = serverTrip.endDate, let ed = parseISO8601(s: e) { localTrip.endDate = ed }
+      localTrip.startDate = parseISO8601(s: serverTrip.startDate)
+      localTrip.endDate = parseISO8601(s: serverTrip.endDate)
 
       if let tId = serverTrip.tripId, let uuid = UUID(uuidString: tId) { localTrip.tripId = uuid }
 
@@ -489,8 +489,8 @@ public final class SynchTrips {
 
       if let tripName = serverTrip.tripName { trip.name = tripName }
       if let guide = serverTrip.guideName { trip.guideName = guide }
-      if let s = serverTrip.startDate, let sd = parseISO8601(s: s) { trip.startDate = sd }
-      if let e = serverTrip.endDate, let ed = parseISO8601(s: e) { trip.endDate = ed }
+      trip.startDate = parseISO8601(s: serverTrip.startDate)
+      trip.endDate = parseISO8601(s: serverTrip.endDate)
       if let created = parseISO8601(s: serverTrip.createdAt) { trip.createdAt = created }
       if let updated = parseISO8601(s: serverTrip.updatedAt) { trip.localUpdatedAt = updated }
 
@@ -670,15 +670,19 @@ public final class SynchTrips {
     if let d = iso1.date(from: s) { return d }
     let iso2 = ISO8601DateFormatter()
     iso2.formatOptions = [.withInternetDateTime]
-    return iso2.date(from: s)
+    if let d = iso2.date(from: s) { return d }
+    // Fallback: date-only "yyyy-MM-dd" (e.g. 1-day trips)
+    return parseYMD(s: s)
   }
 
   private static func parseYMD(s: String?) -> Date? {
     guard let s = s else { return nil }
+    // Date-only strings represent a calendar day — parse in local timezone
+    // so they align with Calendar.startOfDay used in predicates.
     let df = DateFormatter()
     df.calendar = Calendar(identifier: .gregorian)
     df.dateFormat = "yyyy-MM-dd"
-    df.timeZone = TimeZone(secondsFromGMT: 0)
+    df.timeZone = .current
     return df.date(from: s)
   }
 

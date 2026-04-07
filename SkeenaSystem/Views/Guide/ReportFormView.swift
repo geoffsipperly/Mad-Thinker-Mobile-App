@@ -312,7 +312,7 @@ struct ReportFormView: View {
       Button {
         vm.save(context: context, trip: selectedTrip) { success in
           if success {
-            dismiss() // ✅ Always return to LandingView when save succeeds
+            dismiss() // ✅ Always return to GuideLandingView when save succeeds
           } else {
             // Optionally keep the form open and let the toast show the error
           }

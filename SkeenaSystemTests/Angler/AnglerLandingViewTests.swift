@@ -262,7 +262,7 @@ final class AnglerLandingViewTests: XCTestCase {
   private func landingViewName(for userType: AuthService.UserType?, isConservation: Bool = false) -> String {
     guard let t = userType else { return "LoginView" }
     switch t {
-    case .guide:      return "LandingView"
+    case .guide:      return "GuideLandingView"
     case .angler:     return isConservation ? "ConservationLandingView" : "AnglerLandingView"
     case .public:     return "PublicLandingView"
     case .researcher: return isConservation ? "ResearcherLandingView" : "PublicLandingView"
@@ -275,7 +275,7 @@ final class AnglerLandingViewTests: XCTestCase {
   }
 
   func testRouting_guideType_routesToLandingView() {
-    XCTAssertEqual(landingViewName(for: .guide), "LandingView",
+    XCTAssertEqual(landingViewName(for: .guide), "GuideLandingView",
                    "Guide user type should route to LandingView")
   }
 

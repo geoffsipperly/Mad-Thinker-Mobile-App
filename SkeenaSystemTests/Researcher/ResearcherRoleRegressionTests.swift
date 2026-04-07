@@ -356,7 +356,7 @@ final class ResearcherRoleRegressionTests: XCTestCase {
     // Mirrors AppRootView logic
     func landingViewName(for userType: AuthService.UserType, isConservation: Bool) -> String {
       switch userType {
-      case .guide:      return "LandingView"
+      case .guide:      return "GuideLandingView"
       case .angler:     return isConservation ? "ConservationLandingView" : "AnglerLandingView"
       case .public:     return "PublicLandingView"
       case .researcher: return isConservation ? "ResearcherLandingView" : "PublicLandingView"
@@ -372,7 +372,7 @@ final class ResearcherRoleRegressionTests: XCTestCase {
   func testRouting_researcherNonConservation_fallsBackToPublicLandingView() {
     func landingViewName(for userType: AuthService.UserType, isConservation: Bool) -> String {
       switch userType {
-      case .guide:      return "LandingView"
+      case .guide:      return "GuideLandingView"
       case .angler:     return isConservation ? "ConservationLandingView" : "AnglerLandingView"
       case .public:     return "PublicLandingView"
       case .researcher: return isConservation ? "ResearcherLandingView" : "PublicLandingView"
@@ -388,7 +388,7 @@ final class ResearcherRoleRegressionTests: XCTestCase {
   func testRouting_anglerConservation_routesToConservationLandingView() {
     func landingViewName(for userType: AuthService.UserType, isConservation: Bool) -> String {
       switch userType {
-      case .guide:      return "LandingView"
+      case .guide:      return "GuideLandingView"
       case .angler:     return isConservation ? "ConservationLandingView" : "AnglerLandingView"
       case .public:     return "PublicLandingView"
       case .researcher: return isConservation ? "ResearcherLandingView" : "PublicLandingView"

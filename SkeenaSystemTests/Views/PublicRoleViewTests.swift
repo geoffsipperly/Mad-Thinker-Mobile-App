@@ -144,13 +144,13 @@ final class PublicRoleViewTests: XCTestCase {
   func testRouting_allUserTypes_areHandled() {
     func viewName(for type: AuthService.UserType, isConservation: Bool = false) -> String {
       switch type {
-      case .guide:      return "LandingView"
+      case .guide:      return "GuideLandingView"
       case .angler:     return isConservation ? "ConservationLandingView" : "AnglerLandingView"
       case .public:     return "PublicLandingView"
       case .researcher: return isConservation ? "ResearcherLandingView" : "PublicLandingView"
       }
     }
-    XCTAssertEqual(viewName(for: .guide),   "LandingView")
+    XCTAssertEqual(viewName(for: .guide),   "GuideLandingView")
     XCTAssertEqual(viewName(for: .angler),  "AnglerLandingView")
     XCTAssertEqual(viewName(for: .angler, isConservation: true), "ConservationLandingView",
                    "SNAPSHOT: .angler + Conservation must route to ConservationLandingView")

@@ -182,7 +182,7 @@ struct LoginView: View {
       .modifier(ScrollDismissesKeyboardIfAvailable())
       .sheet(isPresented: $showRegistration) {
         NavigationView {
-          GuideRegistrationView()
+          MemberRegistrationView()
             .navigationTitle("Guide Registration")
             .navigationBarTitleDisplayMode(.inline)
         }
