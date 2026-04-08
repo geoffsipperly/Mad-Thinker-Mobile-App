@@ -57,13 +57,42 @@ curl -sf "https://koyegehcwcrvxpfthkxq.supabase.co/functions/v1/api-reference?fo
 
 Snapshots live at `docs/api-reference.md` (human-readable) and `docs/api-reference.json` (programmatic). These are the source of truth for endpoint contracts, parameter names, and response shapes — not any DTOs or URL constants inside this repo. If a DTO in Swift contradicts the reference, **trust the reference** and update the DTO.
 
+## Project Structure
+```
+SkeenaSystem/
+├── Authentication/     # AuthService, AuthStore, BiometricAuth, CommunityService, AppLogging
+├── Config/             # Environment, DateFormatting, FeatureFlags, xcconfigs
+├── Location/           # RiverLocator, WaterBodyLocator, coordinate data, LocationManager
+├── Managers/           # Upload managers (Catch/Farmed/Observations), SynchTrips, TripSync,
+│                       #   CatchPhotoAnalyzer, ImagePicker, FishWeightEstimator, SplashVideo
+├── Models/             # Pure data models (CatchModels, CommunityModels, CatchReportPicMemo,
+│                       #   Observation, FarmedReport, LiveWeather) + CoreData extensions + ML models
+├── Services/           # API clients: TripAPI, OpsTicketsAPI, MapReportService, WeatherSnapshot,
+│                       #   CatchStoryService, MemberProfileFieldsAPI, APIURLUtilities
+├── Stores/             # Observable state: CatchReportStore, ObservationStore, FarmedReportStore,
+│                       #   PhotoStore, TermsStore
+├── ViewModels/         # CatchChatViewModel, ReportFormViewModel, ResearcherCatchFlowManager
+├── Views/
+│   ├── Auth/           # LoginView, CommunityPicker, CommunitySwitcher, JoinCommunity, Terms
+│   ├── Shared/         # DarkPageTemplate, SectionChrome, Toast, SplashVideoView
+│   ├── Components/     # CommunityLogoView, SocialFeed
+│   ├── Map/            # Map views + callout views
+│   ├── Angler/         # Angler role views (landing, onboarding, trips, forecasts, catches)
+│   ├── Guide/          # Guide role views (landing, trips, reports, chat, observations, ops)
+│   ├── Public/         # Public role views (landing, explore, record activity)
+│   └── Researcher/     # Researcher role views (landing, conservation, catch confirmation)
+├── Terms/              # Markdown terms documents (angler_terms.md, guide_terms.md)
+├── Persistence.swift   # Core Data stack + community seed
+└── SkeenaSystemApp.swift
+```
+
 ## Key Files
 - `SkeenaSystem/Managers/CatchPhotoAnalyzer.swift` — all ML inference, `speciesLabels`, length re-estimation
-- `SkeenaSystem/Models/CatchChatViewModel.swift` — species parsing (`splitSpecies`), `speciesDisplayNames`, chat/report building
+- `SkeenaSystem/ViewModels/CatchChatViewModel.swift` — species parsing (`splitSpecies`), `speciesDisplayNames`, chat/report building
 - `SkeenaSystem/Config/Environment.swift` — feature flags, thresholds, endpoint URLs
 - `SkeenaSystem/Managers/UploadCatchReport.swift` — Supabase upload
 - `SkeenaSystem/Views/Guide/ReportsListView.swift` — report list + upload trigger
-- `SkeenaSystem/Views/DarkPageTemplate.swift` — shared dark-theme page chrome used across role landing views
+- `SkeenaSystem/Views/Shared/DarkPageTemplate.swift` — shared dark-theme page chrome used across role landing views
 
 ## Logging
 `AppLogging` with categories `.ml`, `.catch`, `.upload`, etc. ML pipeline logs at `.debug` on `.ml`.
