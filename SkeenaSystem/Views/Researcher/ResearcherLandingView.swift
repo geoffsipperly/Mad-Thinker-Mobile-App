@@ -15,7 +15,6 @@ struct ResearcherLandingView: View {
   @StateObject private var loc = LocationManager()
 
   @State private var showConfirmation = false
-  @State private var showSavedAlert = false
 
   var body: some View {
     NavigationStack {
@@ -83,17 +82,13 @@ struct ResearcherLandingView: View {
           chatVM: chatVM,
           onConfirm: {
             showConfirmation = false
-            showSavedAlert = true
+            resetForNextCatch()
           },
           onCancel: {
             showConfirmation = false
+            resetForNextCatch()
           }
         )
-      }
-      .alert("Catch Report Saved", isPresented: $showSavedAlert) {
-        Button("OK") {
-          resetForNextCatch()
-        }
       }
       .tint(.blue)
     }

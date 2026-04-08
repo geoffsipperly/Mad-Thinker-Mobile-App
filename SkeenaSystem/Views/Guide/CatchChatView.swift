@@ -156,6 +156,143 @@ struct CatchChatView: View {
     .padding(.horizontal, 4)
   }
 
+  // MARK: - Researcher step buttons
+
+  // MARK: - Inline choice buttons (rendered below message)
+
+  @ViewBuilder
+  private var researcherInlineChoices: some View {
+    let step = viewModel.researcherFlow?.currentStep
+
+    if step == .studyParticipation {
+      HStack(spacing: 12) {
+        choiceButton("Pit", icon: "tag.fill", disabled: true) {}
+        choiceButton("Floy", icon: "tag.fill", disabled: false) {
+          viewModel.researcherSelectStudy(.floy)
+        }
+        choiceButton("Radio", icon: "antenna.radiowaves.left.and.right", disabled: true) {}
+        choiceButton("No", icon: "forward.fill", disabled: false) {
+          viewModel.researcherConfirm()
+        }
+      }
+    } else if step == .sampleCollection {
+      HStack(spacing: 12) {
+        choiceButton("Scale", icon: "fish.fill", disabled: false) {
+          viewModel.researcherSelectSample(.scale)
+        }
+        choiceButton("Fin Tip", icon: "scissors", disabled: false) {
+          viewModel.researcherSelectSample(.finTip)
+        }
+        choiceButton("Both", icon: "plus.circle.fill", disabled: false) {
+          viewModel.researcherSelectSample(.both)
+        }
+        choiceButton("No", icon: "forward.fill", disabled: false) {
+          viewModel.researcherConfirm()
+        }
+      }
+    }
+  }
+
+  private func choiceButton(_ label: String, icon: String, disabled: Bool, action: @escaping () -> Void) -> some View {
+    Button(action: action) {
+      VStack(spacing: 4) {
+        Image(systemName: icon)
+          .font(.title3)
+        Text(label)
+          .font(.caption)
+      }
+      .foregroundColor(disabled ? .gray : .white)
+      .frame(minWidth: 56)
+      .padding(.vertical, 8)
+      .padding(.horizontal, 4)
+      .background(Color.white.opacity(disabled ? 0.05 : 0.12))
+      .cornerRadius(12)
+    }
+    .disabled(disabled)
+  }
+
+  // MARK: - Researcher side buttons (right of message)
+
+  @ViewBuilder
+  private var researcherStepButtons: some View {
+    let step = viewModel.researcherFlow?.currentStep
+
+    if step == .floyTagID {
+      // Only show Confirm once a tag number has been entered
+      if let tag = viewModel.researcherFlow?.floyTagNumber, !tag.isEmpty {
+        Button {
+          viewModel.researcherConfirm()
+        } label: {
+          VStack(spacing: 4) {
+            Image(systemName: "checkmark.circle.fill")
+              .font(.title2)
+            Text("Confirm")
+              .font(.footnote)
+          }
+        }
+      }
+    } else if step == .scaleScan {
+      // Scan barcode for scale sample
+      Button {
+        viewModel.researcherScaleScan()
+      } label: {
+        VStack(spacing: 4) {
+          Image(systemName: "camera.fill")
+            .font(.title2)
+          Text("Scan")
+            .font(.footnote)
+        }
+      }
+
+      Button {
+        viewModel.researcherConfirm()
+      } label: {
+        VStack(spacing: 4) {
+          Image(systemName: "forward.fill")
+            .font(.title2)
+          Text("Skip")
+            .font(.footnote)
+        }
+      }
+    } else if step == .finTipScan {
+      // Scan barcode for fin tip sample
+      Button {
+        viewModel.researcherFinTipScan()
+      } label: {
+        VStack(spacing: 4) {
+          Image(systemName: "camera.fill")
+            .font(.title2)
+          Text("Scan")
+            .font(.footnote)
+        }
+      }
+
+      Button {
+        viewModel.researcherConfirm()
+      } label: {
+        VStack(spacing: 4) {
+          Image(systemName: "forward.fill")
+            .font(.title2)
+          Text("Skip")
+            .font(.footnote)
+        }
+      }
+    } else {
+      // identification, confirmLength, confirmGirth, finalSummary
+      let useConfirmStyle = step == .identification || step == .finalSummary
+      Button {
+        viewModel.researcherConfirm()
+      } label: {
+        VStack(spacing: 4) {
+          Image(systemName: useConfirmStyle ? "checkmark.circle.fill" : "arrow.right.circle.fill")
+            .font(.title2)
+          Text(useConfirmStyle ? "Confirm" : "Next")
+            .font(.footnote)
+        }
+      }
+    }
+  }
+
   private func hideKeyboard() {
     #if canImport(UIKit)
     UIApplication.shared.endEditing(true)
@@ -164,164 +301,131 @@ struct CatchChatView: View {
 
   // MARK: - Message rows
 
+  /// Whether the current researcher step renders choice buttons below the message.
+  private var researcherStepUsesInlineChoices: Bool {
+    guard let step = viewModel.researcherFlow?.currentStep else { return false }
+    return step == .studyParticipation || step == .sampleCollection
+  }
+
   @ViewBuilder
   private func messageRow(_ message: ChatMessage, index: Int) -> some View {
-    HStack(alignment: .center, spacing: 8) {
-      if message.sender == .assistant {
-        Image(AppEnvironment.shared.appLogoAsset)
-          .resizable()
-          .scaledToFit()
-          .frame(width: 24, height: 24)
-          .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
+    let showResearcherButtons = (viewModel.researcherFlow?.confirmAnchorID == message.id)
+    let showChoicesBelow = showResearcherButtons && researcherStepUsesInlineChoices
 
-        bubble(message, isUser: false)
+    VStack(alignment: .leading, spacing: 8) {
+      HStack(alignment: .center, spacing: 8) {
+        if message.sender == .assistant {
+          Image(AppEnvironment.shared.appLogoAsset)
+            .resizable()
+            .scaledToFit()
+            .frame(width: 24, height: 24)
+            .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
 
-        Spacer(minLength: 16)
+          bubble(message, isUser: false)
 
-        let showPhotoButton = viewModel.showCaptureOptions && index == 0
-        let showVoiceButton = (viewModel.voiceMemoAnchorMessageID == message.id)
-        let showConfirmButton = (viewModel.confirmAnalysisMessageID == message.id)
-        let showResearcherButtons = (viewModel.researcherFlow?.confirmAnchorID == message.id)
-        if showPhotoButton || showVoiceButton || showConfirmButton || showResearcherButtons {
-          HStack(spacing: 16) {
-            if showPhotoButton {
-              Button {
-                AppLogging.log("Upload button tapped for photo source selection", level: .debug, category: .angler)
-                showSourceActionSheet = true
-              } label: {
-                VStack(spacing: 4) {
-                  Image(systemName: "photo.on.rectangle")
-                    .font(.title2)
-                  Text("Upload")
-                    .font(.footnote)
-                }
-              }
-            }
+          Spacer(minLength: 16)
 
-            if showVoiceButton {
-              // In researcher voice memo step, show Memo and Skip
-              if viewModel.researcherFlow?.currentStep == .voiceMemo {
+          let showPhotoButton = viewModel.showCaptureOptions && index == 0
+          let showVoiceButton = (viewModel.voiceMemoAnchorMessageID == message.id)
+          let showConfirmButton = (viewModel.confirmAnalysisMessageID == message.id)
+          // Side buttons: everything except study/sample choice steps
+          let showSideResearcherButtons = showResearcherButtons && !showChoicesBelow
+          if showPhotoButton || showVoiceButton || showConfirmButton || showSideResearcherButtons {
+            HStack(spacing: 16) {
+              if showPhotoButton {
                 Button {
-                  showVoiceNoteSheet = true
+                  AppLogging.log("Upload button tapped for photo source selection", level: .debug, category: .angler)
+                  showSourceActionSheet = true
                 } label: {
                   VStack(spacing: 4) {
-                    Image(systemName: "mic.fill")
+                    Image(systemName: "photo.on.rectangle")
                       .font(.title2)
-                    Text("Memo")
-                      .font(.footnote)
-                  }
-                }
-
-                Button {
-                  viewModel.researcherSkipVoiceMemo()
-                } label: {
-                  VStack(spacing: 4) {
-                    Image(systemName: "forward.fill")
-                      .font(.title2)
-                    Text("Skip")
-                      .font(.footnote)
-                  }
-                }
-              } else {
-                Button {
-                  showVoiceNoteSheet = true
-                } label: {
-                  VStack(spacing: 4) {
-                    Image(systemName: "mic.fill")
-                      .font(.title2)
-                    Text("Memo")
-                      .font(.footnote)
-                  }
-                }
-
-                Button {
-                  viewModel.deferVoiceMemoToLater()
-                } label: {
-                  VStack(spacing: 4) {
-                    Image(systemName: "clock.arrow.circlepath")
-                      .font(.title2)
-                    Text("Later")
+                    Text("Upload")
                       .font(.footnote)
                   }
                 }
               }
-            }
 
-            if showConfirmButton {
-              Button {
-                viewModel.confirmAnalysisFromButton()
-              } label: {
-                VStack(spacing: 4) {
-                  Image(systemName: "checkmark.circle.fill")
-                    .font(.title2)
-                  Text("Confirm")
-                    .font(.footnote)
+              if showVoiceButton {
+                if viewModel.researcherFlow?.currentStep == .voiceMemo {
+                  Button {
+                    showVoiceNoteSheet = true
+                  } label: {
+                    VStack(spacing: 4) {
+                      Image(systemName: "mic.fill")
+                        .font(.title2)
+                      Text("Memo")
+                        .font(.footnote)
+                    }
+                  }
+
+                  Button {
+                    viewModel.researcherSkipVoiceMemo()
+                  } label: {
+                    VStack(spacing: 4) {
+                      Image(systemName: "forward.fill")
+                        .font(.title2)
+                      Text("Skip")
+                        .font(.footnote)
+                    }
+                  }
+                } else {
+                  Button {
+                    showVoiceNoteSheet = true
+                  } label: {
+                    VStack(spacing: 4) {
+                      Image(systemName: "mic.fill")
+                        .font(.title2)
+                      Text("Memo")
+                        .font(.footnote)
+                    }
+                  }
+
+                  Button {
+                    viewModel.deferVoiceMemoToLater()
+                  } label: {
+                    VStack(spacing: 4) {
+                      Image(systemName: "clock.arrow.circlepath")
+                        .font(.title2)
+                      Text("Later")
+                        .font(.footnote)
+                    }
+                  }
                 }
               }
-            }
 
-            if showResearcherButtons {
-              let step = viewModel.researcherFlow?.currentStep
-
-              if step == .floyTag {
-                // Floy Tag: user can type a number (handled by text input) or skip
+              if showConfirmButton {
                 Button {
-                  viewModel.researcherConfirm()
+                  viewModel.confirmAnalysisFromButton()
                 } label: {
                   VStack(spacing: 4) {
-                    Image(systemName: "forward.fill")
+                    Image(systemName: "checkmark.circle.fill")
                       .font(.title2)
-                    Text("Skip")
-                      .font(.footnote)
-                  }
-                }
-              } else if step == .scaleSample {
-                // Scale Sample: camera to scan barcode, or skip
-                Button {
-                  viewModel.researcherScaleSampleScan()
-                } label: {
-                  VStack(spacing: 4) {
-                    Image(systemName: "camera.fill")
-                      .font(.title2)
-                    Text("Scan")
-                      .font(.footnote)
-                  }
-                }
-
-                Button {
-                  viewModel.researcherConfirm()
-                } label: {
-                  VStack(spacing: 4) {
-                    Image(systemName: "forward.fill")
-                      .font(.title2)
-                    Text("Skip")
-                      .font(.footnote)
-                  }
-                }
-              } else {
-                let useConfirmStyle = step == .identification || step == .finalSummary
-                Button {
-                  viewModel.researcherConfirm()
-                } label: {
-                  VStack(spacing: 4) {
-                    Image(systemName: useConfirmStyle ? "checkmark.circle.fill" : "arrow.right.circle.fill")
-                      .font(.title2)
-                    Text(useConfirmStyle ? "Confirm" : "Next")
+                    Text("Confirm")
                       .font(.footnote)
                   }
                 }
               }
-            }
 
+              if showSideResearcherButtons {
+                researcherStepButtons
+              }
+            }
+            .foregroundColor(.white)
+          } else {
+            Spacer(minLength: 24)
           }
-          .foregroundColor(.white)
-        } else {
-          Spacer(minLength: 24)
-        }
 
-      } else {
-        Spacer(minLength: 40)
-        bubble(message, isUser: true)
+        } else {
+          Spacer(minLength: 40)
+          bubble(message, isUser: true)
+        }
+      }
+
+      // Choice buttons rendered below the message for study/sample steps
+      if showChoicesBelow {
+        researcherInlineChoices
+          .padding(.leading, 32) // align under the bubble (past the logo)
       }
     }
   }

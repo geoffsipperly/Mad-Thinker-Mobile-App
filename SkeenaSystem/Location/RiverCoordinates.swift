@@ -611,6 +611,160 @@ enum RiverAtlas {
             // Mile 60 — Headwaters, Sol Duc Park area (V — GNIS)
             CLLocationCoordinate2D(latitude: 47.9400, longitude: -123.7500),
         ],
+
+        // ─────────────────────────────────────────────
+        // Alaska Peninsula
+        // ─────────────────────────────────────────────
+
+        "Ocean River": [
+            CLLocationCoordinate2D(latitude: 56.5619, longitude: -159.7564),
+            CLLocationCoordinate2D(latitude: 56.5520, longitude: -159.6800),
+            CLLocationCoordinate2D(latitude: 56.5380, longitude: -159.6100),
+            CLLocationCoordinate2D(latitude: 56.5250, longitude: -159.5400),
+        ],
+
+        "Sandy River": [
+            CLLocationCoordinate2D(latitude: 56.1700, longitude: -159.9500),
+            CLLocationCoordinate2D(latitude: 56.1450, longitude: -159.9300),
+            CLLocationCoordinate2D(latitude: 56.1200, longitude: -159.9100),
+            CLLocationCoordinate2D(latitude: 56.0950, longitude: -159.8800),
+            CLLocationCoordinate2D(latitude: 56.0700, longitude: -159.8500),
+        ],
+
+        "King Salmon River": [
+            CLLocationCoordinate2D(latitude: 57.4972, longitude: -157.6417),
+            CLLocationCoordinate2D(latitude: 57.4700, longitude: -157.6000),
+            CLLocationCoordinate2D(latitude: 57.4430, longitude: -157.5600),
+            CLLocationCoordinate2D(latitude: 57.4150, longitude: -157.5300),
+            CLLocationCoordinate2D(latitude: 57.3900, longitude: -157.5100),
+            CLLocationCoordinate2D(latitude: 57.3650, longitude: -157.5000),
+            CLLocationCoordinate2D(latitude: 57.3450, longitude: -157.4900),
+            CLLocationCoordinate2D(latitude: 57.3330, longitude: -157.5000),
+        ],
+
+        // ─────────────────────────────────────────────
+        // Yakutat, Alaska
+        // ─────────────────────────────────────────────
+
+        "Situk River": [
+            CLLocationCoordinate2D(latitude: 59.4353, longitude: -139.5467),
+            CLLocationCoordinate2D(latitude: 59.4700, longitude: -139.5200),
+            CLLocationCoordinate2D(latitude: 59.5100, longitude: -139.5000),
+            CLLocationCoordinate2D(latitude: 59.5500, longitude: -139.4800),
+            CLLocationCoordinate2D(latitude: 59.5864, longitude: -139.4600),
+        ],
+
+        // ─────────────────────────────────────────────
+        // Klamath Basin — California / Oregon
+        // ─────────────────────────────────────────────
+
+        "Klamath River": [
+            // California section — mouth to OR/CA line
+            CLLocationCoordinate2D(latitude: 41.5331, longitude: -124.0811),
+            CLLocationCoordinate2D(latitude: 41.5330, longitude: -123.9900),
+            CLLocationCoordinate2D(latitude: 41.5330, longitude: -123.8989),
+            CLLocationCoordinate2D(latitude: 41.5330, longitude: -123.8078),
+            CLLocationCoordinate2D(latitude: 41.5200, longitude: -123.7400),
+            CLLocationCoordinate2D(latitude: 41.5050, longitude: -123.6700),
+            CLLocationCoordinate2D(latitude: 41.3575, longitude: -123.6035),
+            CLLocationCoordinate2D(latitude: 41.3300, longitude: -123.5680),
+            CLLocationCoordinate2D(latitude: 41.3028, longitude: -123.5369),
+            CLLocationCoordinate2D(latitude: 41.3350, longitude: -123.5000),
+            CLLocationCoordinate2D(latitude: 41.3550, longitude: -123.4870),
+            CLLocationCoordinate2D(latitude: 41.3764, longitude: -123.4753),
+            CLLocationCoordinate2D(latitude: 41.4500, longitude: -123.4300),
+            CLLocationCoordinate2D(latitude: 41.5700, longitude: -123.3900),
+            CLLocationCoordinate2D(latitude: 41.6800, longitude: -123.3500),
+            CLLocationCoordinate2D(latitude: 41.7350, longitude: -123.3650),
+            CLLocationCoordinate2D(latitude: 41.7931, longitude: -123.3814),
+            CLLocationCoordinate2D(latitude: 41.7980, longitude: -123.3590),
+            CLLocationCoordinate2D(latitude: 41.8015, longitude: -123.3395),
+            CLLocationCoordinate2D(latitude: 41.8050, longitude: -123.3200),
+            CLLocationCoordinate2D(latitude: 41.8200, longitude: -123.2760),
+            CLLocationCoordinate2D(latitude: 41.8370, longitude: -123.2540),
+            CLLocationCoordinate2D(latitude: 41.8542, longitude: -123.2320),
+            CLLocationCoordinate2D(latitude: 41.8450, longitude: -123.1400),
+            CLLocationCoordinate2D(latitude: 41.8380, longitude: -123.0950),
+            CLLocationCoordinate2D(latitude: 41.8300, longitude: -123.0500),
+            CLLocationCoordinate2D(latitude: 41.8400, longitude: -122.9500),
+            CLLocationCoordinate2D(latitude: 41.8700, longitude: -122.8000),
+            CLLocationCoordinate2D(latitude: 41.8900, longitude: -122.6800),
+            CLLocationCoordinate2D(latitude: 41.9100, longitude: -122.5600),
+            CLLocationCoordinate2D(latitude: 41.9200, longitude: -122.5000),
+            CLLocationCoordinate2D(latitude: 41.9254, longitude: -122.4715),
+            CLLocationCoordinate2D(latitude: 41.9306, longitude: -122.4431),
+            // Oregon section — OR/CA line to headwaters
+            CLLocationCoordinate2D(latitude: 41.9500, longitude: -122.3900),
+            CLLocationCoordinate2D(latitude: 41.9600, longitude: -122.3600),
+            CLLocationCoordinate2D(latitude: 41.9700, longitude: -122.3300),
+            CLLocationCoordinate2D(latitude: 41.9800, longitude: -122.2800),
+            CLLocationCoordinate2D(latitude: 41.9900, longitude: -122.2400),
+            CLLocationCoordinate2D(latitude: 42.0000, longitude: -122.2000),
+            CLLocationCoordinate2D(latitude: 42.0420, longitude: -122.1367),
+            CLLocationCoordinate2D(latitude: 42.0633, longitude: -122.1050),
+            CLLocationCoordinate2D(latitude: 42.0846, longitude: -122.0733),
+            CLLocationCoordinate2D(latitude: 42.1089, longitude: -122.0177),
+            CLLocationCoordinate2D(latitude: 42.1211, longitude: -121.9900),
+            CLLocationCoordinate2D(latitude: 42.1332, longitude: -121.9622),
+            CLLocationCoordinate2D(latitude: 42.1400, longitude: -121.9300),
+            CLLocationCoordinate2D(latitude: 42.1574, longitude: -121.8645),
+            CLLocationCoordinate2D(latitude: 42.1747, longitude: -121.7987),
+            CLLocationCoordinate2D(latitude: 42.1990, longitude: -121.7964),
+            CLLocationCoordinate2D(latitude: 42.2235, longitude: -121.7942),
+            CLLocationCoordinate2D(latitude: 42.3108, longitude: -121.8589),
+            CLLocationCoordinate2D(latitude: 42.3545, longitude: -121.8912),
+            CLLocationCoordinate2D(latitude: 42.3982, longitude: -121.9236),
+        ],
+
+        "Williamson River": [
+            CLLocationCoordinate2D(latitude: 42.4900, longitude: -121.9300),
+            CLLocationCoordinate2D(latitude: 42.5272, longitude: -121.9048),
+            CLLocationCoordinate2D(latitude: 42.5644, longitude: -121.8797),
+            CLLocationCoordinate2D(latitude: 42.5700, longitude: -121.8700),
+            CLLocationCoordinate2D(latitude: 42.5750, longitude: -121.8650),
+            CLLocationCoordinate2D(latitude: 42.5800, longitude: -121.8600),
+            CLLocationCoordinate2D(latitude: 42.5850, longitude: -121.8550),
+            CLLocationCoordinate2D(latitude: 42.6100, longitude: -121.8450),
+            CLLocationCoordinate2D(latitude: 42.6700, longitude: -121.8365),
+            CLLocationCoordinate2D(latitude: 42.7403, longitude: -121.8333),
+            CLLocationCoordinate2D(latitude: 42.7500, longitude: -121.8267),
+            CLLocationCoordinate2D(latitude: 42.7550, longitude: -121.8000),
+            CLLocationCoordinate2D(latitude: 42.7600, longitude: -121.7733),
+            CLLocationCoordinate2D(latitude: 42.7700, longitude: -121.7467),
+            CLLocationCoordinate2D(latitude: 42.7800, longitude: -121.7200),
+            CLLocationCoordinate2D(latitude: 42.8075, longitude: -121.6850),
+            CLLocationCoordinate2D(latitude: 42.8250, longitude: -121.6675),
+            CLLocationCoordinate2D(latitude: 42.8375, longitude: -121.6575),
+            CLLocationCoordinate2D(latitude: 42.8438, longitude: -121.6537),
+            CLLocationCoordinate2D(latitude: 42.8500, longitude: -121.6500),
+        ],
+
+        "Wood River": [
+            CLLocationCoordinate2D(latitude: 42.5500, longitude: -121.9500),
+            CLLocationCoordinate2D(latitude: 42.5900, longitude: -121.9550),
+            CLLocationCoordinate2D(latitude: 42.6400, longitude: -121.9600),
+            CLLocationCoordinate2D(latitude: 42.6900, longitude: -121.9700),
+            CLLocationCoordinate2D(latitude: 42.7381, longitude: -121.9800),
+        ],
+
+        "Sprague River": [
+            CLLocationCoordinate2D(latitude: 42.5712, longitude: -121.8745),
+            CLLocationCoordinate2D(latitude: 42.5779, longitude: -121.8616),
+            CLLocationCoordinate2D(latitude: 42.5847, longitude: -121.8486),
+            CLLocationCoordinate2D(latitude: 42.5798, longitude: -121.8193),
+            CLLocationCoordinate2D(latitude: 42.5750, longitude: -121.7900),
+            CLLocationCoordinate2D(latitude: 42.5700, longitude: -121.7600),
+            CLLocationCoordinate2D(latitude: 42.5650, longitude: -121.7300),
+            CLLocationCoordinate2D(latitude: 42.5575, longitude: -121.6900),
+            CLLocationCoordinate2D(latitude: 42.5500, longitude: -121.6500),
+            CLLocationCoordinate2D(latitude: 42.5400, longitude: -121.6100),
+            CLLocationCoordinate2D(latitude: 42.5300, longitude: -121.5700),
+            CLLocationCoordinate2D(latitude: 42.5200, longitude: -121.5300),
+            CLLocationCoordinate2D(latitude: 42.5100, longitude: -121.4900),
+            CLLocationCoordinate2D(latitude: 42.5000, longitude: -121.4500),
+            CLLocationCoordinate2D(latitude: 42.4900, longitude: -121.4000),
+            CLLocationCoordinate2D(latitude: 42.4378, longitude: -121.1094),
+        ],
     ]
 
     /// Default search radius (km) from any spine point to count as "on" a river.

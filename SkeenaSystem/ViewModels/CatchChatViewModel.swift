@@ -302,15 +302,14 @@ final class CatchChatViewModel: ObservableObject {
     let nextMessage = flow.confirm()
 
     if flow.currentStep == .voiceMemo {
-      // Show voice memo buttons
+      // Show voice memo buttons (Memo / Skip)
       let msg = appendAssistant(nextMessage)
       voiceMemoAnchorMessageID = msg.id
       confirmAnalysisMessageID = nil
     } else if flow.currentStep == .complete {
       // Trigger save
-      triggerSave()
-    } else {
-      // Show next step (Next button for intermediate steps, Confirm for final summary)
+      saveRequested = true
+    } else if !nextMessage.isEmpty {
       let msg = appendAssistant(nextMessage)
       flow.confirmAnchorID = msg.id
     }
@@ -340,35 +339,71 @@ final class CatchChatViewModel: ObservableObject {
     }
   }
 
-  /// Mock: researcher taps Scan for scale sample barcode.
-  /// Simulates a scanned barcode and advances to voice memo.
-  func researcherScaleSampleScan() {
+  /// Researcher selects a study type (Pit, Floy, Radio Telemetry).
+  func researcherSelectStudy(_ type: ResearcherCatchFlowManager.StudyType) {
     guard let flow = researcherFlow else { return }
-
     flow.confirmAnchorID = nil
-    flow.scaleSampleBarcode = "MOCK-BARCODE-\(Int.random(in: 1000...9999))"
 
-    let msg = appendAssistant("Scale sample barcode scanned: \(flow.scaleSampleBarcode!)\n§\nBarcode recorded (mock).")
+    let (message, _) = flow.selectStudy(type)
+    let msg = appendAssistant(message)
+    flow.confirmAnchorID = msg.id
+  }
 
-    // Advance to voice memo
-    flow.currentStep = .voiceMemo
-    let voicePrompt = appendAssistant("Would you like to add a voice memo for this catch?")
-    voiceMemoAnchorMessageID = voicePrompt.id
-    confirmAnalysisMessageID = nil
+  /// Researcher selects a sample type (Scale, Fin Tip, Both).
+  func researcherSelectSample(_ type: ResearcherCatchFlowManager.SampleType) {
+    guard let flow = researcherFlow else { return }
+    flow.confirmAnchorID = nil
+
+    let (message, _) = flow.selectSample(type)
+    let msg = appendAssistant(message)
+    flow.confirmAnchorID = msg.id
+  }
+
+  /// Researcher scans a barcode for scale sample.
+  func researcherScaleScan() {
+    guard let flow = researcherFlow else { return }
+    flow.confirmAnchorID = nil
+
+    // Mock barcode scan
+    flow.scaleSampleBarcode = "SCALE-\(Int.random(in: 1000...9999))"
+    appendAssistant("Scale barcode scanned: \(flow.scaleSampleBarcode!)")
+
+    // Advance via confirm (handles both → finTipScan, or → voiceMemo)
+    let nextMessage = flow.confirm()
+    if flow.currentStep == .voiceMemo {
+      let msg = appendAssistant(nextMessage)
+      voiceMemoAnchorMessageID = msg.id
+    } else if !nextMessage.isEmpty {
+      let msg = appendAssistant(nextMessage)
+      flow.confirmAnchorID = msg.id
+    }
+  }
+
+  /// Researcher scans a barcode for fin tip sample.
+  func researcherFinTipScan() {
+    guard let flow = researcherFlow else { return }
+    flow.confirmAnchorID = nil
+
+    // Mock barcode scan
+    flow.finTipSampleBarcode = "FINTIP-\(Int.random(in: 1000...9999))"
+    appendAssistant("Fin Tip barcode scanned: \(flow.finTipSampleBarcode!)")
+
+    let nextMessage = flow.confirm()
+    if flow.currentStep == .voiceMemo {
+      let msg = appendAssistant(nextMessage)
+      voiceMemoAnchorMessageID = msg.id
+    } else if !nextMessage.isEmpty {
+      let msg = appendAssistant(nextMessage)
+      flow.confirmAnchorID = msg.id
+    }
   }
 
   /// Researcher skips voice memo from the voice memo step.
   func researcherSkipVoiceMemo() {
     guard let flow = researcherFlow else { return }
-
     voiceMemoAnchorMessageID = nil
     flow.currentStep = .complete
-
-    // Show final summary then save
-    let summaryText = flow.finalSummaryText()
-    appendAssistant(summaryText)
-    appendAssistant("Saving catch now...")
-    triggerSave()
+    saveRequested = true
   }
 
   /// Re-estimate length when the researcher corrects the species during identification.

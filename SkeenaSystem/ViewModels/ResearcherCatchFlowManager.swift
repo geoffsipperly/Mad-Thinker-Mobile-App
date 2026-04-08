@@ -26,10 +26,27 @@ final class ResearcherCatchFlowManager: ObservableObject {
     case confirmLength          // show estimated length, confirm or edit
     case confirmGirth           // show length + estimated girth, confirm or edit girth
     case finalSummary           // show all confirmed values + derived weight
-    case floyTag                // ask for Floy Tag number (skip or enter)
-    case scaleSample            // ask about scale sample (skip or scan barcode)
+    case studyParticipation     // "Are you participating in a study?" — Pit, Floy, Radio Telemetry
+    case floyTagID              // conditional: enter Floy Tag ID (only if Floy selected)
+    case sampleCollection       // "Are you taking a sample?" — Scale, Fin Tip, Both
+    case scaleScan              // scan barcode for scale envelope
+    case finTipScan             // scan barcode for fin tip envelope
     case voiceMemo              // offer voice memo
     case complete
+  }
+
+  /// Study type selected by the researcher (nil = not participating).
+  enum StudyType: String, Equatable {
+    case pit = "Pit"
+    case floy = "Floy"
+    case radioTelemetry = "Radio Telemetry"
+  }
+
+  /// Sample type selected by the researcher (nil = not taking a sample).
+  enum SampleType: String, Equatable {
+    case scale = "Scale"
+    case finTip = "Fin Tip"
+    case both = "Both"
   }
 
   // MARK: - Published State
@@ -70,9 +87,14 @@ final class ResearcherCatchFlowManager: ObservableObject {
   var initialGirthRatio: Double = FishWeightEstimator.defaultGirthRatio
   var initialGirthRatioSource: String = "Default (freshwater average)"
 
-  // Floy tag and scale sample (mock — not persisted yet)
+  // Study participation
+  @Published var studyType: StudyType?
   @Published var floyTagNumber: String?
+
+  // Sample collection
+  @Published var sampleType: SampleType?
   @Published var scaleSampleBarcode: String?
+  @Published var finTipSampleBarcode: String?
 
   // Length estimation source (updated when species correction triggers re-estimation)
   var lengthSource: LengthEstimateSource?
@@ -152,20 +174,42 @@ final class ResearcherCatchFlowManager: ObservableObject {
       return finalAnalysisText()
 
     case .finalSummary:
-      currentStep = .floyTag
-      return "If there is a Floy Tag present, please enter the number below, or press Skip."
+      currentStep = .studyParticipation
+      return "Are you participating in a study?"
 
-    case .floyTag:
-      currentStep = .scaleSample
-      return "Are you taking a Scale Sample?\nIf yes, use your camera to scan the barcode on the envelope."
+    case .studyParticipation:
+      // "No" was selected (confirm = skip). Move to sample collection.
+      studyType = nil
+      currentStep = .sampleCollection
+      return "Are you taking a sample?"
 
-    case .scaleSample:
+    case .floyTagID:
+      // Floy tag submitted or skipped → sample collection
+      currentStep = .sampleCollection
+      return "Are you taking a sample?"
+
+    case .sampleCollection:
+      // "No" was selected. Move to voice memo.
+      sampleType = nil
+      currentStep = .voiceMemo
+      return "Would you like to add a voice memo for this catch?"
+
+    case .scaleScan:
+      // Scale barcode scanned or skipped → check if fin tip also needed
+      if sampleType == .both {
+        currentStep = .finTipScan
+        return "Now scan the barcode on the Fin Tip envelope."
+      }
+      currentStep = .voiceMemo
+      return "Would you like to add a voice memo for this catch?"
+
+    case .finTipScan:
       currentStep = .voiceMemo
       return "Would you like to add a voice memo for this catch?"
 
     case .voiceMemo:
       currentStep = .complete
-      return "Saving catch now..."
+      return ""
 
     case .complete:
       return ""
@@ -207,18 +251,50 @@ final class ResearcherCatchFlowManager: ObservableObject {
       }
       return (girthPrompt(), false)
 
-    case .floyTag:
-      // Any text input is treated as the Floy Tag number → auto-advance
+    case .floyTagID:
+      // Store the Floy Tag ID but don't advance — show it for confirmation
       let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
       if !trimmed.isEmpty {
         floyTagNumber = trimmed
-        currentStep = .scaleSample
-        return ("Floy Tag: \(trimmed)\n§\nAre you taking a Scale Sample?\nIf yes, use your camera to scan the barcode on the envelope.", true)
+        return ("Floy Tag ID: \(trimmed)\n§\nConfirm, or type a corrected value.", false)
       }
-      return ("If there is a Floy Tag present, please enter the number below, or press Skip.", false)
+      return ("Please enter the Floy Tag ID.", false)
 
     default:
       return ("", false)
+    }
+  }
+
+  // MARK: - Study & Sample Selection
+
+  /// Called when the researcher selects a study type (Pit, Floy, Radio Telemetry).
+  func selectStudy(_ type: StudyType) -> (message: String, nextStep: Step) {
+    studyType = type
+
+    if type == .floy {
+      currentStep = .floyTagID
+      return ("Study: \(type.rawValue)\n§\nPlease enter the Floy Tag ID.", .floyTagID)
+    } else {
+      // Pit and Radio Telemetry don't have follow-up yet
+      currentStep = .sampleCollection
+      return ("Study: \(type.rawValue)\n§\nAre you taking a sample?", .sampleCollection)
+    }
+  }
+
+  /// Called when the researcher selects a sample type (Scale, Fin Tip, Both).
+  func selectSample(_ type: SampleType) -> (message: String, nextStep: Step) {
+    sampleType = type
+
+    switch type {
+    case .scale:
+      currentStep = .scaleScan
+      return ("Sample: \(type.rawValue)\n§\nScan the barcode on the Scale envelope.", .scaleScan)
+    case .finTip:
+      currentStep = .finTipScan
+      return ("Sample: \(type.rawValue)\n§\nScan the barcode on the Fin Tip envelope.", .finTipScan)
+    case .both:
+      currentStep = .scaleScan
+      return ("Sample: \(type.rawValue)\n§\nFirst, scan the barcode on the Scale envelope.", .scaleScan)
     }
   }
 
