@@ -71,7 +71,7 @@ SkeenaSystem/
 │                       #   CatchStoryService, MemberProfileFieldsAPI, APIURLUtilities
 ├── Stores/             # Observable state: CatchReportStore, ObservationStore, FarmedReportStore,
 │                       #   PhotoStore, TermsStore
-├── ViewModels/         # CatchChatViewModel, ReportFormViewModel, ResearcherCatchFlowManager
+├── ViewModels/         # CatchChatViewModel, CatchCaptureContext, ResearcherCatchFlowManager
 ├── Views/
 │   ├── Auth/           # LoginView, CommunityPicker, CommunitySwitcher, JoinCommunity, Terms
 │   ├── Shared/         # DarkPageTemplate, SectionChrome, Toast, SplashVideoView

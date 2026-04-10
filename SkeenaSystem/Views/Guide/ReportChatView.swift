@@ -29,7 +29,7 @@ struct ReportChatView: View {
     self._isSoloMode = State(initialValue: alwaysSolo)
   }
 
-  @StateObject private var vm = ReportFormViewModel()
+  @StateObject private var vm = CatchCaptureContext()
   @StateObject private var loc = LocationManager()
 
   @StateObject private var chatVM = CatchChatViewModel()
