@@ -11,8 +11,8 @@ struct GuideLandingView: View {
   @StateObject private var auth = AuthService.shared
   @ObservedObject private var communityService = CommunityService.shared
 
-  // Reactive entitlement — driven by backend config with xcconfig fallback
-  private var E_MANAGE_OPS: Bool { communityService.activeCommunityConfig.flag("E_MANAGE_OPS") }
+  // OPS add-on — driven by community_addons table (replaces isOpsActive entitlement)
+  private var isOpsActive: Bool { communityService.addons["OPS"] ?? false }
 
   // Navigation
   @State private var showRecordActivity = false
@@ -90,8 +90,8 @@ struct GuideLandingView: View {
         ToolbarItem(placement: .navigationBarLeading) {
           CommunityToolbarButton()
         }
-        // Leading ops tickets button (guides only, when E_MANAGE_OPS)
-        if E_MANAGE_OPS {
+        // Leading ops tickets button (guides only, when isOpsActive)
+        if isOpsActive {
           ToolbarItem(placement: .navigationBarLeading) {
             NavigationLink { OpsTicketsListView() } label: {
               Image(systemName: "wrench.and.screwdriver")

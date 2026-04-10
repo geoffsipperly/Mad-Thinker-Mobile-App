@@ -207,7 +207,7 @@ final class UploadCatchPicMemo {
   /// Validates a single report's fields. Returns error messages, or empty array if valid.
   static func validateReport(_ report: CatchReportPicMemo) -> [String] {
     var errors: [String] = []
-    let memberId = report.memberId.trimmingCharacters(in: .whitespacesAndNewlines)
+    let memberId = MemberNumber.normalize(report.memberId.trimmingCharacters(in: .whitespacesAndNewlines))
     if memberId.isEmpty {
       errors.append("• \(report.id.uuidString): memberId is required")
     }
@@ -468,7 +468,7 @@ final class UploadCatchPicMemo {
   private func makeDTO(from r: CatchReportPicMemo, now: Date) throws -> UploadCatchPicMemoDTO {
     var localErrors: [String] = []
 
-    let memberId = r.memberId.trimmingCharacters(in: .whitespacesAndNewlines)
+    let memberId = MemberNumber.normalize(r.memberId.trimmingCharacters(in: .whitespacesAndNewlines))
     if memberId.isEmpty {
       localErrors.append("memberId is required")
     }

@@ -84,12 +84,14 @@ final class CommunityServiceTests: XCTestCase {
     communityName: String = "Emerald Waters Anglers",
     role: String = "guide",
     code: String = "EWA001",
-    isActive: Bool = true
+    isActive: Bool = true,
+    memberIsActive: Bool = true
   ) -> [String: Any] {
     [
       "id": UUID().uuidString,
       "community_id": communityId,
       "role": role,
+      "is_active": memberIsActive,
       "communities": [
         "id": communityId,
         "name": communityName,

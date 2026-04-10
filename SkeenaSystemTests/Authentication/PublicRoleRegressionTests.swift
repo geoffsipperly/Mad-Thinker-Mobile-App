@@ -96,6 +96,7 @@ final class PublicRoleRegressionTests: XCTestCase {
       "id": UUID().uuidString,
       "community_id": communityId,
       "role": "public",
+      "is_active": true,
       "communities": [
         "id": communityId,
         "name": communityName,
@@ -172,6 +173,7 @@ final class PublicRoleRegressionTests: XCTestCase {
       "id": UUID().uuidString,
       "community_id": "c-guide",
       "role": "guide",
+      "is_active": true,
       "communities": ["id": "c-guide", "name": "Lodge A", "code": "LDG001", "is_active": true]
     ]
     let data = makeMembershipsJSON([pub, guide])
@@ -279,6 +281,7 @@ final class PublicRoleRegressionTests: XCTestCase {
       "id": UUID().uuidString,
       "community_id": "c-guide",
       "role": "guide",
+      "is_active": true,
       "communities": ["id": "c-guide", "name": "Lodge A", "code": "LDG001", "is_active": true]
     ]
     let data = makeMembershipsJSON([pub, guide])

@@ -567,7 +567,7 @@ final class AuthService: ObservableObject {
   /// Updates the current user's member_id in Supabase user_metadata
   /// and refreshes the local cache.
   func updateMemberId(_ id: String) async throws {
-    let trimmed = id.trimmingCharacters(in: .whitespacesAndNewlines)
+    let trimmed = MemberNumber.normalize(id.trimmingCharacters(in: .whitespacesAndNewlines))
     guard !trimmed.isEmpty else {
       throw InputValidationError.invalidInput("Member Number cannot be empty.")
     }

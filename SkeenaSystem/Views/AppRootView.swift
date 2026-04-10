@@ -40,6 +40,8 @@ struct AppRootView: View {
           }
         } else if communityService.activeCommunityId == nil {
           CommunityPickerView()
+        } else if !communityService.isMemberActive {
+          InactiveMemberView()
         } else {
           switch auth.currentUserType ?? AuthService.UserType.guide {
           case .guide:

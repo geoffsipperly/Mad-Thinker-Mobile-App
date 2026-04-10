@@ -44,9 +44,7 @@
 	<string>$(E_GEAR_CHECKLIST)</string>
 	<key>E_MANAGE_LICENSES</key>
 	<string>$(E_MANAGE_LICENSES)</string>
-	<key>E_MANAGE_OPS</key>
-	<string>$(E_MANAGE_OPS)</string>
-	<key>E_MEET_STAFF</key>
+<key>E_MEET_STAFF</key>
 	<string>$(E_MEET_STAFF)</string>
 	<key>E_SELF_ASSESSMENT</key>
 	<string>$(E_SELF_ASSESSMENT)</string>

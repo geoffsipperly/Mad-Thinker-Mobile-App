@@ -52,7 +52,7 @@ final class PublicRoleViewTests: XCTestCase {
       ("house", "Home"),
       ("camera.viewfinder", "Catches"),
       ("message", "Social"),
-      ("safari", "Explore")
+      ("safari", "Learn")
     ]
     XCTAssertEqual(tabs.count, 4,
                    "SNAPSHOT: Public toolbar must have exactly 4 tabs")
@@ -63,7 +63,7 @@ final class PublicRoleViewTests: XCTestCase {
     XCTAssertEqual(tabs[0].label, "Home",        "SNAPSHOT: Tab 1 is Home")
     XCTAssertEqual(tabs[1].label, "Catches",     "SNAPSHOT: Tab 2 is Catches")
     XCTAssertEqual(tabs[2].label, "Social",      "SNAPSHOT: Tab 3 is Social")
-    XCTAssertEqual(tabs[3].label, "Explore",     "SNAPSHOT: Tab 4 is Explore")
+    XCTAssertEqual(tabs[3].label, "Learn",       "SNAPSHOT: Tab 4 is Learn")
   }
 
   func testSnapshot_publicToolbarTabs_iconsMatchDesign() {
@@ -71,7 +71,7 @@ final class PublicRoleViewTests: XCTestCase {
       ("house", "Home"),
       ("camera.viewfinder", "Catches"),
       ("message", "Social"),
-      ("safari", "Explore")
+      ("safari", "Learn")
     ]
     XCTAssertEqual(tabs[0].icon, "house")
     XCTAssertEqual(tabs[1].icon, "camera.viewfinder")
@@ -81,7 +81,7 @@ final class PublicRoleViewTests: XCTestCase {
 
   func testSnapshot_publicToolbarDiffersFromGuideToolbar() {
     let guideTabs: Set<String>  = ["Home", "Trips", "Catches", "Community", "Observations"]
-    let publicTabs: Set<String> = ["Home", "Catches", "Social", "Explore"]
+    let publicTabs: Set<String> = ["Home", "Catches", "Social", "Learn"]
     XCTAssertNotEqual(guideTabs, publicTabs,
                       "Public and guide toolbars must be distinct tab sets")
     XCTAssertFalse(publicTabs.contains("Trips"),
@@ -90,8 +90,8 @@ final class PublicRoleViewTests: XCTestCase {
                    "Public toolbar must not contain Conditions (accessed via landing page)")
     XCTAssertTrue(publicTabs.contains("Social"),
                   "Public toolbar must contain Social (maps to Community forum)")
-    XCTAssertTrue(publicTabs.contains("Explore"),
-                  "Public toolbar must contain Explore")
+    XCTAssertTrue(publicTabs.contains("Learn"),
+                  "Public toolbar must contain Learn")
   }
 
   // MARK: - ReportChatView alwaysSolo

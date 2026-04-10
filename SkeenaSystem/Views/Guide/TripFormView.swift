@@ -204,7 +204,7 @@ final class TripFormViewModel: ObservableObject {
     Binding(
       get: { [weak self] in self?.clients.indices.contains(index) == true ? (self?.clients[index].licenseNumber ?? "") : "" },
       set: { [weak self] newValue in
-        self?.updateClient(at: index) { $0.licenseNumber = newValue }
+        self?.updateClient(at: index) { $0.licenseNumber = MemberNumber.normalize(newValue) }
       }
     )
   }

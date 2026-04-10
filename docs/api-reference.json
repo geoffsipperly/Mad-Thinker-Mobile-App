@@ -1,10 +1,11 @@
 {
-  "version": "2026-04-05",
-  "generated": "2026-04-06T22:49:17.844Z",
+  "version": "2026-04-09",
+  "generated": "2026-04-10T00:45:22.321Z",
   "key_concepts": {
     "member_id": "UUID foreign key reference to a member record",
-    "member_number": "Human-readable string identifier (e.g., mtsip6385a)",
-    "entitlements": "Per-community-type feature toggles with E_ prefix",
+    "member_number": "Human-readable identifier in MAD Crockford Base32 format: MAD + 6 random chars (e.g., MAD4ZQ7H9)",
+    "entitlements": "Per-community-type feature toggles with E_ prefix. E_THE_BUZZ has been removed.",
+    "addons": "Per-community feature toggles (CRM, OPS, Social) stored in community_addons table. Social replaces the former E_THE_BUZZ entitlement.",
     "roles": "Community-scoped: angler, guide, admin, public, researcher",
     "units": "Community-level: imperial or metric",
     "auth_headers": "Authorization: Bearer <token> + apikey: <anon_key>"

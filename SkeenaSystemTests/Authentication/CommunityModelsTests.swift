@@ -12,6 +12,7 @@ final class CommunityModelsTests: XCTestCase {
       "id": "mem-uuid-123",
       "community_id": "comm-uuid-456",
       "role": "guide",
+      "is_active": true,
       "communities": {
         "id": "comm-uuid-456",
         "name": "Emerald Waters Anglers",
@@ -26,6 +27,7 @@ final class CommunityModelsTests: XCTestCase {
     XCTAssertEqual(membership.id, "mem-uuid-123")
     XCTAssertEqual(membership.communityId, "comm-uuid-456")
     XCTAssertEqual(membership.role, "guide")
+    XCTAssertTrue(membership.isActive)
     XCTAssertEqual(membership.communities.id, "comm-uuid-456")
     XCTAssertEqual(membership.communities.name, "Emerald Waters Anglers")
     XCTAssertEqual(membership.communities.code, "EWA001")
@@ -38,6 +40,7 @@ final class CommunityModelsTests: XCTestCase {
       "id": "mem-uuid-789",
       "community_id": "comm-uuid-abc",
       "role": "angler",
+      "is_active": true,
       "communities": {
         "id": "comm-uuid-abc",
         "name": "Epic Waters",
@@ -49,6 +52,7 @@ final class CommunityModelsTests: XCTestCase {
 
     let membership = try JSONDecoder().decode(CommunityMembership.self, from: json)
     XCTAssertEqual(membership.role, "angler")
+    XCTAssertTrue(membership.isActive)
     XCTAssertEqual(membership.communities.name, "Epic Waters")
   }
 
@@ -58,6 +62,7 @@ final class CommunityModelsTests: XCTestCase {
       "id": "mem-1",
       "community_id": "comm-inactive",
       "role": "guide",
+      "is_active": true,
       "communities": {
         "id": "comm-inactive",
         "name": "Old Community",
@@ -68,7 +73,29 @@ final class CommunityModelsTests: XCTestCase {
     """.data(using: .utf8)!
 
     let membership = try JSONDecoder().decode(CommunityMembership.self, from: json)
+    XCTAssertTrue(membership.isActive)
     XCTAssertFalse(membership.communities.isActive)
+  }
+
+  func testCommunityMembership_decodesInactiveMember() throws {
+    let json = """
+    {
+      "id": "mem-2",
+      "community_id": "comm-active",
+      "role": "angler",
+      "is_active": false,
+      "communities": {
+        "id": "comm-active",
+        "name": "Active Community",
+        "code": "ACT001",
+        "is_active": true
+      }
+    }
+    """.data(using: .utf8)!
+
+    let membership = try JSONDecoder().decode(CommunityMembership.self, from: json)
+    XCTAssertFalse(membership.isActive)
+    XCTAssertTrue(membership.communities.isActive)
   }
 
   func testCommunityMembership_decodesArray() throws {
@@ -78,12 +105,14 @@ final class CommunityModelsTests: XCTestCase {
         "id": "m1",
         "community_id": "c1",
         "role": "guide",
+        "is_active": true,
         "communities": { "id": "c1", "name": "Comm A", "code": "AAA111", "is_active": true }
       },
       {
         "id": "m2",
         "community_id": "c2",
         "role": "angler",
+        "is_active": true,
         "communities": { "id": "c2", "name": "Comm B", "code": "BBB222", "is_active": true }
       }
     ]

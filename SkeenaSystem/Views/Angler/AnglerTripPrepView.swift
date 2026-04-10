@@ -49,7 +49,7 @@ struct AnglerTripPrepView: View {
       ToolbarTab(icon: "message", label: "Social") {
         handleTab(.community)
       }
-      ToolbarTab(icon: "safari", label: "Explore") {
+      ToolbarTab(icon: "safari", label: "Learn") {
         handleTab(.explore)
       }
     }) {

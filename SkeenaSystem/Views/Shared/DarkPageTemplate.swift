@@ -67,6 +67,9 @@ struct RoleAwareToolbar: View {
   @Environment(\.userRole) private var userRole
   @Environment(\.navigateTo) private var navigateTo
   @Environment(\.guideNavigateTo) private var guideNavigateTo
+  @ObservedObject private var communityService = CommunityService.shared
+
+  private var socialDisabled: Bool { !communityService.isSocialActive }
 
   var body: some View {
     switch userRole {
@@ -89,15 +92,15 @@ struct RoleAwareToolbar: View {
     ToolbarTab(icon: "suitcase", label: "My Trip") {
       navigateTo(.trip)
     }
-    ToolbarTab(icon: "message", label: "Social") {
+    ToolbarTab(icon: "message", label: "Social", disabled: socialDisabled) {
       if activeTab != "community" { navigateTo(.community) }
     }
-    ToolbarTab(icon: "safari", label: "Explore") {
+    ToolbarTab(icon: "safari", label: "Learn") {
       if activeTab != "explore" { navigateTo(.explore) }
     }
   }
 
-  // MARK: Public tabs — Home, Catches, Social, Explore (no Trips)
+  // MARK: Public tabs — Home, Catches, Social, Learn (no Trips)
   @ViewBuilder private var publicToolbar: some View {
     ToolbarTab(icon: "house", label: "Home") {
       guideNavigateTo(nil)
@@ -105,10 +108,10 @@ struct RoleAwareToolbar: View {
     ToolbarTab(icon: "camera.viewfinder", label: "Catches") {
       if activeTab != "catches" { guideNavigateTo(.catches) }
     }
-    ToolbarTab(icon: "message", label: "Social") {
+    ToolbarTab(icon: "message", label: "Social", disabled: socialDisabled) {
       if activeTab != "community" { guideNavigateTo(.community) }
     }
-    ToolbarTab(icon: "safari", label: "Explore") {
+    ToolbarTab(icon: "safari", label: "Learn") {
       if activeTab != "explore" { guideNavigateTo(.explore) }
     }
   }
@@ -124,7 +127,7 @@ struct RoleAwareToolbar: View {
     ToolbarTab(icon: "camera.viewfinder", label: "Catches") {
       if activeTab != "catches" { guideNavigateTo(.catches) }
     }
-    ToolbarTab(icon: "message", label: "Social") {
+    ToolbarTab(icon: "message", label: "Social", disabled: socialDisabled) {
       if activeTab != "community" { guideNavigateTo(.community) }
     }
   }
@@ -236,9 +239,11 @@ struct AppHeader: View {
 
 /// A single tab button used in the pinned bottom toolbar.
 /// Provides a consistent icon + label layout across all views.
+/// Set `disabled: true` to render the tab greyed-out and non-interactive.
 struct ToolbarTab: View {
   let icon: String
   let label: String
+  var disabled: Bool = false
   let action: () -> Void
 
   var body: some View {
@@ -246,14 +251,15 @@ struct ToolbarTab: View {
       VStack(spacing: 4) {
         Image(systemName: icon)
           .font(.system(size: 22))
-          .foregroundColor(.white.opacity(0.85))
+          .foregroundColor(disabled ? .gray.opacity(0.4) : .white.opacity(0.85))
         Text(label)
           .font(.caption2)
-          .foregroundColor(.gray)
+          .foregroundColor(disabled ? .gray.opacity(0.4) : .gray)
       }
       .frame(maxWidth: .infinity)
     }
     .buttonStyle(.plain)
+    .disabled(disabled)
   }
 }
 

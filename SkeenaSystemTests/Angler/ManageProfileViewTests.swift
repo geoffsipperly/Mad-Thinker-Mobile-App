@@ -56,7 +56,7 @@ final class ManageProfileViewTests: XCTestCase {
     {
       "firstName": "John",
       "lastName": "Doe",
-      "memberId": "mtsip6385a",
+      "memberId": "MAD4ZQ7H9",
       "dateOfBirth": "1990-01-15",
       "phoneNumber": "+1-555-123-4567"
     }
@@ -65,7 +65,7 @@ final class ManageProfileViewTests: XCTestCase {
     let profile = try JSONDecoder().decode(MyProfile.self, from: json)
     XCTAssertEqual(profile.firstName, "John")
     XCTAssertEqual(profile.lastName, "Doe")
-    XCTAssertEqual(profile.memberId, "mtsip6385a")
+    XCTAssertEqual(profile.memberId, "MAD4ZQ7H9")
     XCTAssertEqual(profile.dateOfBirth, "1990-01-15")
     XCTAssertEqual(profile.phoneNumber, "+1-555-123-4567")
   }
@@ -137,7 +137,7 @@ final class ManageProfileViewTests: XCTestCase {
       "profile": {
         "firstName": "John",
         "lastName": "Doe",
-        "memberId": "mtsip6385a",
+        "memberId": "MAD4ZQ7H9",
         "dateOfBirth": "1990-01-15",
         "phoneNumber": "+1-555-123-4567"
       }
@@ -150,7 +150,7 @@ final class ManageProfileViewTests: XCTestCase {
 
     let decoded = try JSONDecoder().decode(Resp.self, from: json)
     XCTAssertEqual(decoded.profile.firstName, "John")
-    XCTAssertEqual(decoded.profile.memberId, "mtsip6385a")
+    XCTAssertEqual(decoded.profile.memberId, "MAD4ZQ7H9")
     XCTAssertEqual(decoded.profile.phoneNumber, "+1-555-123-4567")
   }
 
@@ -329,7 +329,7 @@ final class ManageProfileViewTests: XCTestCase {
       "user_metadata": [
         "first_name": "Alex",
         "user_type": "angler",
-        "member_id": "mtsip6385a"
+        "member_id": "MAD4ZQ7H9"
       ]
     ]
     let userData = try JSONSerialization.data(withJSONObject: userJSON, options: [])
@@ -354,7 +354,7 @@ final class ManageProfileViewTests: XCTestCase {
       "profile": [
         "firstName": "Alex",
         "lastName": "Test",
-        "memberId": "mtsip6385a",
+        "memberId": "MAD4ZQ7H9",
         "dateOfBirth": "1990-05-20",
         "phoneNumber": "5551234567"
       ]
@@ -387,7 +387,7 @@ final class ManageProfileViewTests: XCTestCase {
     struct Resp: Decodable { let profile: MyProfile }
     let decoded = try JSONDecoder().decode(Resp.self, from: data)
     XCTAssertEqual(decoded.profile.firstName, "Alex")
-    XCTAssertEqual(decoded.profile.memberId, "mtsip6385a")
+    XCTAssertEqual(decoded.profile.memberId, "MAD4ZQ7H9")
 
     XCTAssertNotNil(capturedRequest)
     XCTAssertEqual(capturedRequest?.httpMethod, "GET")

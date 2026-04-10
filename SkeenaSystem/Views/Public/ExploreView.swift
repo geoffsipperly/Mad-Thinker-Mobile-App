@@ -94,7 +94,7 @@ struct ExploreView: View {
         .padding(.top, 16)
       }
     }
-    .navigationTitle("Explore")
+    .navigationTitle("Learn")
     .navigationBarBackButtonHidden(true)
     .navigationDestination(isPresented: $showMasterclass) {
       if let url = masterclassURL {

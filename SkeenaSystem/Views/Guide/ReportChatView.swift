@@ -459,7 +459,7 @@ struct ReportChatView: View {
   }
 
   private func saveSoloMemberId() async {
-    let trimmed = soloMemberIdInput.trimmingCharacters(in: .whitespacesAndNewlines)
+    let trimmed = MemberNumber.normalize(soloMemberIdInput.trimmingCharacters(in: .whitespacesAndNewlines))
     guard !trimmed.isEmpty else { return }
     do {
       try await AuthService.shared.updateMemberId(trimmed)

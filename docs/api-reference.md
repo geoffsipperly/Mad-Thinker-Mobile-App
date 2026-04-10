@@ -1,13 +1,14 @@
 # Mad Thinker Platform API Reference
 
-**Version:** 2026-04-05
-**Generated:** 2026-04-06T22:49:16.508Z
+**Version:** 2026-04-09
+**Generated:** 2026-04-10T00:40:18.992Z
 
 ## Key Concepts
 
 - **member_id**: UUID foreign key reference to a member record
-- **member_number**: Human-readable string identifier (e.g., "mtsip6385a")
-- **Entitlements**: Per-community-type feature toggles with E_ prefix (e.g., E_CATCH_CAROUSEL)
+- **member_number**: Human-readable string identifier in MAD Crockford Base32 format — 9 characters: "MAD" prefix + 6 random characters from 0-9 A-H J-N P-T V-Z (e.g., "MAD4ZQ7H9")
+- **Entitlements**: Per-community-type feature toggles with E_ prefix (e.g., E_CATCH_CAROUSEL). Note: E_THE_BUZZ has been removed.
+- **Add-ons**: Per-community feature toggles (CRM, OPS, Social) stored in the community_addons table. The "Social" add-on replaces the former E_THE_BUZZ entitlement.
 - **Roles**: community-scoped roles — angler, guide, admin, public, researcher
 - **Units**: community-level setting — "imperial" or "metric"
 - All endpoints require `Authorization: Bearer <token>` and `apikey: <anon_key>` headers unless noted.

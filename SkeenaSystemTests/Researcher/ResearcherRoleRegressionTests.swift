@@ -100,6 +100,7 @@ final class ResearcherRoleRegressionTests: XCTestCase {
       "id": UUID().uuidString,
       "community_id": communityId,
       "role": "researcher",
+      "is_active": true,
       "communities": [
         "id": communityId,
         "name": communityName,
@@ -428,7 +429,7 @@ final class ResearcherRoleRegressionTests: XCTestCase {
       ("house", "Home"),
       ("camera.viewfinder", "Catches"),
       ("message", "Social"),
-      ("safari", "Explore")
+      ("safari", "Learn")
     ]
     XCTAssertEqual(researcherTabs.count, 4,
                    "SNAPSHOT: Researcher toolbar must have exactly 4 tabs")
@@ -445,6 +446,7 @@ final class ResearcherRoleRegressionTests: XCTestCase {
       "id": UUID().uuidString,
       "community_id": "c-guide",
       "role": "guide",
+      "is_active": true,
       "communities": ["id": "c-guide", "name": "Lodge A", "code": "LDG001", "is_active": true]
     ]
     let data = makeMembershipsJSON([sci, guide])

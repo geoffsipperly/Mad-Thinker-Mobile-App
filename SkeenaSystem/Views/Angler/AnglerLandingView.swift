@@ -167,7 +167,7 @@ struct AnglerLandingView: View {
         ToolbarTab(icon: "message", label: "Social") {
           navPath.append(AnglerDestination.community)
         }
-        ToolbarTab(icon: "safari", label: "Explore") {
+        ToolbarTab(icon: "safari", label: "Learn") {
           navPath.append(AnglerDestination.explore)
         }
       }) {

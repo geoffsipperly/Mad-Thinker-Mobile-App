@@ -121,6 +121,7 @@ final class AnglerOnboardingRegressionTests: XCTestCase {
       "id": UUID().uuidString,
       "community_id": communityId,
       "role": "angler",
+      "is_active": true,
       "communities": [
         "id": communityId,
         "name": communityName,

@@ -1009,7 +1009,7 @@ private struct PicMemoDetailView: View {
 
       editableTextField(title: "Member Number", text: Binding(
         get: { report.memberId },
-        set: { report.memberId = $0 }
+        set: { report.memberId = MemberNumber.normalize($0) }
       ))
 
       if CommunityService.shared.activeCommunityConfig.flag("E_MANAGE_LICENSES") {

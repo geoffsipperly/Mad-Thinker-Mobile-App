@@ -27,7 +27,6 @@ E_SELF_ASSESSMENT = true
 E_PREFERENCES = true
 E_CATCH_CAROUSEL = true
 E_CATCH_MAP = true
-E_MANAGE_OPS = true
 
 // ──────────────────────────────────────────────
 // MARK: - API Endpoints (Edge Functions)

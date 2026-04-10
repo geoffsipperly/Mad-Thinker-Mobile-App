@@ -132,6 +132,29 @@ final class DarkPageTemplateTests: XCTestCase {
     XCTAssertEqual(tab2.label, "Learn")
   }
 
+  /// ToolbarTab defaults to enabled (disabled == false).
+  func testToolbarTab_defaultDisabled_isFalse() {
+    let tab = ToolbarTab(icon: "message", label: "Social") {}
+    XCTAssertFalse(tab.disabled, "ToolbarTab should default to enabled")
+  }
+
+  /// ToolbarTab with disabled: true stores the value.
+  func testToolbarTab_disabled_storesTrue() {
+    let tab = ToolbarTab(icon: "message", label: "Social", disabled: true) {}
+    XCTAssertTrue(tab.disabled, "ToolbarTab should store disabled state")
+  }
+
+  // MARK: - CommunityService.isSocialActive
+
+  /// isSocialActive returns false when addons are empty.
+  func testIsSocialActive_defaultsToFalse() {
+    let service = CommunityService.shared
+    // Ensure clean slate — addons should be empty by default or after clear
+    let original = service.isSocialActive
+    // Without any addon data, Social should be inactive
+    XCTAssertFalse(original, "isSocialActive should be false when no addons are loaded")
+  }
+
   // MARK: - BottomToolbar Tests
 
   /// BottomToolbar wraps ToolbarTab content without crashing.
@@ -183,13 +206,13 @@ final class DarkPageTemplateTests: XCTestCase {
       ("house", "Home"),
       ("suitcase", "My Trip"),
       ("message", "Social"),
-      ("safari", "Explore")
+      ("safari", "Learn")
     ]
     XCTAssertEqual(tabs.count, 4, "SNAPSHOT: Angler toolbar has 4 tabs")
     XCTAssertEqual(tabs[0].label, "Home", "SNAPSHOT: First tab is Home")
     XCTAssertEqual(tabs[1].label, "My Trip", "SNAPSHOT: Second tab is My Trip")
     XCTAssertEqual(tabs[2].label, "Social", "SNAPSHOT: Third tab is Social")
-    XCTAssertEqual(tabs[3].label, "Explore", "SNAPSHOT: Fourth tab is Explore")
+    XCTAssertEqual(tabs[3].label, "Learn", "SNAPSHOT: Fourth tab is Learn")
   }
 
   /// Verify the Researcher toolbar tab configuration (currently mirrors public).
@@ -198,13 +221,13 @@ final class DarkPageTemplateTests: XCTestCase {
       ("house", "Home"),
       ("camera.viewfinder", "Catches"),
       ("message", "Social"),
-      ("safari", "Explore")
+      ("safari", "Learn")
     ]
     XCTAssertEqual(tabs.count, 4, "SNAPSHOT: Researcher toolbar has 4 tabs (same as public)")
     XCTAssertEqual(tabs[0].label, "Home", "SNAPSHOT: First tab is Home")
     XCTAssertEqual(tabs[1].label, "Catches", "SNAPSHOT: Second tab is Catches")
     XCTAssertEqual(tabs[2].label, "Social", "SNAPSHOT: Third tab is Social")
-    XCTAssertEqual(tabs[3].label, "Explore", "SNAPSHOT: Fourth tab is Explore")
+    XCTAssertEqual(tabs[3].label, "Learn", "SNAPSHOT: Fourth tab is Learn")
     XCTAssertFalse(tabs.contains(where: { $0.label == "Trips" }),
                    "SNAPSHOT: Researcher toolbar must not contain Trips")
   }
