@@ -61,7 +61,14 @@ final class RiverLocator {
         ?? RiverAtlas.all[riverName + " Creek"]
         ?? RiverAtlas.all[riverName + " Lake"]
         ?? RiverAtlas.all[riverName + " Stream"]
-      guard let coords, !coords.isEmpty else { return nil }
+      guard let coords, !coords.isEmpty else {
+        // Surface the silent-drop case: a community configured a river
+        // name the atlas doesn't know about. Without this log, mismatches
+        // like "Klamath River (California)" vs "Klamath River" cause
+        // river resolution to silently return nil with no trace.
+        AppLogging.log("[RiverLocator] No atlas entry for configured river '\(riverName)' (community=\(communityName))", level: .warn, category: .catch)
+        return nil
+      }
       return RiverDefinition(
         name: riverName,
         communityID: communityName,

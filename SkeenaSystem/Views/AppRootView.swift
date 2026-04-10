@@ -42,8 +42,8 @@ struct AppRootView: View {
           CommunityPickerView()
         } else if !communityService.isMemberActive {
           InactiveMemberView()
-        } else {
-          switch auth.currentUserType ?? AuthService.UserType.guide {
+        } else if let userType = auth.currentUserType {
+          switch userType {
           case .guide:
             GuideLandingView()
           case .angler:
@@ -60,6 +60,15 @@ struct AppRootView: View {
             } else {
               PublicLandingView()
             }
+          }
+        } else {
+          // currentUserType not yet synced from CommunityService — show a
+          // brief loading state rather than defaulting to .guide, which
+          // would flash GuideLandingView for non-guide roles and fire
+          // extraneous onAppear work (weather fetch, trip sync, etc.).
+          ZStack {
+            Color.black.ignoresSafeArea()
+            ProgressView().tint(.white)
           }
         }
       } else {

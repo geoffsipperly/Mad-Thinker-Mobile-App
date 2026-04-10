@@ -658,8 +658,11 @@ enum RiverAtlas {
         // Klamath Basin — California / Oregon
         // ─────────────────────────────────────────────
 
-        "Klamath River": [
-            // California section — mouth to OR/CA line
+        // Split at the CA/OR state line (latitude 42.0°N). Seiad Valley,
+        // Happy Camp, Somes Bar, and the mainstem through Siskiyou County
+        // all fall in the California entry; Keno, Klamath Falls, and the
+        // Upper Klamath Lake outlet fall in the Oregon entry.
+        "Klamath River (California)": [
             CLLocationCoordinate2D(latitude: 41.5331, longitude: -124.0811),
             CLLocationCoordinate2D(latitude: 41.5330, longitude: -123.9900),
             CLLocationCoordinate2D(latitude: 41.5330, longitude: -123.8989),
@@ -693,12 +696,14 @@ enum RiverAtlas {
             CLLocationCoordinate2D(latitude: 41.9200, longitude: -122.5000),
             CLLocationCoordinate2D(latitude: 41.9254, longitude: -122.4715),
             CLLocationCoordinate2D(latitude: 41.9306, longitude: -122.4431),
-            // Oregon section — OR/CA line to headwaters
             CLLocationCoordinate2D(latitude: 41.9500, longitude: -122.3900),
             CLLocationCoordinate2D(latitude: 41.9600, longitude: -122.3600),
             CLLocationCoordinate2D(latitude: 41.9700, longitude: -122.3300),
             CLLocationCoordinate2D(latitude: 41.9800, longitude: -122.2800),
             CLLocationCoordinate2D(latitude: 41.9900, longitude: -122.2400),
+        ],
+
+        "Klamath River (Oregon)": [
             CLLocationCoordinate2D(latitude: 42.0000, longitude: -122.2000),
             CLLocationCoordinate2D(latitude: 42.0420, longitude: -122.1367),
             CLLocationCoordinate2D(latitude: 42.0633, longitude: -122.1050),

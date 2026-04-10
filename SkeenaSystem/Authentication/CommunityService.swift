@@ -241,11 +241,16 @@ final class CommunityService: ObservableObject {
         isMemberActive = membership?.isActive ?? true
         persistActiveState()
 
-        // Sync role to AuthService so existing views that read auth.currentUserType continue to work
+        // Sync role to AuthService synchronously so existing views that read
+        // auth.currentUserType see the correct value on the same render pass.
+        // Previously this was wrapped in Task { @MainActor in ... }, which
+        // deferred the update and caused AppRootView to briefly render
+        // GuideLandingView (the default branch) for non-guide roles before
+        // swapping. setActiveCommunity is always called on the main actor
+        // (SwiftUI view taps and the fetchMemberships MainActor.run block),
+        // so a direct call is safe.
         if let role = activeRole, let userType = AuthService.UserType(rawValue: role) {
-            Task { @MainActor in
-                AuthService.shared.updateUserType(userType)
-            }
+            AuthService.shared.updateUserType(userType)
         }
 
         let typeName = membership?.communities.communityTypes?.name ?? "nil"

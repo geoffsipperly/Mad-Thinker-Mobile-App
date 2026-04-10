@@ -27,6 +27,7 @@ final class AuthService: ObservableObject {
   private let kOfflinePasswordKey = "OfflineLastPassword" // (stored in Keychain)
   private let kOfflineRememberMeKey = "OfflineRememberMeEnabled"
   private let kCachedFirstName = "CachedFirstName"
+  private let kCachedLastName = "CachedLastName"
   private let kCachedUserType = "CachedUserType"
   private let kCachedMemberId = "CachedMemberId"
   // ---------------------------------------
@@ -262,6 +263,7 @@ final class AuthService: ObservableObject {
     await MainActor.run {
       self.currentUserType = nil
       self.currentFirstName = nil
+      self.currentLastName = nil
       self.currentMemberId = nil
       self.isAuthenticated = false
     }
@@ -334,15 +336,17 @@ final class AuthService: ObservableObject {
           AppLogging.log("[Offline] sign-in success for \(email)", level: .info, category: .auth)
 
           let cachedFirst = UserDefaults.standard.string(forKey: kCachedFirstName)
+          let cachedLast = UserDefaults.standard.string(forKey: kCachedLastName)
           let cachedTypeRaw = UserDefaults.standard.string(forKey: kCachedUserType)
           let cachedMid = UserDefaults.standard.string(forKey: kCachedMemberId)
           await MainActor.run {
             self.currentFirstName = cachedFirst
+            self.currentLastName = cachedLast
             if let raw = cachedTypeRaw, let t = UserType(rawValue: raw) { self.currentUserType = t }
             self.currentMemberId = cachedMid
             self.isAuthenticated = true
           }
-          AppLogging.log("[Offline] restored cached profile first=\(cachedFirst ?? "<nil>") type=\(cachedTypeRaw ?? "<nil>") memberId=\(cachedMid ?? "<nil>")", level: .debug, category: .auth)
+          AppLogging.log("[Offline] restored cached profile first=\(cachedFirst ?? "<nil>") last=\(cachedLast ?? "<nil>") type=\(cachedTypeRaw ?? "<nil>") memberId=\(cachedMid ?? "<nil>")", level: .debug, category: .auth)
           return
         } else {
           AppLogging.log("[Offline] sign-in failed – no matching cached credentials.", level: .warn, category: .auth)
@@ -532,9 +536,10 @@ final class AuthService: ObservableObject {
           }
           // Persist minimal cached profile for offline use
           UserDefaults.standard.set(self.currentFirstName, forKey: kCachedFirstName)
+          UserDefaults.standard.set(self.currentLastName, forKey: kCachedLastName)
           UserDefaults.standard.set(self.currentUserType?.rawValue, forKey: kCachedUserType)
           UserDefaults.standard.set(self.currentMemberId, forKey: kCachedMemberId)
-          AppLogging.log("[Offline][ProfileCache] saved first=\(self.currentFirstName ?? "<nil>") userType=\(self.currentUserType?.rawValue ?? "<nil>") memberId=\(self.currentMemberId ?? "<nil>")", level: .debug, category: .auth)
+          AppLogging.log("[Offline][ProfileCache] saved first=\(self.currentFirstName ?? "<nil>") last=\(self.currentLastName ?? "<nil>") userType=\(self.currentUserType?.rawValue ?? "<nil>") memberId=\(self.currentMemberId ?? "<nil>")", level: .debug, category: .auth)
 
           if let t = self.currentUserType {
             // Default Remember Me based on role: guides ON, anglers OFF
@@ -560,7 +565,104 @@ final class AuthService: ObservableObject {
       } catch {
         AppLogging.log("[Profile][ERROR] \(error)", level: .error, category: .auth)
       }
+
+      // Supplement with /functions/v1/my-profile — the documented source of
+      // truth for firstName/lastName. user_metadata is not reliably populated
+      // for members created via admin invite or the members table directly;
+      // my-profile joins the members table and returns the canonical values.
+      await fetchMyProfileSupplement()
     }
+
+  /// Hits /functions/v1/my-profile and, when it returns usable firstName /
+  /// lastName values, writes them into `currentFirstName` / `currentLastName`
+  /// and refreshes the offline cache. Safe to call repeatedly; errors are
+  /// logged and swallowed so this never blocks the auth flow.
+  private func fetchMyProfileSupplement() async {
+    guard let token = await currentAccessToken() else {
+      AppLogging.log("[Profile][my-profile] no access token; skipping supplement fetch", level: .debug, category: .auth)
+      return
+    }
+
+    let url = projectURL.appendingPathComponent("/functions/v1/my-profile")
+    var req = URLRequest(url: url)
+    req.httpMethod = "GET"
+    req.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+    req.setValue(anonPublicKey, forHTTPHeaderField: "apikey")
+
+    do {
+      let (data, resp) = try await session.data(for: req)
+      let code = (resp as? HTTPURLResponse)?.statusCode ?? -1
+      let rawBody = String(data: data, encoding: .utf8) ?? "<non-UTF8>"
+      AppLogging.log("[Profile][my-profile][RAW] status=\(code) body=\(rawBody)", level: .info, category: .auth)
+
+      guard (200..<300).contains(code) else {
+        AppLogging.log("[Profile][my-profile][WARN] non-2xx status=\(code)", level: .warn, category: .auth)
+        return
+      }
+
+      // Edge function wraps the payload in { "profile": { ... } }. Accept
+      // both that shape and a bare top-level object. Accept both camelCase
+      // (documented GET response) and snake_case as a belt-and-braces
+      // guard against future drift.
+      struct ProfileFields: Decodable {
+        let firstName: String?
+        let lastName: String?
+        let memberId: String?
+
+        private enum CodingKeys: String, CodingKey {
+          case firstName, lastName, memberId
+          case first_name, last_name, member_id
+        }
+
+        init(from decoder: Decoder) throws {
+          let c = try decoder.container(keyedBy: CodingKeys.self)
+          self.firstName = try c.decodeIfPresent(String.self, forKey: .firstName)
+            ?? c.decodeIfPresent(String.self, forKey: .first_name)
+          self.lastName = try c.decodeIfPresent(String.self, forKey: .lastName)
+            ?? c.decodeIfPresent(String.self, forKey: .last_name)
+          self.memberId = try c.decodeIfPresent(String.self, forKey: .memberId)
+            ?? c.decodeIfPresent(String.self, forKey: .member_id)
+        }
+      }
+      struct MyProfileEnvelope: Decodable {
+        let profile: ProfileFields?
+      }
+
+      let decoder = JSONDecoder()
+      // Try wrapped shape first, fall back to bare object if decode fails
+      // or the wrapper is absent.
+      let fields: ProfileFields
+      if let envelope = try? decoder.decode(MyProfileEnvelope.self, from: data),
+         let inner = envelope.profile {
+        fields = inner
+      } else {
+        fields = try decoder.decode(ProfileFields.self, from: data)
+      }
+
+      let first = fields.firstName?.trimmingCharacters(in: .whitespacesAndNewlines)
+      let last = fields.lastName?.trimmingCharacters(in: .whitespacesAndNewlines)
+      let memberId = fields.memberId?.trimmingCharacters(in: .whitespacesAndNewlines)
+
+      AppLogging.log("[Profile][my-profile][PARSED] firstName=\(first ?? "<nil>") lastName=\(last ?? "<nil>") memberId=\(memberId ?? "<nil>")", level: .info, category: .auth)
+
+      await MainActor.run {
+        if let first, !first.isEmpty {
+          self.currentFirstName = first
+          UserDefaults.standard.set(first, forKey: self.kCachedFirstName)
+        }
+        if let last, !last.isEmpty {
+          self.currentLastName = last
+          UserDefaults.standard.set(last, forKey: self.kCachedLastName)
+        }
+        if let memberId, !memberId.isEmpty, (self.currentMemberId ?? "").isEmpty {
+          self.currentMemberId = memberId
+          UserDefaults.standard.set(memberId, forKey: self.kCachedMemberId)
+        }
+      }
+    } catch {
+      AppLogging.log("[Profile][my-profile][ERROR] \(error)", level: .error, category: .auth)
+    }
+  }
 
   // MARK: - Update Member ID (for guides using Solo mode)
 
@@ -658,10 +760,12 @@ final class AuthService: ObservableObject {
         AppLogging.log("[Biometric] Network unavailable; attempting explicit offline sign-in (after-auth).", level: .warn, category: .auth)
         if canSignInOffline(email: creds.email, password: creds.password) {
           let cachedFirst = UserDefaults.standard.string(forKey: kCachedFirstName)
+          let cachedLast = UserDefaults.standard.string(forKey: kCachedLastName)
           let cachedTypeRaw = UserDefaults.standard.string(forKey: kCachedUserType)
           let cachedMid = UserDefaults.standard.string(forKey: kCachedMemberId)
           // We're on MainActor so we can update directly
           self.currentFirstName = cachedFirst
+          self.currentLastName = cachedLast
           if let raw = cachedTypeRaw, let t = UserType(rawValue: raw) { self.currentUserType = t }
           self.currentMemberId = cachedMid
           self.isAuthenticated = true
@@ -883,6 +987,7 @@ final class AuthService: ObservableObject {
         UserDefaults.standard.removeObject(forKey: kOfflineEmailKey)
         Keychain.delete(kOfflinePasswordKey)
         UserDefaults.standard.removeObject(forKey: kCachedFirstName)
+        UserDefaults.standard.removeObject(forKey: kCachedLastName)
         UserDefaults.standard.removeObject(forKey: kCachedUserType)
         UserDefaults.standard.removeObject(forKey: kCachedMemberId)
         AppLogging.log("[Offline] rememberMe=false; cleared cached offline credentials", level: .debug, category: .auth)
@@ -897,6 +1002,7 @@ final class AuthService: ObservableObject {
         self.isAuthenticated = false
         self.currentUserType = nil
         self.currentFirstName = nil
+        self.currentLastName = nil
         self.currentMemberId = nil
       }
     }
