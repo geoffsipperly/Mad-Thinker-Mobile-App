@@ -1,6 +1,6 @@
 {
-  "version": "2026-04-09",
-  "generated": "2026-04-10T00:45:22.321Z",
+  "version": "2026-04-10",
+  "generated": "2026-04-11T20:37:36.192Z",
   "key_concepts": {
     "member_id": "UUID foreign key reference to a member record",
     "member_number": "Human-readable identifier in MAD Crockford Base32 format: MAD + 6 random chars (e.g., MAD4ZQ7H9)",
@@ -278,10 +278,10 @@
       }
     },
     {
-      "name": "Upload Catch Reports v4",
-      "path": "/functions/v1/upload-catch-reports-v4",
+      "name": "Upload Catch Reports v5",
+      "path": "/functions/v1/upload-catch-reports-v5",
       "method": "POST",
-      "description": "Upload catch reports. Requires tripId. Auto-creates Solo Fishing Trip if tripId doesn't exist.",
+      "description": "Upload catch reports with conservation research fields. Writes to catch_reports table. Supports dual photos (full fish + back of head), research identifiers (Floy ID, PIT ID, Scale Card ID, DNA #), initial and actual girth/weight, and conservation opt-in.",
       "auth": "required",
       "body": {
         "reportId": {
@@ -293,6 +293,21 @@
           "type": "iso8601",
           "required": true,
           "description": "Catch timestamp"
+        },
+        "tripId": {
+          "type": "uuid",
+          "required": true,
+          "description": "Trip UUID (auto-creates solo trip if not found)"
+        },
+        "tripName": {
+          "type": "string",
+          "required": false,
+          "description": "Trip name (fallback lookup / solo trip name)"
+        },
+        "communityId": {
+          "type": "uuid",
+          "required": false,
+          "description": "Community UUID (inferred if guide has one community)"
         },
         "catch.memberId": {
           "type": "string",
@@ -309,50 +324,65 @@
           "required": true,
           "description": "Fish length in inches"
         },
-        "catch.river": {
-          "type": "string",
-          "required": false,
-          "description": "River name"
-        },
         "catch.sex": {
           "type": "string",
           "required": false,
           "description": "Fish sex"
         },
-        "catch.origin": {
+        "catch.river": {
           "type": "string",
           "required": false,
-          "description": "Wild or Hatchery"
+          "description": "River name"
+        },
+        "catch.lifecycleStage": {
+          "type": "string",
+          "required": false,
+          "description": "e.g. Adult, Juvenile"
         },
         "catch.girthInches": {
           "type": "number",
           "required": false,
-          "description": "Girth measurement"
+          "description": "Final confirmed girth (inches)"
         },
         "catch.weightLbs": {
           "type": "number",
           "required": false,
-          "description": "Weight in pounds"
+          "description": "Final confirmed weight (lbs)"
         },
-        "catch.weightEstimation": {
-          "type": "object",
+        "catch.initialGirthInches": {
+          "type": "number",
           "required": false,
-          "description": "Weight estimation metadata (method, formula, etc.)"
+          "description": "Initial girth estimate before correction"
         },
-        "catch.tactic": {
+        "catch.initialWeightLbs": {
+          "type": "number",
+          "required": false,
+          "description": "Initial weight estimate before correction"
+        },
+        "catch.floyId": {
           "type": "string",
           "required": false,
-          "description": "Fishing tactic used"
+          "description": "Floy tag alphanumeric ID"
         },
-        "catch.quality": {
+        "catch.pitId": {
           "type": "string",
           "required": false,
-          "description": "Catch quality"
+          "description": "PIT tag alphanumeric ID"
         },
-        "catch.notes": {
+        "catch.scaleCardId": {
           "type": "string",
           "required": false,
-          "description": "Notes"
+          "description": "Scale card barcode ID"
+        },
+        "catch.dnaNumber": {
+          "type": "string",
+          "required": false,
+          "description": "DNA sample number"
+        },
+        "catch.conservationOptIn": {
+          "type": "boolean",
+          "required": false,
+          "description": "Conservation data sharing opt-in (default false)"
         },
         "catch.location.lat": {
           "type": "number",
@@ -364,50 +394,62 @@
           "required": false,
           "description": "Longitude"
         },
-        "catch.photo.filename": {
-          "type": "string",
+        "catch.photo": {
+          "type": "object",
           "required": false,
-          "description": "Photo filename"
+          "description": "Full fish photo: { filename, mimeType, data_base64 } or { url }"
         },
-        "catch.photo.mimeType": {
-          "type": "string",
+        "catch.headPhoto": {
+          "type": "object",
           "required": false,
-          "description": "Photo MIME type"
+          "description": "Back-of-head photo: { filename, mimeType, data_base64 } or { url }"
         },
-        "catch.photo.data_base64": {
-          "type": "string",
+        "catch.voiceMemo": {
+          "type": "object",
           "required": false,
-          "description": "Base64 encoded photo data"
+          "description": "Voice memo: { filename, mimeType, data_base64, transcript?, language? }"
         },
-        "trip.tripId": {
-          "type": "uuid",
-          "required": true,
-          "description": "Trip UUID"
-        },
-        "trip.tripName": {
-          "type": "string",
+        "weightEstimation": {
+          "type": "object",
           "required": false,
-          "description": "Trip name"
+          "description": "Weight estimation metadata blob (stored as JSONB)"
         },
-        "trip.guideName": {
-          "type": "string",
+        "initialAnalysis": {
+          "type": "object",
           "required": false,
-          "description": "Guide name"
+          "description": "ML analysis: { riverName, species, lifecycleStage, sex, lengthInches, mlFeatures, lengthSource, modelVersion }"
         },
         "meta.appVersion": {
           "type": "string",
           "required": true,
           "description": "App version string"
         },
-        "meta.communityId": {
-          "type": "uuid",
+        "meta.device": {
+          "type": "string",
           "required": false,
-          "description": "Community UUID"
+          "description": "Device model"
+        },
+        "meta.platform": {
+          "type": "string",
+          "required": false,
+          "description": "OS platform"
         }
       },
+      "response": {
+        "version": "v5",
+        "processed": "number",
+        "successful": "number",
+        "skipped": "number",
+        "failed": "number",
+        "results": "array of { reportId, id, status, tripId, anglerId }",
+        "errors": "array of { reportId, error }"
+      },
       "notes": [
+        "Writes to catch_reports table (legacy v1 table has been removed).",
+        "Removed fields from v4: origin, tactic, quality, tag_id, notes, classified_waters_license.",
+        "New dual-photo support: photo (full fish) + headPhoto (back of head). Head photo is stored but not displayed to users.",
         "If tripId doesn't exist, a 'Solo Fishing Trip' is auto-created.",
-        "Supports girthInches, weightLbs, and weightEstimation for researcher role."
+        "Enrichment (weather, tides, moon phase) is triggered automatically after insert."
       ]
     },
     {

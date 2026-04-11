@@ -79,6 +79,17 @@ final class CatchChatViewModel: ObservableObject {
   /// of that flow or until the user uploads the head shot.
   @Published var headPhotoFilename: String?
 
+  /// Filename of the head shot the user just uploaded but has not yet
+  /// confirmed. Distinct from `headPhotoFilename` so a Retake can discard
+  /// it without affecting any previously committed value. Promoted to
+  /// `headPhotoFilename` on `confirmHeadPhoto()`.
+  @Published var pendingHeadPhotoFilename: String?
+
+  /// Anchor for the Confirm / Retake side buttons shown after a head photo
+  /// is uploaded in the conservation/research flow. Nil outside that
+  /// intermediate confirmation step.
+  @Published var headConfirmAnchorMessageID: UUID?
+
   /// True when the chat is waiting for the user to upload the head photo
   /// before the regular fish-photo analysis pipeline runs. Only set in the
   /// conservation/research flow. Flipped off after the head photo is saved.
@@ -133,6 +144,8 @@ final class CatchChatViewModel: ObservableObject {
     catchLog = nil
     photoFilename = nil
     headPhotoFilename = nil
+    pendingHeadPhotoFilename = nil
+    headConfirmAnchorMessageID = nil
     awaitingHeadPhoto = false
     researcherFlow = nil
     currentAnalysis = nil
@@ -255,33 +268,73 @@ final class CatchChatViewModel: ObservableObject {
     }
 
   /// Handles the close-up head photo uploaded as the first step of the
-  /// conservation/research flow. Persists the image to PhotoStore, stores its
-  /// filename, and prompts the user to upload the primary fish photo next.
+  /// conservation/research flow. Persists the image to PhotoStore as a
+  /// *pending* filename and shows a Confirm / Retake prompt so the user can
+  /// verify the shot before the chat advances to the full-body photo request.
   ///
   /// The ML analysis pipeline deliberately does NOT run on the head photo —
   /// analysis is for the full-body shot that drives species identification and
   /// length estimation. The head photo is metadata for research, stored
   /// alongside the catch and uploaded to the v5 `catch.headPhoto` field.
+  ///
+  /// `awaitingHeadPhoto` stays true until `confirmHeadPhoto()` is called, so a
+  /// retake still routes through this handler rather than the analysis path.
   private func handleHeadPhotoSelected(_ picked: PickedPhoto) {
     // Show the image in the chat as user content.
     messages.append(ChatMessage(sender: .user, text: nil, image: picked.image))
 
-    // Persist to the same CatchPhotos directory as the primary photo. Using a
-    // distinct filename (via PhotoStore's default name generation) keeps the
-    // two photos independent even when saved in the same catch.
+    // Persist to the same CatchPhotos directory as the primary photo. This is
+    // a *pending* file: if the user taps Retake we delete it via
+    // PhotoStore.delete(filename:) before saving the replacement.
     if let filename = try? PhotoStore.shared.save(image: picked.image) {
-      self.headPhotoFilename = filename
+      self.pendingHeadPhotoFilename = filename
     } else {
-      self.headPhotoFilename = nil
+      self.pendingHeadPhotoFilename = nil
     }
 
-    // Head photo captured — move on to the primary fish photo prompt.
+    // Hide the Upload button while the user decides. It comes back anchored
+    // to a different prompt on either Confirm or Retake.
+    showCaptureOptions = false
+    uploadAnchorMessageID = nil
+
+    let confirmPrompt = appendAssistant("How does this look?\n§\nTap Confirm to continue, or Retake to try another shot.")
+    headConfirmAnchorMessageID = confirmPrompt.id
+  }
+
+  /// User confirmed the pending head photo. Promote the pending filename to
+  /// the committed `headPhotoFilename` and advance the chat to the full-body
+  /// fish photo prompt — this is the transition that `handleHeadPhotoSelected`
+  /// used to perform inline before the confirmation step was added.
+  func confirmHeadPhoto() {
+    guard pendingHeadPhotoFilename != nil else { return }
+
+    headPhotoFilename = pendingHeadPhotoFilename
+    pendingHeadPhotoFilename = nil
+    headConfirmAnchorMessageID = nil
     awaitingHeadPhoto = false
+
     let nextPrompt = appendAssistant("Got it. Now please upload a photo of the full fish.\n§\nHold the fish pointing the head to the left for best analysis.")
-    // Re-anchor the Upload button to the new prompt. The next upload will
-    // route through the normal analysis path because awaitingHeadPhoto is
-    // now false.
     uploadAnchorMessageID = nextPrompt.id
+    showCaptureOptions = true
+  }
+
+  /// User wants to retake the head photo. Discard the pending file and
+  /// re-anchor the Upload button to a new prompt. We intentionally leave
+  /// the previous photo bubble and "how does this look?" message in the
+  /// chat log — consistent with the rest of this flow, which never rewrites
+  /// history.
+  func retakeHeadPhoto() {
+    if let pending = pendingHeadPhotoFilename {
+      PhotoStore.shared.delete(filename: pending)
+    }
+    pendingHeadPhotoFilename = nil
+    headConfirmAnchorMessageID = nil
+    // awaitingHeadPhoto stays true so the next upload still routes to
+    // handleHeadPhotoSelected() rather than the analysis pipeline.
+
+    let retakePrompt = appendAssistant("No problem — upload another close-up of the head.")
+    uploadAnchorMessageID = retakePrompt.id
+    showCaptureOptions = true
   }
 
   // MARK: - Flow branching

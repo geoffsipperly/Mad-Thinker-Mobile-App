@@ -69,6 +69,7 @@ nonisolated final class UploadObservations {
 
   enum UploadError: LocalizedError {
     case unauthenticated
+    case missingMemberNumber
     case noObservationsToUpload
     case encodingFailed(String)
     case network(Error)
@@ -78,6 +79,8 @@ nonisolated final class UploadObservations {
       switch self {
       case .unauthenticated:
         return "Not authenticated. Please log in and try again."
+      case .missingMemberNumber:
+        return "No member number on file. Re-link your member account and try again."
       case .noObservationsToUpload:
         return "No pending observations to upload."
       case .encodingFailed(let detail):
@@ -94,6 +97,7 @@ nonisolated final class UploadObservations {
 
   private struct UploadObservationDTO: Codable {
     let clientId: String
+    let memberId: String
     let createdAt: String
     let language: String
     let onDevice: Bool
@@ -104,8 +108,12 @@ nonisolated final class UploadObservations {
     let location: LocationDTO?
     let audio: AudioDTO
 
+    // v5: `memberId` carries the human-readable member_number string and is
+    // emitted camelCase on the wire to match the catch-upload v5 convention
+    // (catch.memberId). The legacy snake_case `community_id` is preserved for
+    // backwards compatibility with the existing observations endpoint.
     enum CodingKeys: String, CodingKey {
-      case clientId, createdAt, language, onDevice, sampleRate, format, transcript
+      case clientId, memberId, createdAt, language, onDevice, sampleRate, format, transcript
       case communityId = "community_id"
       case location, audio
     }
@@ -127,6 +135,7 @@ nonisolated final class UploadObservations {
 
   func upload(
     observations: [Observation],
+    memberId: String,
     progress: @escaping (Double) -> Void,
     completion: @escaping (Result<[UUID], UploadError>) -> Void
   ) {
@@ -138,6 +147,16 @@ nonisolated final class UploadObservations {
 
     guard let jwt = AuthStore.shared.jwt, !jwt.isEmpty else {
       completion(.failure(.unauthenticated))
+      return
+    }
+
+    // v5: every observation row must carry the uploader's member_number.
+    // Sourced at the call site (MainActor) from AuthService.shared.currentMemberId
+    // and threaded through here so this nonisolated method does not have to
+    // touch the MainActor-isolated AuthService.
+    let normalizedMemberId = MemberNumber.normalize(memberId.trimmingCharacters(in: .whitespacesAndNewlines))
+    guard !normalizedMemberId.isEmpty else {
+      completion(.failure(.missingMemberNumber))
       return
     }
 
@@ -168,6 +187,7 @@ nonisolated final class UploadObservations {
 
       let dto = UploadObservationDTO(
         clientId: obs.clientId.uuidString,
+        memberId: normalizedMemberId,
         createdAt: isoFormatter.string(from: obs.createdAt),
         language: obs.voiceLanguage ?? "en-US",
         onDevice: obs.voiceOnDevice ?? true,

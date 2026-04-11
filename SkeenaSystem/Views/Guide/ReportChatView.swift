@@ -37,6 +37,11 @@ struct ReportChatView: View {
   // Trips (in-progress)
   @State private var trips: [Trip] = []
 
+  /// True while a TripSyncService run kicked off by this view is in flight.
+  /// Drives the "Loading trips…" placeholder so first-login users don't see
+  /// "No trips created" while the background hydrate is still running.
+  @State private var isSyncingTrips: Bool = false
+
   @State private var selectedTripID: NSManagedObjectID?
   @State private var selectedClientID: NSManagedObjectID?
   @State private var clientOptions: [ClientOption] = []
@@ -143,8 +148,23 @@ struct ReportChatView: View {
     loc.request()
     loc.start()
 
-    // Reload trips from Core Data, then pick a default if needed
+    // Reload trips from Core Data, then pick a default if needed.
     loadTrips()
+
+    // Defensive sync: on first login the GuideLandingView background sync
+    // can still be running by the time the user taps "Record a Catch" — at
+    // which point loadTrips() above returns 0 rows. Kick off the same
+    // idempotent sync here (TripSyncService.isSyncing prevents overlap) and
+    // surface a "Loading trips…" placeholder while it runs. Once the sync
+    // saves Core Data the existing NSManagedObjectContextDidSave listener
+    // will reload trips automatically.
+    if trips.isEmpty {
+      isSyncingTrips = true
+      Task {
+        await TripSyncService.shared.syncTripsIfNeeded(context: context)
+        await MainActor.run { isSyncingTrips = false }
+      }
+    }
 
     // Seed chat VM with the logged-in guide (not the trip's guide)
     let loggedInGuide = (AuthService.shared.currentFirstName ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
@@ -254,11 +274,19 @@ struct ReportChatView: View {
             .truncationMode(.tail)
             .minimumScaleFactor(0.85)
           Spacer(minLength: 4)
-          Image(systemName: "chevron.down")
-            .font(.footnote)
-            .foregroundColor(.white.opacity(0.7))
+          if trips.isEmpty && isSyncingTrips {
+            ProgressView()
+              .progressViewStyle(.circular)
+              .scaleEffect(0.7)
+              .tint(.white)
+          } else {
+            Image(systemName: "chevron.down")
+              .font(.footnote)
+              .foregroundColor(.white.opacity(0.7))
+          }
         }
       }
+      .disabled(trips.isEmpty)
     }
     .padding()
     .frame(maxWidth: .infinity, alignment: .leading)
@@ -660,6 +688,14 @@ struct ReportChatView: View {
     guard let id = selectedTripID,
           let t = trips.first(where: { $0.objectID == id })
     else {
+      // While the first-login background sync is still running, surface a
+      // "Loading…" placeholder instead of the misleading "No trips created"
+      // message. Once trips arrive the NSManagedObjectContextDidSave
+      // listener reloads them and selectedTripID gets set by
+      // setDefaultTripIfNeeded().
+      if trips.isEmpty && isSyncingTrips {
+        return "Loading trips…"
+      }
       return "No trips created"
     }
     return tripDisplay(t)

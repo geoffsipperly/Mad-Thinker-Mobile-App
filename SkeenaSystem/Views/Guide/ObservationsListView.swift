@@ -279,8 +279,14 @@ struct ObservationsListView: View {
     Task {
       await AuthStore.shared.refreshFromSupabase()
 
+      // v5: read the member_number on MainActor and pass it through. The
+      // uploader is intentionally `nonisolated` and cannot touch
+      // AuthService.shared directly.
+      let memberId = AuthService.shared.currentMemberId ?? ""
+
       uploader.upload(
         observations: pendingObservations,
+        memberId: memberId,
         progress: { p in
           DispatchQueue.main.async { self.uploadProgress = p }
         },

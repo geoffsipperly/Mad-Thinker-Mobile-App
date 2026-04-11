@@ -361,9 +361,10 @@ struct CatchChatView: View {
             return index == 0
           }()
           let showVoiceButton = (viewModel.voiceMemoAnchorMessageID == message.id)
+          let showHeadConfirmButtons = (viewModel.headConfirmAnchorMessageID == message.id)
           // Side buttons: everything except study/sample choice steps
           let showSideResearcherButtons = showResearcherButtons && !showChoicesBelow
-          if showPhotoButton || showVoiceButton || showSideResearcherButtons {
+          if showPhotoButton || showVoiceButton || showSideResearcherButtons || showHeadConfirmButtons {
             HStack(spacing: 16) {
               if showPhotoButton {
                 Button {
@@ -374,6 +375,34 @@ struct CatchChatView: View {
                     Image(systemName: "photo.on.rectangle")
                       .font(.title2)
                     Text("Upload")
+                      .font(.footnote)
+                  }
+                }
+              }
+
+              // Confirm / Retake for the conservation head-photo capture.
+              // Anchored to the "How does this look?" prompt that
+              // CatchChatViewModel.handleHeadPhotoSelected appends after
+              // the user uploads a head shot.
+              if showHeadConfirmButtons {
+                Button {
+                  viewModel.confirmHeadPhoto()
+                } label: {
+                  VStack(spacing: 4) {
+                    Image(systemName: "checkmark.circle.fill")
+                      .font(.title2)
+                    Text("Confirm")
+                      .font(.footnote)
+                  }
+                }
+
+                Button {
+                  viewModel.retakeHeadPhoto()
+                } label: {
+                  VStack(spacing: 4) {
+                    Image(systemName: "arrow.counterclockwise")
+                      .font(.title2)
+                    Text("Retake")
                       .font(.footnote)
                   }
                 }

@@ -51,6 +51,15 @@ final class PhotoStore {
     folderURL().appendingPathComponent(filename)
   }
 
+  /// Best-effort deletion of a file in the photo folder. Used by the
+  /// conservation head-photo flow when the user retakes before confirming.
+  func delete(filename: String) {
+    let trimmed = filename.trimmingCharacters(in: .whitespacesAndNewlines)
+    guard !trimmed.isEmpty else { return }
+    let url = folderURL().appendingPathComponent(trimmed)
+    try? FileManager.default.removeItem(at: url)
+  }
+
   // MARK: - Helpers
 
   private func folderURL() -> URL {
