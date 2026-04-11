@@ -400,13 +400,24 @@ final class UploadCatchReport {
     // THIS report in the pending array so the response matcher works. Swallow
     // the inner progress callback — sequential progress is reported here at
     // a per-report granularity instead of per-byte within a request.
+    //
+    // IMPORTANT: strong `self` capture is deliberate. The URLSession dataTask
+    // inside performUpload dispatches its success to main.async and then its
+    // own closure returns — at that moment the dataTask releases the only
+    // strong ref keeping this UploadCatchReport alive (the caller's local
+    // `uploader` variable already went out of scope when `upload(reports:)`
+    // returned). Main queue then runs the dispatched block and invokes this
+    // closure; if we used [weak self] here, self would be nil and we'd
+    // silently bail before firing the terminal completion — leaving the UI
+    // stuck at 0% progress and the catch never marked uploaded. No retain
+    // cycle because this closure is released once `uploadSequentially` hits
+    // its terminal case and the outer completion fires.
     performUpload(
       request: request,
       attempt: 1,
       pending: [report],
       progress: { _ in },
-      completion: { [weak self] result in
-        guard let self else { return }
+      completion: { result in
         var nextAccumulated = accumulated
         var nextError = lastError
         switch result {
