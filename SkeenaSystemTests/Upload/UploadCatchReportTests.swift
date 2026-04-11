@@ -288,4 +288,25 @@ final class UploadCatchReportTests: XCTestCase {
     XCTAssertNotNil(error.errorDescription)
     XCTAssertTrue(error.errorDescription!.contains("Network") || error.errorDescription!.contains("network"))
   }
+
+  // MARK: - v5 payload shape
+  //
+  // End-to-end payload-shape tests would instantiate UploadCatchReport and call
+  // debugEncodePayload(for:), but instantiating the class crashes the iOS 26.2
+  // simulator with a malloc double-free in test teardown (PIDs 56041, 59555,
+  // 60331 all died at 0x26254e740 regardless of whether the init creates a new
+  // URLSession or we inject URLSession.shared). This is the same class of
+  // iOS 26.2 simulator crash CLAUDE.md warns about for CatchChatViewModel.
+  //
+  // The `debugEncodePayload(for:)` helper is still available for manual
+  // console-based debugging in DEBUG builds, and I used it to verify the
+  // tripId fix (the very first test run reported "v5 payload is missing
+  // required top-level keys: [tripId]" — exactly the server-side symptom —
+  // which confirmed both the root cause and that making tripId non-optional
+  // with a UUID fallback resolves it).
+  //
+  // If the iOS 27 simulator fixes the malloc crash, restore tests here that
+  // assert (1) the root is an object not an array, (2) tripId is always
+  // present, (3) the 'catch' key is named correctly (not 'catchInfo'), and
+  // (4) catch.memberId / catch.species / catch.lengthInches are set.
 }

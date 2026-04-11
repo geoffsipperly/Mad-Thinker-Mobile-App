@@ -76,7 +76,10 @@ final class UploadCatchReport {
     let reportId: String
     let createdAt: Date
     let uploadedAt: Date
-    let tripId: String?
+    /// Required by v5 — we synthesize a fresh UUID in `makeDTO` when the
+    /// CatchReport has no tripId (researcher or solo-guide catch). The
+    /// backend auto-creates a "Solo Fishing Trip" for unknown UUIDs.
+    let tripId: String
     let communityId: String?
     let tripName: String?
     let catchInfo: CatchDTO
@@ -560,6 +563,20 @@ final class UploadCatchReport {
 
   // MARK: - Mapping
 
+  /// Debug helper: build a single-report DTO via `makeDTO` and return its
+  /// encoded JSON string. Used by tests to verify the top-level payload shape
+  /// against the v5 API spec without needing to run an actual network request.
+  /// Returns `nil` if the report can't be built (validation error, missing
+  /// photo, etc.) — the thrown error is swallowed intentionally because
+  /// callers just want to eyeball the payload shape.
+  internal func debugEncodePayload(for report: CatchReport, now: Date = Date()) -> String? {
+    guard let dto = try? makeDTO(from: report, now: now),
+          let data = try? Self.sharedEncoder.encode(dto) else {
+      return nil
+    }
+    return String(data: data, encoding: .utf8)
+  }
+
   private func makeDTO(from r: CatchReport, now: Date) throws -> UploadCatchReportDTO {
     var localErrors: [String] = []
 
@@ -622,7 +639,22 @@ final class UploadCatchReport {
     AppLogging.log({ "[UploadCatchReport] Mapping for report=\(r.id): tripId=\(tripIdDebug), tripName=\(tripNameDebug)" }, level: .debug, category: .network)
     #endif
 
-    let tripIdToSend = r.tripId
+    // v5 REQUIRES tripId on the top-level body. When a catch has no
+    // associated trip (researcher records, guide solo mode without a
+    // pre-existing trip row) we generate a fresh UUID and let the backend
+    // auto-create a "Solo Fishing Trip" server-side. The spec explicitly
+    // documents this fallback — see docs/api-reference.md "Upload Catch
+    // Reports v5" → "If tripId doesn't exist, a 'Solo Fishing Trip' is
+    // auto-created." Omitting the key entirely (which is what JSONEncoder
+    // does for nil optionals) causes a 400 with "Missing required fields:
+    // reportId, createdAt, tripId, catch, meta".
+    let tripIdToSend: String = {
+      if let existing = r.tripId?.trimmingCharacters(in: .whitespacesAndNewlines),
+         !existing.isEmpty {
+        return existing
+      }
+      return UUID().uuidString
+    }()
     let tripNameToSend = r.tripName
 
     let meta = MetaDTO(
