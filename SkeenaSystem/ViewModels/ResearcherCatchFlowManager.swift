@@ -245,16 +245,33 @@ final class ResearcherCatchFlowManager: ObservableObject {
   // MARK: - Edit Handling
 
   /// Apply a user correction at the current step, recalculate downstream values.
-  /// Returns (message, shouldAutoAdvance).
-  /// When a numeric value is entered for length or girth, it auto-advances to the next step.
-  func applyEdit(_ text: String) -> (message: String, autoAdvance: Bool) {
+  /// Returns (message, shouldAutoAdvance, recognized).
+  /// - `recognized = false` means the input was rejected (empty, profane, or
+  ///   unparseable); callers should show the message as-is without a
+  ///   "Got it, updated:" prefix.
+  /// When a numeric value is entered for length or girth, it auto-advances to
+  /// the next step.
+  func applyEdit(_ text: String) -> (message: String, autoAdvance: Bool, recognized: Bool) {
     let lower = text.lowercased().trimmingCharacters(in: .whitespacesAndNewlines)
+
+    // Global profanity screen — never persist profane text into species/ID
+    // fields. Reply with the step-appropriate re-prompt.
+    if Self.containsProfanity(text) {
+      return (profanityReply(for: currentStep), false, false)
+    }
 
     switch currentStep {
     case .identification:
-      parseSpeciesSexEdit(text, lower: lower)
+      let recognized = parseSpeciesSexEdit(text, lower: lower)
+      if !recognized {
+        return (
+          "I didn't catch that — please enter a species name (e.g., \"Steelhead\"), sex (male/female), or a lifecycle stage (holding, traveler, spawning, kelt, smolt, resident).",
+          false,
+          false
+        )
+      }
       // Don't recalculate yet — measurements aren't shown until confirmed
-      return (identificationPrompt(), false)
+      return (identificationPrompt(), false, true)
 
     case .confirmLength:
       if let num = extractNumber(from: text) {
@@ -262,9 +279,13 @@ final class ResearcherCatchFlowManager: ObservableObject {
         recalculate()
         // Auto-advance: entering a number counts as confirming length
         currentStep = .confirmGirth
-        return (girthPrompt(), true)
+        return (girthPrompt(), true, true)
       }
-      return (lengthPrompt(), false)
+      return (
+        "I didn't catch that — please enter the length in inches (e.g., 28 or 28.5).",
+        false,
+        false
+      )
 
     case .confirmGirth:
       if let num = extractNumber(from: text) {
@@ -273,18 +294,22 @@ final class ResearcherCatchFlowManager: ObservableObject {
         recalculateWeightOnly()
         // Auto-advance: entering a number counts as confirming girth
         currentStep = .finalSummary
-        return (finalAnalysisText(), true)
+        return (finalAnalysisText(), true, true)
       }
-      return (girthPrompt(), false)
+      return (
+        "I didn't catch that — please enter the girth in inches (e.g., 14 or 14.5).",
+        false,
+        false
+      )
 
     case .floyTagID:
       // Store the Floy Tag ID but don't advance — show it for confirmation
       let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
       if !trimmed.isEmpty {
         floyTagNumber = trimmed
-        return ("Floy Tag ID: \(trimmed)\n§\nConfirm, or type a corrected value.", false)
+        return ("Floy Tag ID: \(trimmed)\n§\nConfirm, or type a corrected value.", false, true)
       }
-      return ("Please enter the Floy Tag ID.", false)
+      return ("Please enter the Floy Tag ID.", false, false)
 
     case .scaleScan:
       // Scale card ID is typed manually (no barcode scanner yet). Store the
@@ -292,21 +317,49 @@ final class ResearcherCatchFlowManager: ObservableObject {
       let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
       if !trimmed.isEmpty {
         scaleSampleBarcode = trimmed
-        return ("Scale Card ID: \(trimmed)\n§\nConfirm, or type a corrected value.", false)
+        return ("Scale Card ID: \(trimmed)\n§\nConfirm, or type a corrected value.", false, true)
       }
-      return ("Please enter the Scale Card ID.", false)
+      return ("Please enter the Scale Card ID.", false, false)
 
     case .finTipScan:
       // Fin tip envelope ID is typed manually. Same pattern as scaleScan.
       let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
       if !trimmed.isEmpty {
         finTipSampleBarcode = trimmed
-        return ("Fin Tip ID: \(trimmed)\n§\nConfirm, or type a corrected value.", false)
+        return ("Fin Tip ID: \(trimmed)\n§\nConfirm, or type a corrected value.", false, true)
       }
-      return ("Please enter the Fin Tip ID.", false)
+      return ("Please enter the Fin Tip ID.", false, false)
 
     default:
-      return ("", false)
+      // .studyParticipation, .sampleCollection, .voiceMemo, .finalSummary,
+      // .complete — these are button-driven steps; typed input isn't expected.
+      return (
+        "I'm not expecting typed input right now — use the buttons above, or upload a new photo.",
+        false,
+        false
+      )
+    }
+  }
+
+  /// Step-appropriate re-prompt when the user's input was rejected by the
+  /// profanity screen. Kept separate from the main switch so we don't mix
+  /// rejection messaging into the happy-path prompts.
+  private func profanityReply(for step: Step) -> String {
+    switch step {
+    case .identification:
+      return "Let's keep it civil. Please enter a species name, sex (male/female), or a lifecycle stage."
+    case .confirmLength:
+      return "Let's keep it civil. Please enter the length in inches (e.g., 28 or 28.5)."
+    case .confirmGirth:
+      return "Let's keep it civil. Please enter the girth in inches (e.g., 14 or 14.5)."
+    case .floyTagID:
+      return "Let's keep it civil. Please enter the Floy Tag ID."
+    case .scaleScan:
+      return "Let's keep it civil. Please enter the Scale Card ID."
+    case .finTipScan:
+      return "Let's keep it civil. Please enter the Fin Tip ID."
+    default:
+      return "Let's keep it civil. Use the buttons above, or upload a new photo."
     }
   }
 
@@ -523,6 +576,25 @@ final class ResearcherCatchFlowManager: ObservableObject {
   // Lifecycle stage keywords — stripped from species candidate
   private static let stageKeywords: Set<String> = ["holding", "traveler", "spawning", "kelt", "smolt", "resident"]
 
+  // Lightweight profanity screen — keeps freeform input out of species/ID fields
+  // when it would otherwise be stored verbatim and uploaded. Conservative list;
+  // matches on whole-word tokens only (so "scunthorpe" won't trip "cunt").
+  private static let profanityTokens: Set<String> = [
+    "fuck", "fucking", "fucker", "fucked",
+    "shit", "shitty", "bullshit",
+    "bitch", "bitches",
+    "cunt", "asshole", "bastard",
+    "dick", "piss", "cock", "pussy", "twat", "wanker"
+  ]
+
+  /// Returns true if `text` contains any token from `profanityTokens`.
+  /// Splits on non-letters so punctuation doesn't bypass the check.
+  static func containsProfanity(_ text: String) -> Bool {
+    let tokens = text.lowercased().split { !$0.isLetter }.map(String.init)
+    for token in tokens where profanityTokens.contains(token) { return true }
+    return false
+  }
+
   // Known species names the user might type (lowercase). Maps to display name.
   private static let knownSpecies: [String: String] = [
     "steelhead":        "Steelhead",
@@ -556,31 +628,39 @@ final class ResearcherCatchFlowManager: ObservableObject {
     "sockeye":          "Sockeye Salmon",
   ]
 
-  private func parseSpeciesSexEdit(_ text: String, lower: String) {
+  /// Parse user's freeform identification edit. Returns `true` if we could
+  /// recognize any species / sex / lifecycle content — callers use this to
+  /// distinguish a real update from unparseable input (keyboard mashing,
+  /// out-of-context chatter) and prompt the user again.
+  private func parseSpeciesSexEdit(_ text: String, lower: String) -> Bool {
     let tokens = lower.split { !$0.isLetter }.map(String.init)
     var speciesUpdated = false
+    var recognized = false
 
     // Try to extract species via keyword pattern ("species: X" or "species is X")
-    if let val = valueAfterKeyword("species", in: text, lower: lower) {
+    if let val = valueAfterKeyword("species", in: text, lower: lower), !val.isEmpty {
       species = val
       speciesUpdated = true
+      recognized = true
     }
 
     // Try to extract sex via keyword pattern ("sex: X" or "sex is X")
-    if let val = valueAfterKeyword("sex", in: text, lower: lower) {
+    if let val = valueAfterKeyword("sex", in: text, lower: lower), !val.isEmpty {
       sex = val.capitalized
+      recognized = true
     } else {
       // Infer sex from standalone keywords
-      if tokens.contains("male") { sex = "Male" }
-      else if tokens.contains("female") { sex = "Female" }
-      else if tokens.contains("hen") { sex = "Hen" }
-      else if tokens.contains("buck") { sex = "Buck" }
+      if tokens.contains("male") { sex = "Male"; recognized = true }
+      else if tokens.contains("female") { sex = "Female"; recognized = true }
+      else if tokens.contains("hen") { sex = "Hen"; recognized = true }
+      else if tokens.contains("buck") { sex = "Buck"; recognized = true }
     }
 
     // Try to extract lifecycle stage (before species fallback so we can strip it)
     for keyword in Self.stageKeywords {
       if tokens.contains(keyword) {
         lifecycleStage = keyword.capitalized
+        recognized = true
         break
       }
     }
@@ -596,15 +676,20 @@ final class ResearcherCatchFlowManager: ObservableObject {
 
       if let displayName = Self.knownSpecies[candidate] {
         species = displayName
-      } else if !candidate.isEmpty {
-        // Not a recognized species but not a sex/stage keyword either —
-        // treat as a species name (user may know something we don't)
+        recognized = true
+      } else if candidate.count >= 3 {
+        // Not a recognized species but plausible enough to accept —
+        // treat as a species name (user may know something we don't).
+        // The ≥3-letter floor filters out "xx", stray punctuation, etc.
         species = text.trimmingCharacters(in: .whitespacesAndNewlines)
           .components(separatedBy: " ")
           .filter { !noiseWords.contains($0.lowercased()) }
           .joined(separator: " ")
+        recognized = true
       }
     }
+
+    return recognized
   }
 
   private func valueAfterKeyword(_ keyword: String, in text: String, lower: String) -> String? {

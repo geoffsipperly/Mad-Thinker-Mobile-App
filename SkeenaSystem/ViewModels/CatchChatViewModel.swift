@@ -469,7 +469,15 @@ final class CatchChatViewModel: ObservableObject {
 
     flow.confirmAnchorID = nil
 
-    let (updatedPrompt, autoAdvanced) = flow.applyEdit(text)
+    let (updatedPrompt, autoAdvanced, recognized) = flow.applyEdit(text)
+
+    if !recognized {
+      // Input was empty, profane, or unparseable — show the step's re-prompt
+      // verbatim (no "Got it, updated:" prefix).
+      let msg = appendAssistant(updatedPrompt)
+      flow.confirmAnchorID = msg.id
+      return
+    }
 
     if autoAdvanced {
       // Value entry auto-confirmed the step and advanced
@@ -576,7 +584,11 @@ final class CatchChatViewModel: ObservableObject {
       researcherApplyEdit(text)
 
     case .idle:
-      appendAssistant("You can upload another photo, record a voice memo, or tell me more about the catch here.")
+      if ResearcherCatchFlowManager.containsProfanity(text) {
+        appendAssistant("Let's keep it civil. You can upload another photo, record a voice memo, or tell me about the catch.")
+      } else {
+        appendAssistant("You can upload another photo, record a voice memo, or tell me more about the catch here.")
+      }
     }
   }
 
