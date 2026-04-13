@@ -127,10 +127,14 @@ struct ResearcherLandingView: View {
         )
       }
       .tint(.blue)
-      .fullScreenCover(isPresented: $chatVM.showRecordObservation) {
+      .fullScreenCover(isPresented: $chatVM.showRecordObservation, onDismiss: {
+        // The sheet can be dismissed via Cancel (no observation saved) or
+        // via Save (onSaved fires first). In both cases reset the chat so
+        // the researcher sees the Catch / Observation icons again.
+        chatVM.resetForNewCatch()
+      }) {
         RecordObservationSheet { _ in
           chatVM.showRecordObservation = false
-          chatVM.resetForNewCatch()
         }
       }
     }
