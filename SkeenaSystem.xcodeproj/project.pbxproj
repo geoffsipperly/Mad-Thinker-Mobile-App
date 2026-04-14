@@ -21,7 +21,6 @@
 		FD0A00012F3A000100000001 /* MapboxMaps in Frameworks */ = {isa = PBXBuildFile; productRef = FD0A00002F3A000100000001 /* MapboxMaps */; };
 		FD616A952F6C2E60009F1B3F /* hand_landmarker.task in Resources */ = {isa = PBXBuildFile; fileRef = FD616A942F6C2E60009F1B3F /* hand_landmarker.task */; };
 		FD616D252F6C3043009F1B3F /* libz.tbd in Frameworks */ = {isa = PBXBuildFile; fileRef = FD616D242F6C3043009F1B3F /* libz.tbd */; };
-		FDFCA4462F31951200CD5E46 /* Media in Resources */ = {isa = PBXBuildFile; fileRef = FDFCA4452F31951200CD5E46 /* Media */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -62,7 +61,6 @@
 		FD616D262F6C30C2009F1B3F /* libz.tbd */ = {isa = PBXFileReference; lastKnownFileType = "sourcecode.text-based-dylib-definition"; name = libz.tbd; path = Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.2.sdk/usr/lib/libz.tbd; sourceTree = DEVELOPER_DIR; };
 		FD6334CA2EFF0B4900CF49C7 /* .gitignore */ = {isa = PBXFileReference; lastKnownFileType = text; path = .gitignore; sourceTree = "<group>"; };
 		FD6A18CF2F18487A0067DBFD /* SkeenaSystemUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = SkeenaSystemUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
-		FDFCA4452F31951200CD5E46 /* Media */ = {isa = PBXFileReference; lastKnownFileType = folder; name = Media; path = SkeenaSystem/Media; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -137,7 +135,6 @@
 		4759B4702E8EE1F9005E27BB = {
 			isa = PBXGroup;
 			children = (
-				FDFCA4452F31951200CD5E46 /* Media */,
 				FD6334CA2EFF0B4900CF49C7 /* .gitignore */,
 				4759B47B2E8EE1F9005E27BB /* SkeenaSystem */,
 				47E678582E8F368B009190EF /* SkeenaSystem.app */,
@@ -309,7 +306,6 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				FDFCA4462F31951200CD5E46 /* Media in Resources */,
 				FD616A952F6C2E60009F1B3F /* hand_landmarker.task in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
