@@ -172,9 +172,7 @@ nonisolated final class UploadObservations {
       progress(Double(index) / Double(pending.count) * 0.5) // 0–50% for prep
 
       guard let audioDTO = loadAudio(for: obs) else {
-        #if DEBUG
-        print("[UploadObservations] Skipping observation \(obs.id) — no audio file found")
-        #endif
+        AppLogging.log("[UploadObservations] Skipping observation \(obs.id) — no audio file found", level: .warn, category: .upload)
         continue
       }
 

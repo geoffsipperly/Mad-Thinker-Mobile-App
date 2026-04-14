@@ -73,7 +73,7 @@ final class CommunityService: ObservableObject {
         }
 
         if let cachedId = activeCommunityId {
-            AppLogging.log("[CommunityService] Restored cached community: id=\(cachedId) role=\(activeRole ?? "nil") typeId=\(activeCommunityTypeId ?? "nil") flags=\(activeCommunityConfig.entitlements.count)", level: .debug, category: .auth)
+            AppLogging.log("[CommunityService] Restored cached community: id=\(cachedId) role=\(activeRole ?? "nil") typeId=\(activeCommunityTypeId ?? "nil") flags=\(activeCommunityConfig.entitlements.count)", level: .debug, category: .community)
         }
     }
 
@@ -102,16 +102,16 @@ final class CommunityService: ObservableObject {
     /// Call after successful login/token refresh.
     func fetchMemberships() async {
         // --- DIAGNOSTIC: Log pre-fetch state ---
-        AppLogging.log("[CommunityService][DIAG] Pre-fetch state: memberships.count=\(memberships.count) activeCommunityId=\(activeCommunityId ?? "nil") hasFetched=\(hasFetchedMemberships)", level: .info, category: .auth)
+        AppLogging.log("[CommunityService][DIAG] Pre-fetch state: memberships.count=\(memberships.count) activeCommunityId=\(activeCommunityId ?? "nil") hasFetched=\(hasFetchedMemberships)", level: .info, category: .community)
         if let cachedConfigData = UserDefaults.standard.data(forKey: kActiveCommunityConfig) {
-            AppLogging.log("[CommunityService][DIAG] Cached config in UserDefaults: \(cachedConfigData.count) bytes", level: .debug, category: .auth)
+            AppLogging.log("[CommunityService][DIAG] Cached config in UserDefaults: \(cachedConfigData.count) bytes", level: .debug, category: .community)
         } else {
-            AppLogging.log("[CommunityService][DIAG] No cached config in UserDefaults", level: .debug, category: .auth)
+            AppLogging.log("[CommunityService][DIAG] No cached config in UserDefaults", level: .debug, category: .community)
         }
-        AppLogging.log("[CommunityService][DIAG] Cached activeCommunityId in UserDefaults: \(UserDefaults.standard.string(forKey: kActiveCommunityId) ?? "nil")", level: .debug, category: .auth)
+        AppLogging.log("[CommunityService][DIAG] Cached activeCommunityId in UserDefaults: \(UserDefaults.standard.string(forKey: kActiveCommunityId) ?? "nil")", level: .debug, category: .community)
 
         guard let token = await AuthService.shared.currentAccessToken() else {
-            AppLogging.log("[CommunityService] No access token for membership fetch", level: .warn, category: .auth)
+            AppLogging.log("[CommunityService] No access token for membership fetch", level: .warn, category: .community)
             await MainActor.run { self.hasFetchedMemberships = true }
             return
         }
@@ -122,7 +122,7 @@ final class CommunityService: ObservableObject {
            let json = try? JSONSerialization.jsonObject(with: padded) as? [String: Any] {
             let sub = json["sub"] as? String ?? "unknown"
             let exp = json["exp"] as? Int ?? 0
-            AppLogging.log("[CommunityService][DIAG] JWT sub (user_id)=\(sub) exp=\(exp)", level: .info, category: .auth)
+            AppLogging.log("[CommunityService][DIAG] JWT sub (user_id)=\(sub) exp=\(exp)", level: .info, category: .community)
         }
 
         // Build URL: GET /rest/v1/user_communities with nested joins for branding, geography + entitlements
@@ -136,7 +136,7 @@ final class CommunityService: ObservableObject {
         request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
         request.setValue(anonKey, forHTTPHeaderField: "apikey")
 
-        AppLogging.log("[CommunityService][DIAG] Fetching: \(comps.url?.absoluteString ?? "nil")", level: .debug, category: .auth)
+        AppLogging.log("[CommunityService][DIAG] Fetching: \(comps.url?.absoluteString ?? "nil")", level: .debug, category: .community)
 
         do {
             let (data, response) = try await URLSession.shared.data(for: request)
@@ -144,10 +144,10 @@ final class CommunityService: ObservableObject {
 
             // --- DIAGNOSTIC: Log raw response ---
             let rawBody = String(data: data, encoding: .utf8) ?? "<non-UTF8>"
-            AppLogging.log("[CommunityService][DIAG] Response status=\(statusCode) body=\(rawBody)", level: .info, category: .auth)
+            AppLogging.log("[CommunityService][DIAG] Response status=\(statusCode) body=\(rawBody)", level: .info, category: .community)
 
             guard (200..<300).contains(statusCode) else {
-                AppLogging.log("[CommunityService] Fetch failed status=\(statusCode) body=\(rawBody)", level: .error, category: .auth)
+                AppLogging.log("[CommunityService] Fetch failed status=\(statusCode) body=\(rawBody)", level: .error, category: .community)
                 await MainActor.run { self.hasFetchedMemberships = true }
                 return
             }
@@ -158,16 +158,16 @@ final class CommunityService: ObservableObject {
             let fetched = allFetched.filter { $0.communities.isActive }
             if allFetched.count != fetched.count {
                 let inactiveNames = allFetched.filter { !$0.communities.isActive }.map { $0.communities.name }
-                AppLogging.log("[CommunityService] Filtered \(allFetched.count - fetched.count) inactive community(s): \(inactiveNames.joined(separator: ", "))", level: .info, category: .auth)
+                AppLogging.log("[CommunityService] Filtered \(allFetched.count - fetched.count) inactive community(s): \(inactiveNames.joined(separator: ", "))", level: .info, category: .community)
             }
 
             await MainActor.run {
                 self.memberships = fetched
-                AppLogging.log("[CommunityService] Fetched \(fetched.count) active membership(s) from server", level: .info, category: .auth)
+                AppLogging.log("[CommunityService] Fetched \(fetched.count) active membership(s) from server", level: .info, category: .community)
                 for m in fetched {
                     let typeName = m.communities.communityTypes?.name ?? "nil"
                     let flagCount = m.communities.communityTypes?.entitlements.count ?? 0
-                    AppLogging.log("[CommunityService]   • \(m.communities.name) role=\(m.role) type=\(typeName) flags=\(flagCount) logo=\(m.communities.logoUrl ?? "bundled")", level: .debug, category: .auth)
+                    AppLogging.log("[CommunityService]   • \(m.communities.name) role=\(m.role) type=\(typeName) flags=\(flagCount) logo=\(m.communities.logoUrl ?? "bundled")", level: .debug, category: .community)
                 }
 
                 // Validate cached selection or leave nil so picker is shown
@@ -189,7 +189,7 @@ final class CommunityService: ObservableObject {
                             }
 
                             let typeName = membership.communities.communityTypes?.name ?? "nil"
-                            AppLogging.log("[CommunityService] Refreshed cached community: id=\(cachedId) role=\(membership.role) type=\(typeName) memberActive=\(membership.isActive) flags=\(self.activeCommunityConfig.entitlements.count)", level: .debug, category: .auth)
+                            AppLogging.log("[CommunityService] Refreshed cached community: id=\(cachedId) role=\(membership.role) type=\(typeName) memberActive=\(membership.isActive) flags=\(self.activeCommunityConfig.entitlements.count)", level: .debug, category: .community)
                         }
                     } else {
                         // Cached community no longer valid — clear selection so picker is shown
@@ -199,32 +199,32 @@ final class CommunityService: ObservableObject {
                         self.activeCommunityTypeName = nil
                         self.activeCommunityConfig = .default
                         persistActiveState()
-                        AppLogging.log("[CommunityService] Cached community no longer valid — showing picker for \(fetched.count) communities", level: .info, category: .auth)
+                        AppLogging.log("[CommunityService] Cached community no longer valid — showing picker for \(fetched.count) communities", level: .info, category: .community)
                     }
                 } else if let defaultId = self.defaultCommunityId,
                           fetched.contains(where: { $0.communityId == defaultId }) {
                     // No active selection but user has a valid default — auto-select it
-                    AppLogging.log("[CommunityService] Auto-selecting default community: id=\(defaultId)", level: .info, category: .auth)
+                    AppLogging.log("[CommunityService] Auto-selecting default community: id=\(defaultId)", level: .info, category: .community)
                     self.setActiveCommunity(id: defaultId)
                 } else if fetched.count == 1, let only = fetched.first {
                     // Single community — auto-select and skip the picker
-                    AppLogging.log("[CommunityService] Single community — auto-selecting: \(only.communities.name) role=\(only.role)", level: .info, category: .auth)
+                    AppLogging.log("[CommunityService] Single community — auto-selecting: \(only.communities.name) role=\(only.role)", level: .info, category: .community)
                     self.setActiveCommunity(id: only.communityId)
                     self.setDefaultCommunity(id: only.communityId)
                 } else {
                     // No cached selection and no valid default — show picker
                     if let defaultId = self.defaultCommunityId {
                         // Default exists but user is no longer a member — clear it
-                        AppLogging.log("[CommunityService] Default community \(defaultId) no longer valid — clearing", level: .info, category: .auth)
+                        AppLogging.log("[CommunityService] Default community \(defaultId) no longer valid — clearing", level: .info, category: .community)
                         self.clearDefaultCommunity()
                     }
-                    AppLogging.log("[CommunityService] No cached selection — \(fetched.count) communities available, showing picker", level: .info, category: .auth)
+                    AppLogging.log("[CommunityService] No cached selection — \(fetched.count) communities available, showing picker", level: .info, category: .community)
                 }
 
                 self.hasFetchedMemberships = true
             }
         } catch {
-            AppLogging.log("[CommunityService] Fetch error: \(error)", level: .error, category: .auth)
+            AppLogging.log("[CommunityService] Fetch error: \(error)", level: .error, category: .community)
             await MainActor.run { self.hasFetchedMemberships = true }
         }
     }
@@ -254,7 +254,7 @@ final class CommunityService: ObservableObject {
         }
 
         let typeName = membership?.communities.communityTypes?.name ?? "nil"
-        AppLogging.log("[CommunityService] Active community set: id=\(id) role=\(activeRole ?? "nil") type=\(typeName) memberActive=\(isMemberActive) flags=\(activeCommunityConfig.entitlements.count) logo=\(activeCommunityConfig.logoUrl ?? "bundled") name=\(activeCommunityName)", level: .info, category: .auth)
+        AppLogging.log("[CommunityService] Active community set: id=\(id) role=\(activeRole ?? "nil") type=\(typeName) memberActive=\(isMemberActive) flags=\(activeCommunityConfig.entitlements.count) logo=\(activeCommunityConfig.logoUrl ?? "bundled") name=\(activeCommunityName)", level: .info, category: .community)
 
         // Fetch add-ons for the newly active community
         Task { await fetchAddons() }
@@ -267,14 +267,14 @@ final class CommunityService: ObservableObject {
     func setDefaultCommunity(id: String) {
         defaultCommunityId = id
         UserDefaults.standard.set(id, forKey: kDefaultCommunityId)
-        AppLogging.log("[CommunityService] Default community set: id=\(id)", level: .info, category: .auth)
+        AppLogging.log("[CommunityService] Default community set: id=\(id)", level: .info, category: .community)
     }
 
     /// Remove the default community designation. The picker will be shown on next login.
     func clearDefaultCommunity() {
         defaultCommunityId = nil
         UserDefaults.standard.removeObject(forKey: kDefaultCommunityId)
-        AppLogging.log("[CommunityService] Default community cleared", level: .info, category: .auth)
+        AppLogging.log("[CommunityService] Default community cleared", level: .info, category: .community)
     }
 
     /// Nils the active community (routing back to the picker) without a full logout.
@@ -288,7 +288,7 @@ final class CommunityService: ObservableObject {
         isMemberActive = true
         addons = [:]
         persistActiveState()
-        AppLogging.log("[CommunityService] Active community cleared — showing picker", level: .info, category: .auth)
+        AppLogging.log("[CommunityService] Active community cleared — showing picker", level: .info, category: .community)
     }
 
     // MARK: - Join community
@@ -320,7 +320,7 @@ final class CommunityService: ObservableObject {
 
         switch statusCode {
         case 200:
-            AppLogging.log("[CommunityService] Joined community: \(decoded.communityName ?? "?") type=\(decoded.communityType ?? "nil") id=\(decoded.communityId ?? "nil")", level: .info, category: .auth)
+            AppLogging.log("[CommunityService] Joined community: \(decoded.communityName ?? "?") type=\(decoded.communityType ?? "nil") id=\(decoded.communityId ?? "nil")", level: .info, category: .community)
             // Refresh memberships to pick up the new one
             await fetchMemberships()
             // Auto-select the newly joined community so the user lands directly in it
@@ -366,7 +366,7 @@ final class CommunityService: ObservableObject {
             let (data, response) = try await URLSession.shared.data(for: request)
             let statusCode = (response as? HTTPURLResponse)?.statusCode ?? -1
             guard (200..<300).contains(statusCode) else {
-                AppLogging.log("[CommunityService] Fetch addons failed status=\(statusCode)", level: .error, category: .auth)
+                AppLogging.log("[CommunityService] Fetch addons failed status=\(statusCode)", level: .error, category: .community)
                 return
             }
 
@@ -379,16 +379,16 @@ final class CommunityService: ObservableObject {
             await MainActor.run {
                 self.addons = dict
             }
-            AppLogging.log("[CommunityService] Fetched \(rows.count) addon(s): \(dict)", level: .info, category: .auth)
+            AppLogging.log("[CommunityService] Fetched \(rows.count) addon(s): \(dict)", level: .info, category: .community)
         } catch {
-            AppLogging.log("[CommunityService] Fetch addons error: \(error)", level: .error, category: .auth)
+            AppLogging.log("[CommunityService] Fetch addons error: \(error)", level: .error, category: .community)
         }
     }
 
     // MARK: - Clear on logout
 
     func clear() {
-        AppLogging.log("[CommunityService] Clearing community state (logout)", level: .info, category: .auth)
+        AppLogging.log("[CommunityService] Clearing community state (logout)", level: .info, category: .community)
         memberships = []
         activeCommunityId = nil
         activeRole = nil

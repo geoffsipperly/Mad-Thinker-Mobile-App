@@ -52,16 +52,16 @@ enum WeatherSnapshotService {
   /// timeout and one automatic retry.
   static func fetch(lat: Double, lon: Double) async throws -> WeatherSnapshotResponse {
     let base = AppEnvironment.shared.projectURL
-    AppLogging.log("[Weather] projectURL base=\(base.absoluteString)", level: .debug, category: .network)
+    AppLogging.log("[Weather] projectURL base=\(base.absoluteString)", level: .debug, category: .weather)
     guard var comps = URLComponents(url: base, resolvingAgainstBaseURL: false) else {
-      AppLogging.log("[Weather] URLComponents failed for base \(base.absoluteString)", level: .error, category: .network)
+      AppLogging.log("[Weather] URLComponents failed for base \(base.absoluteString)", level: .error, category: .weather)
       throw URLError(.badURL)
     }
     let existingPath = comps.path == "/" ? "" : comps.path
     comps.path = existingPath + "/functions/v1/weather-snapshot"
     comps.queryItems = nil
     guard let url = comps.url else {
-      AppLogging.log("[Weather] URL construction failed from components", level: .error, category: .network)
+      AppLogging.log("[Weather] URL construction failed from components", level: .error, category: .weather)
       throw URLError(.badURL)
     }
 
@@ -74,7 +74,7 @@ enum WeatherSnapshotService {
         return result
       } catch {
         lastError = error
-        AppLogging.log("[Weather] attempt \(attempt)/\(maxAttempts) failed: \(error.localizedDescription)", level: .error, category: .network)
+        AppLogging.log("[Weather] attempt \(attempt)/\(maxAttempts) failed: \(error.localizedDescription)", level: .error, category: .weather)
         if attempt < maxAttempts {
           // Brief delay before retry
           try? await Task.sleep(nanoseconds: 500_000_000) // 0.5s
@@ -92,28 +92,28 @@ enum WeatherSnapshotService {
     req.setValue("application/json", forHTTPHeaderField: "Accept")
     req.setValue(AppEnvironment.shared.anonKey, forHTTPHeaderField: "apikey")
 
-    AppLogging.log("[Weather] attempt \(attempt) — requesting token", level: .debug, category: .network)
+    AppLogging.log("[Weather] attempt \(attempt) — requesting token", level: .debug, category: .weather)
     if let token = await AuthService.shared.currentAccessToken(), !token.isEmpty {
       req.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
-      AppLogging.log("[Weather] attempt \(attempt) — auth header set, token len=\(token.count)", level: .debug, category: .network)
+      AppLogging.log("[Weather] attempt \(attempt) — auth header set, token len=\(token.count)", level: .debug, category: .weather)
     } else {
-      AppLogging.log("[Weather] attempt \(attempt) — no auth token, sending unauthenticated", level: .debug, category: .network)
+      AppLogging.log("[Weather] attempt \(attempt) — no auth token, sending unauthenticated", level: .debug, category: .weather)
     }
 
     let body: [String: Double] = ["latitude": lat, "longitude": lon]
     req.httpBody = try JSONEncoder().encode(body)
 
-    AppLogging.log("[Weather] attempt \(attempt) — POST \(url.absoluteString)", level: .debug, category: .network)
+    AppLogging.log("[Weather] attempt \(attempt) — POST \(url.absoluteString)", level: .debug, category: .weather)
     let (data, resp) = try await URLSession.shared.data(for: req)
     let code = (resp as? HTTPURLResponse)?.statusCode ?? -1
-    AppLogging.log("[Weather] attempt \(attempt) — HTTP \(code), \(data.count) bytes", level: .debug, category: .network)
+    AppLogging.log("[Weather] attempt \(attempt) — HTTP \(code), \(data.count) bytes", level: .debug, category: .weather)
     guard (200..<300).contains(code) else {
       let bodyStr = String(data: data, encoding: .utf8) ?? "<binary>"
-      AppLogging.log("[Weather] attempt \(attempt) — HTTP \(code): \(bodyStr.prefix(500))", level: .error, category: .network)
+      AppLogging.log("[Weather] attempt \(attempt) — HTTP \(code): \(bodyStr.prefix(500))", level: .error, category: .weather)
       throw URLError(.badServerResponse)
     }
     let decoded = try JSONDecoder().decode(WeatherSnapshotResponse.self, from: data)
-    AppLogging.log("[Weather] attempt \(attempt) — source: \(decoded.source ?? "unknown")", level: .debug, category: .network)
+    AppLogging.log("[Weather] attempt \(attempt) — source: \(decoded.source ?? "unknown")", level: .debug, category: .weather)
     return decoded
   }
 

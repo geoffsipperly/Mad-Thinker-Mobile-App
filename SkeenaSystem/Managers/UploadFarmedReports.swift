@@ -164,14 +164,9 @@ nonisolated final class UploadFarmedReports {
     // Filter to reports with GPS coordinates
     let withGPS = pending.filter { $0.lat != nil && $0.lon != nil }
 
-    #if DEBUG
-    let skipped = pending.count - withGPS.count
-    if skipped > 0 {
-      for report in pending where report.lat == nil || report.lon == nil {
-        print("[UploadFarmedReports] Skipping report \(report.id) — no GPS coordinates")
-      }
+    for report in pending where report.lat == nil || report.lon == nil {
+      AppLogging.log("[UploadFarmedReports] Skipping report \(report.id) — no GPS coordinates", level: .warn, category: .upload)
     }
-    #endif
 
     guard !withGPS.isEmpty else {
       completion(.failure(UploadError.encodingFailed("No reports have GPS coordinates")))

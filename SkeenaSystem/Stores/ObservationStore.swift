@@ -91,9 +91,7 @@ final class ObservationStore: ObservableObject {
       let data = try encoder.encode(observation)
       try data.write(to: url, options: [.atomic])
     } catch {
-      #if DEBUG
-      print("[ObservationStore] Failed to save observation \(observation.id): \(error.localizedDescription)")
-      #endif
+      AppLogging.log("[ObservationStore] Failed to save observation \(observation.id): \(error.localizedDescription)", level: .error, category: .observation)
     }
   }
 
@@ -112,9 +110,7 @@ final class ObservationStore: ObservableObject {
         let observation = try decoder.decode(Observation.self, from: data)
         loaded.append(observation)
       } catch {
-        #if DEBUG
-        print("[ObservationStore] Failed to decode \(file.lastPathComponent): \(error.localizedDescription)")
-        #endif
+        AppLogging.log("[ObservationStore] Failed to decode \(file.lastPathComponent): \(error.localizedDescription)", level: .error, category: .observation)
       }
     }
 

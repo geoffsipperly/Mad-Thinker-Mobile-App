@@ -37,30 +37,13 @@ enum UploadAnglerContext {
     ]
     req.httpBody = try JSONSerialization.data(withJSONObject: body, options: [])
 
-    // DEBUG: Log request (masked token)
-    #if DEBUG
-    let maskedToken: String
-    if token.count > 20 {
-      maskedToken = token.prefix(10) + "…" + token.suffix(5)
-    } else {
-      maskedToken = String(token.prefix(8)) + "…"
-    }
-    print("[Proficiency][REQUEST] URL: \(url.absoluteString)")
-    print("[Proficiency][REQUEST] Headers: Authorization=Bearer \(maskedToken), apikey=\(AppEnvironment.shared.anonKey.prefix(8))… Content-Type=application/json")
-    if let bodyData = try? JSONSerialization.data(withJSONObject: body, options: [.prettyPrinted]),
-       let bodyString = String(data: bodyData, encoding: .utf8) {
-      print("[Proficiency][REQUEST] Body: \n\(bodyString)")
-    }
-    #endif
+    AppLogging.log("[Proficiency] Request URL: \(url.absoluteString)", level: .debug, category: .network)
 
     let (data, response) = try await URLSession.shared.data(for: req)
     let code = (response as? HTTPURLResponse)?.statusCode ?? -1
     let responseBody = String(data: data, encoding: .utf8) ?? "<non-utf8>"
 
-    #if DEBUG
-    print("[Proficiency][RESPONSE] Status: \(code)")
-    print("[Proficiency][RESPONSE] Body: \n\(responseBody)")
-    #endif
+    AppLogging.log("[Proficiency] Response status: \(code)", level: .debug, category: .network)
 
     guard (200..<300).contains(code) else { throw UploadError.server }
   }

@@ -11,9 +11,8 @@ struct SkeenaSystemApp: App {
     
     /// This initializer runs before the body is evaluated.
       init() {
-        // Log the current environment project URL
-        print("Current environment project URL: \(AppEnvironment.shared.projectURL)")
-          print("Logging set to: \(AppEnvironment.shared.logLevel)")
+        AppLogging.log("Environment project URL: \(AppEnvironment.shared.projectURL)", level: .info, category: .auth)
+        AppLogging.log("Log level: \(AppEnvironment.shared.logLevel)", level: .info, category: .auth)
       }
 
   var body: some Scene {

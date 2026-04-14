@@ -23,6 +23,7 @@ final class LocationManager: NSObject, ObservableObject {
 
 extension LocationManager: CLLocationManagerDelegate {
   func locationManager(_ manager: CLLocationManager, didChangeAuthorization status: CLAuthorizationStatus) {
+    AppLogging.log("[Location] Authorization changed: \(status.rawValue)", level: .info, category: .location)
     DispatchQueue.main.async { self.authorizationStatus = status }
     if status == .authorizedWhenInUse || status == .authorizedAlways { start() }
   }
@@ -32,6 +33,6 @@ extension LocationManager: CLLocationManagerDelegate {
   }
 
   func locationManager(_ manager: CLLocationManager, didFailWithError error: Error) {
-    print("Location error: \(error.localizedDescription)")
+    AppLogging.log("[Location] Error: \(error.localizedDescription)", level: .error, category: .location)
   }
 }

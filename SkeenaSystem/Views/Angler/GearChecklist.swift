@@ -260,16 +260,12 @@ struct GearChecklist: View {
       url = try MemberProfileFieldsAPI.url(communityId: cid, category: "gear")
     } catch {
       errorText = "Unsupported URL (check API_BASE_URL / MEMBER_PROFILE_FIELDS_URL)."
-      #if DEBUG
-      print("[GearChecklist] URL compose error: \(error)")
-      #endif
+      AppLogging.log("[GearChecklist] URL compose error: \(error)", level: .error, category: .network)
       loadFromCache()
       return
     }
 
-    #if DEBUG
-    print("[GearChecklist] loadGear URL: \(url.absoluteString)")
-    #endif
+    AppLogging.log("[GearChecklist] loadGear URL: \(url.absoluteString)", level: .debug, category: .network)
 
     var req = URLRequest(url: url)
     req.httpMethod = "GET"
@@ -281,11 +277,7 @@ struct GearChecklist: View {
       let (data, resp) = try await URLSession.shared.data(for: req)
       let code = (resp as? HTTPURLResponse)?.statusCode ?? -1
 
-      #if DEBUG
-      print("[GearChecklist] loadGear status: \(code)")
-      let preview = String(data: data.prefix(800), encoding: .utf8) ?? "<non-UTF8>"
-      print("[GearChecklist] loadGear body preview:\n\(preview)")
-      #endif
+      AppLogging.log("[GearChecklist] loadGear status: \(code)", level: .debug, category: .network)
 
       guard (200..<300).contains(code) else {
         errorText = "Load failed (\(code))."
@@ -335,9 +327,7 @@ struct GearChecklist: View {
       return false
     }
 
-    #if DEBUG
-    print("[GearChecklist] saveGear URL: \(url.absoluteString)")
-    #endif
+    AppLogging.log("[GearChecklist] saveGear URL: \(url.absoluteString)", level: .debug, category: .network)
 
     var req = URLRequest(url: url)
     req.httpMethod = "POST"
@@ -361,11 +351,7 @@ struct GearChecklist: View {
       let (data, resp) = try await URLSession.shared.data(for: req)
       let code = (resp as? HTTPURLResponse)?.statusCode ?? -1
 
-      #if DEBUG
-      print("[GearChecklist] saveGear status: \(code)")
-      let preview = String(data: data.prefix(800), encoding: .utf8) ?? "<non-UTF8>"
-      print("[GearChecklist] saveGear body preview:\n\(preview)")
-      #endif
+      AppLogging.log("[GearChecklist] saveGear status: \(code)", level: .debug, category: .network)
 
       guard (200..<300).contains(code) else {
         let msg = String(data: data, encoding: .utf8) ?? "Save failed."

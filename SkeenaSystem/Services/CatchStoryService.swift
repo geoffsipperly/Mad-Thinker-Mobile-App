@@ -229,7 +229,7 @@ final class CatchStoryService {
       UserDefaults.standard.set(data, forKey: key)
     } catch {
       // ignore cache failures for now; network result still returned
-      print("[CatchStoryService] failed to cache story: \(error)")
+      AppLogging.log("[CatchStoryService] Failed to cache story: \(error)", level: .warn, category: .network)
     }
   }
 }

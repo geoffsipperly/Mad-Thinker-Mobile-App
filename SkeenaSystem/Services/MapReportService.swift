@@ -44,7 +44,7 @@ enum MapReportService {
     comps.queryItems = queryItems
     guard let url = comps.url else { throw URLError(.badURL) }
 
-    AppLogging.log("[MapReports] REQUEST → \(url.absoluteString)", level: .debug, category: .network)
+    AppLogging.log("[MapReports] REQUEST → \(url.absoluteString)", level: .debug, category: .map)
 
     var req = URLRequest(url: url)
     req.httpMethod = "GET"
@@ -58,18 +58,18 @@ enum MapReportService {
     let (data, resp) = try await URLSession.shared.data(for: req)
     let code = (resp as? HTTPURLResponse)?.statusCode ?? -1
 
-    AppLogging.log("[MapReports] RESPONSE ← HTTP \(code), \(data.count) bytes", level: .debug, category: .network)
+    AppLogging.log("[MapReports] RESPONSE ← HTTP \(code), \(data.count) bytes", level: .debug, category: .map)
 
     guard (200..<300).contains(code) else {
       let body = String(data: data, encoding: .utf8) ?? "<non-utf8>"
-      AppLogging.log("[MapReports] ERROR body: \(body)", level: .error, category: .network)
+      AppLogging.log("[MapReports] ERROR body: \(body)", level: .error, category: .map)
       throw URLError(.badServerResponse)
     }
 
     let decoded = try JSONDecoder().decode(MapReportsResponse.self, from: data)
-    AppLogging.log("[MapReports] Decoded \(decoded.count) reports — types: \(decoded.reports.map(\.type).joined(separator: ", "))", level: .debug, category: .network)
+    AppLogging.log("[MapReports] Decoded \(decoded.count) reports — types: \(decoded.reports.map(\.type).joined(separator: ", "))", level: .debug, category: .map)
     for r in decoded.reports {
-      AppLogging.log("[MapReports]   id=\(r.id) type=\(r.type) lat=\(r.latitude.map { String($0) } ?? "nil") lon=\(r.longitude.map { String($0) } ?? "nil")", level: .debug, category: .network)
+      AppLogging.log("[MapReports]   id=\(r.id) type=\(r.type) lat=\(r.latitude.map { String($0) } ?? "nil") lon=\(r.longitude.map { String($0) } ?? "nil")", level: .debug, category: .map)
     }
     return decoded.reports
   }

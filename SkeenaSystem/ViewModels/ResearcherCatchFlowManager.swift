@@ -150,12 +150,14 @@ final class ResearcherCatchFlowManager: ObservableObject {
     self.originalLifecycleStage = lifecycleStage
 
     currentStep = .identification
+    AppLogging.log("[ResearcherFlow] Initialized: species=\(species ?? "nil") lifecycle=\(lifecycleStage ?? "nil") sex=\(sex ?? "nil") length=\(lengthInches.map { String($0) } ?? "nil")", level: .info, category: .research)
   }
 
   // MARK: - Step Advancement
 
   /// Confirm the current step and advance to the next one. Returns the message to post.
   func confirm() -> String {
+    AppLogging.log("[ResearcherFlow] Confirming step: \(currentStep)", level: .debug, category: .research)
     switch currentStep {
     case .identification:
       // Species/sex/lifecycle confirmed — now calculate measurements for the first time

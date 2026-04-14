@@ -868,9 +868,6 @@ final class AuthService: ObservableObject {
           let bodyStr = "grant_type=refresh_token&refresh_token=\(encodedRefresh)"
           req.httpBody = bodyStr.data(using: .utf8)
 
-          // Temporary debug: print request URL and body so tests can be inspected
-          AppLogging.log("[Refresh][DEBUG] RequestURL=\(req.url?.absoluteString ?? "<no-url>") body=\(String(data: req.httpBody ?? Data(), encoding: .utf8) ?? "<no-body>")", level: .debug, category: .auth)
-
           func performRequest() async throws -> (Data, URLResponse) {
             try await session.data(for: req)
           }

@@ -54,7 +54,10 @@ nonisolated final class UploadCoordinator {
     let hasMarks = !marks.isEmpty
     let hasNotes = !observations.isEmpty
 
+    AppLogging.log("[UploadCoordinator] Starting: catches=\(catches.count) marks=\(marks.count) observations=\(observations.count)", level: .info, category: .upload)
+
     guard hasCatches || hasMarks || hasNotes else {
+      AppLogging.log("[UploadCoordinator] Nothing to upload", level: .debug, category: .upload)
       DispatchQueue.main.async { completion(UploadResult()) }
       return
     }
@@ -96,6 +99,7 @@ nonisolated final class UploadCoordinator {
           case .failure(let error):
             result.errors.append("Notes: \(error.localizedDescription)")
           }
+          AppLogging.log("[UploadCoordinator] Complete: \(result.totalUploaded) uploaded, \(result.errors.count) error(s)", level: result.hasErrors ? .warn : .info, category: .upload)
           DispatchQueue.main.async {
             progress(1.0)
             completion(result)

@@ -252,9 +252,7 @@ struct ManagePreferencesView: View {
       return
     }
 
-    #if DEBUG
-    print("[Preferences] loadPreferences URL: \(url.absoluteString)")
-    #endif
+    AppLogging.log("[Preferences] loadPreferences URL: \(url.absoluteString)", level: .debug, category: .network)
 
     var req = URLRequest(url: url)
     req.httpMethod = "GET"
@@ -266,11 +264,7 @@ struct ManagePreferencesView: View {
       let (data, resp) = try await URLSession.shared.data(for: req)
       let code = (resp as? HTTPURLResponse)?.statusCode ?? -1
 
-      #if DEBUG
-      print("[Preferences] loadPreferences status: \(code)")
-      let preview = String(data: data.prefix(800), encoding: .utf8) ?? "<non-UTF8>"
-      print("[Preferences] loadPreferences body preview:\n\(preview)")
-      #endif
+      AppLogging.log("[Preferences] loadPreferences status: \(code)", level: .debug, category: .network)
 
       guard (200..<300).contains(code) else {
         errorText = "Load failed (\(code))."
@@ -338,9 +332,7 @@ struct ManagePreferencesView: View {
       return
     }
 
-    #if DEBUG
-    print("[Preferences] save URL: \(url.absoluteString)")
-    #endif
+    AppLogging.log("[Preferences] save URL: \(url.absoluteString)", level: .debug, category: .network)
 
     var req = URLRequest(url: url)
     req.httpMethod = "POST"
@@ -374,11 +366,7 @@ struct ManagePreferencesView: View {
       let (data, resp) = try await URLSession.shared.data(for: req)
       let code = (resp as? HTTPURLResponse)?.statusCode ?? -1
 
-      #if DEBUG
-      print("[Preferences] save status: \(code)")
-      let preview = String(data: data.prefix(800), encoding: .utf8) ?? "<non-UTF8>"
-      print("[Preferences] save body preview:\n\(preview)")
-      #endif
+      AppLogging.log("[Preferences] save status: \(code)", level: .debug, category: .network)
 
       guard (200..<300).contains(code) else {
         let msg = String(data: data, encoding: .utf8) ?? "Save failed."

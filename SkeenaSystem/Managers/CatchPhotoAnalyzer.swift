@@ -1099,11 +1099,6 @@ final class CatchPhotoAnalyzer {
         let w = CGFloat(read(2, i))
         let h = CGFloat(read(3, i))
 
-        // DEBUG: Log first detection's raw values
-        if i == 0 {
-          AppLogging.log({ "DEBUG first anchor: x=\(x), y=\(y), w=\(w), h=\(h)" }, level: .debug, category: .ml)
-        }
-
         // 4) Geometry filters
         let aspect = w / max(h, 1.0)
         let hFrac = h / imgH

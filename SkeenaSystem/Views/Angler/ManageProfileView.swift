@@ -236,15 +236,11 @@ struct ManageProfileView: View {
       url = try ManageProfileAPI.url()
     } catch {
       errorText = "Unsupported URL (check API_BASE_URL / MY_PROFILE_URL)."
-      #if DEBUG
-      print("[ManageProfile] URL compose error: \(error)")
-      #endif
+      AppLogging.log("[ManageProfile] URL compose error: \(error)", level: .error, category: .network)
       return
     }
 
-    #if DEBUG
-    print("[ManageProfile] loadProfile URL: \(url.absoluteString)")
-    #endif
+    AppLogging.log("[ManageProfile] loadProfile URL: \(url.absoluteString)", level: .debug, category: .network)
 
     var req = URLRequest(url: url)
     req.httpMethod = "GET"
@@ -256,11 +252,7 @@ struct ManageProfileView: View {
       let (data, resp) = try await URLSession.shared.data(for: req)
       let code = (resp as? HTTPURLResponse)?.statusCode ?? -1
 
-      #if DEBUG
-      print("[ManageProfile] loadProfile status: \(code)")
-      let preview = String(data: data.prefix(800), encoding: .utf8) ?? "<non-UTF8>"
-      print("[ManageProfile] loadProfile body preview:\n\(preview)")
-      #endif
+      AppLogging.log("[ManageProfile] loadProfile status: \(code)", level: .debug, category: .network)
 
       guard (200..<300).contains(code) else {
         errorText = "Load failed (\(code))."
@@ -319,15 +311,11 @@ struct ManageProfileView: View {
       url = try ManageProfileAPI.url()
     } catch {
       errorText = "Unsupported URL (check API_BASE_URL / MY_PROFILE_URL)."
-      #if DEBUG
-      print("[ManageProfile] URL compose error: \(error)")
-      #endif
+      AppLogging.log("[ManageProfile] URL compose error: \(error)", level: .error, category: .network)
       return
     }
 
-    #if DEBUG
-    print("[ManageProfile] saveProfile URL: \(url.absoluteString)")
-    #endif
+    AppLogging.log("[ManageProfile] saveProfile URL: \(url.absoluteString)", level: .debug, category: .network)
 
     var req = URLRequest(url: url)
     req.httpMethod = ManageProfileAPI.saveMethod
@@ -348,11 +336,7 @@ struct ManageProfileView: View {
       let (data, resp) = try await URLSession.shared.data(for: req)
       let code = (resp as? HTTPURLResponse)?.statusCode ?? -1
 
-      #if DEBUG
-      print("[ManageProfile] saveProfile status: \(code)")
-      let preview = String(data: data.prefix(800), encoding: .utf8) ?? "<non-UTF8>"
-      print("[ManageProfile] saveProfile body preview:\n\(preview)")
-      #endif
+      AppLogging.log("[ManageProfile] saveProfile status: \(code)", level: .debug, category: .network)
 
       guard (200..<300).contains(code) else {
         let msg = String(data: data, encoding: .utf8) ?? ""

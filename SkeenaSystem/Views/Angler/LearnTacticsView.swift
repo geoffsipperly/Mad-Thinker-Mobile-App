@@ -53,23 +53,23 @@ struct WebView: UIViewRepresentable {
   func updateUIView(_ webView: WKWebView, context: Context) {
     // Only load if not already at the target URL
     if webView.url == nil || webView.url?.absoluteString != url.absoluteString {
-      print("[WebView] Loading URL: \(url.absoluteString)")
+      AppLogging.log("[WebView] Loading URL: \(url.absoluteString)", level: .debug, category: .ui)
       webView.load(URLRequest(url: url))
     }
   }
 
   class Coordinator: NSObject, WKNavigationDelegate {
     func webView(_ webView: WKWebView, didStartProvisionalNavigation navigation: WKNavigation!) {
-      print("[WebView] Started loading: \(webView.url?.absoluteString ?? "<nil>")")
+      AppLogging.log("[WebView] Started loading: \(webView.url?.absoluteString ?? "<nil>")", level: .debug, category: .ui)
     }
     func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
-      print("[WebView] Finished loading: \(webView.url?.absoluteString ?? "<nil>")")
+      AppLogging.log("[WebView] Finished loading: \(webView.url?.absoluteString ?? "<nil>")", level: .debug, category: .ui)
     }
     func webView(_ webView: WKWebView, didFail navigation: WKNavigation!, withError error: Error) {
-      print("[WebView][ERROR] Navigation failed: \(error.localizedDescription)")
+      AppLogging.log("[WebView] Navigation failed: \(error.localizedDescription)", level: .error, category: .ui)
     }
     func webView(_ webView: WKWebView, didFailProvisionalNavigation navigation: WKNavigation!, withError error: Error) {
-      print("[WebView][ERROR] Provisional navigation failed: \(error.localizedDescription)")
+      AppLogging.log("[WebView] Provisional navigation failed: \(error.localizedDescription)", level: .error, category: .ui)
     }
   }
 }

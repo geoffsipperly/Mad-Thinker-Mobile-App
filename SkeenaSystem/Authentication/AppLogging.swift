@@ -14,11 +14,18 @@ public enum LogCategory: String, CaseIterable, Hashable {
   case network = "network"
   case trip = "trip"
   case ui = "ui"
-  case `catch` = "catch" // catch-related flows (photo capture, analysis results)
-  case ml = "ml"         // Core ML / Vision inference pipelines
+  case `catch` = "catch"           // catch-related flows (photo capture, analysis results)
+  case ml = "ml"                   // Core ML / Vision inference pipelines
   case persistence = "persistence" // Core Data and other storage
-  case audio = "audio" // Voice memo / audio processing
+  case audio = "audio"             // Voice memo / audio processing
   case angler = "angler"
+  case location = "location"       // GPS, water body lookup, coordinate matching
+  case upload = "upload"           // Upload orchestration & phase transitions
+  case weather = "weather"         // Forecast requests & data sourcing
+  case observation = "observation" // Observation capture, storage, upload
+  case community = "community"     // Community switching, member management
+  case map = "map"                 // Map rendering, report clustering, callouts
+  case research = "research"       // Researcher role workflows & catch confirmation
 }
 
 public struct AppLogging {
@@ -62,6 +69,13 @@ public struct AppLogging {
   private static let persistenceLogger = Logger(subsystem: subsystem, category: LogCategory.persistence.rawValue)
   private static let audioLogger = Logger(subsystem: subsystem, category: LogCategory.audio.rawValue)
   private static let anglerLogger = Logger(subsystem: subsystem, category: LogCategory.angler.rawValue)
+  private static let locationLogger = Logger(subsystem: subsystem, category: LogCategory.location.rawValue)
+  private static let uploadLogger = Logger(subsystem: subsystem, category: LogCategory.upload.rawValue)
+  private static let weatherLogger = Logger(subsystem: subsystem, category: LogCategory.weather.rawValue)
+  private static let observationLogger = Logger(subsystem: subsystem, category: LogCategory.observation.rawValue)
+  private static let communityLogger = Logger(subsystem: subsystem, category: LogCategory.community.rawValue)
+  private static let mapLogger = Logger(subsystem: subsystem, category: LogCategory.map.rawValue)
+  private static let researchLogger = Logger(subsystem: subsystem, category: LogCategory.research.rawValue)
 
   // One-time diagnostic: log resolved LOG_LEVEL using os.Logger directly (unfiltered)
   private static let __logLevelDiagnostic: Void = {
@@ -93,6 +107,13 @@ public struct AppLogging {
       case .persistence: return persistenceLogger
       case .audio: return audioLogger
       case .angler: return anglerLogger
+      case .location: return locationLogger
+      case .upload: return uploadLogger
+      case .weather: return weatherLogger
+      case .observation: return observationLogger
+      case .community: return communityLogger
+      case .map: return mapLogger
+      case .research: return researchLogger
       }
     }()
 

@@ -262,9 +262,7 @@ struct AnglerAboutYou: View {
       return
     }
 
-    #if DEBUG
-    print("[SelfAssessment] loadProficiency URL: \(url.absoluteString)")
-    #endif
+    AppLogging.log("[SelfAssessment] loadProficiency URL: \(url.absoluteString)", level: .debug, category: .network)
 
     var req = URLRequest(url: url)
     req.httpMethod = "GET"
@@ -276,11 +274,7 @@ struct AnglerAboutYou: View {
       let (data, resp) = try await URLSession.shared.data(for: req)
       let code = (resp as? HTTPURLResponse)?.statusCode ?? -1
 
-      #if DEBUG
-      print("[SelfAssessment] loadProficiency status: \(code)")
-      let preview = String(data: data.prefix(800), encoding: .utf8) ?? "<non-UTF8>"
-      print("[SelfAssessment] loadProficiency body preview:\n\(preview)")
-      #endif
+      AppLogging.log("[SelfAssessment] loadProficiency status: \(code)", level: .debug, category: .network)
 
       guard (200..<300).contains(code) else {
         errorText = "Load failed (\(code))."
@@ -333,9 +327,7 @@ struct AnglerAboutYou: View {
       return false
     }
 
-    #if DEBUG
-    print("[SelfAssessment] saveProficiency URL: \(url.absoluteString)")
-    #endif
+    AppLogging.log("[SelfAssessment] saveProficiency URL: \(url.absoluteString)", level: .debug, category: .network)
 
     var req = URLRequest(url: url)
     req.httpMethod = "POST"
@@ -359,11 +351,7 @@ struct AnglerAboutYou: View {
       let (data, resp) = try await URLSession.shared.data(for: req)
       let code = (resp as? HTTPURLResponse)?.statusCode ?? -1
 
-      #if DEBUG
-      print("[SelfAssessment] saveProficiency status: \(code)")
-      let preview = String(data: data.prefix(800), encoding: .utf8) ?? "<non-UTF8>"
-      print("[SelfAssessment] saveProficiency body preview:\n\(preview)")
-      #endif
+      AppLogging.log("[SelfAssessment] saveProficiency status: \(code)", level: .debug, category: .network)
 
       guard (200..<300).contains(code) else {
         let msg = String(data: data, encoding: .utf8) ?? "Save failed."
