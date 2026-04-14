@@ -313,7 +313,7 @@ enum TripRosterAPI {
     }
     guard (200...299).contains(http.statusCode) else {
       let body = String(data: data, encoding: .utf8) ?? ""
-      AppLogging.log("TripRosterAPI request failed with status \(http.statusCode), body: \(body)", level: .debug, category: .trip)
+      AppLogging.log("TripRosterAPI request failed with status \(http.statusCode), body: \(body)", level: .error, category: .trip)
       throw NSError(domain: "TripRoster", code: http.statusCode, userInfo: [NSLocalizedDescriptionKey: body.isEmpty ? "HTTP \(http.statusCode)" : body])
     }
 

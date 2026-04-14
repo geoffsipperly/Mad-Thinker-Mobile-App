@@ -97,7 +97,7 @@ enum WeatherSnapshotService {
       req.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
       AppLogging.log("[Weather] attempt \(attempt) — auth header set, token len=\(token.count)", level: .debug, category: .weather)
     } else {
-      AppLogging.log("[Weather] attempt \(attempt) — no auth token, sending unauthenticated", level: .debug, category: .weather)
+      AppLogging.log("[Weather] attempt \(attempt) — no auth token, sending unauthenticated", level: .warn, category: .weather)
     }
 
     let body: [String: Double] = ["latitude": lat, "longitude": lon]
@@ -113,7 +113,7 @@ enum WeatherSnapshotService {
       throw URLError(.badServerResponse)
     }
     let decoded = try JSONDecoder().decode(WeatherSnapshotResponse.self, from: data)
-    AppLogging.log("[Weather] attempt \(attempt) — source: \(decoded.source ?? "unknown")", level: .debug, category: .weather)
+    AppLogging.log("[Weather] attempt \(attempt) — source: \(decoded.source ?? "unknown")", level: .info, category: .weather)
     return decoded
   }
 

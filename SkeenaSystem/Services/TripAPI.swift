@@ -188,7 +188,7 @@ struct TripAPI {
         case 200:
             do {
                 let decoded = try JSONDecoder().decode(GetTripsResponse.self, from: data)
-                AppLogging.log("[TripAPI] Decoded trips count: \(decoded.trips.count)", level: .debug, category: .trip)
+                AppLogging.log("[TripAPI] Decoded trips count: \(decoded.trips.count)", level: .info, category: .trip)
                 if let first = decoded.trips.first {
                   AppLogging.log("[TripAPI] First trip sample: id=\(first.tripId ?? "<nil>"), anglers=\(first.anglers?.count ?? 0)", level: .debug, category: .trip)
                 }

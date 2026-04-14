@@ -424,7 +424,7 @@ struct GuideLandingView: View {
           hourly: slots,
           source: response.source
         )
-        AppLogging.log("[GuideLandingView] liveWeather SET — locationName='\(locationName)', temp=\(Int(w.temperature.rounded())), source=\(response.source ?? "unknown")", level: .debug, category: .network)
+        AppLogging.log("[GuideLandingView] liveWeather SET — locationName='\(locationName)', temp=\(Int(w.temperature.rounded())), source=\(response.source ?? "unknown")", level: .info, category: .network)
       }
     } catch {
       AppLogging.log("[GuideLandingView] WeatherSnapshotService FAILED: \(error.localizedDescription)", level: .error, category: .network)

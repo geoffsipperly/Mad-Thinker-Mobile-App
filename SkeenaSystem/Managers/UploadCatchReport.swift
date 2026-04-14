@@ -536,7 +536,7 @@ nonisolated final class UploadCatchReport {
           let resp = try Self.sharedDecoder.decode(ResponseDTO.self, from: data)
           #if DEBUG
           let v = resp.version ?? "unknown"
-          AppLogging.log({ "[UploadCatchReport] Parsed response: version=\(v), processed=\(resp.processed), successful=\(resp.successful), failed=\(resp.failed)" }, level: .debug, category: .network)
+          AppLogging.log({ "[UploadCatchReport] Parsed response: version=\(v), processed=\(resp.processed), successful=\(resp.successful), failed=\(resp.failed)" }, level: .info, category: .network)
           if let reconciled = resp.results?.filter({ $0.tripReconciled == true }), !reconciled.isEmpty {
             AppLogging.log({ "[UploadCatchReport] Trip reconciled for \(reconciled.count) report(s)" }, level: .debug, category: .network)
           }
@@ -753,7 +753,7 @@ nonisolated final class UploadCatchReport {
 
     guard fm.fileExists(atPath: url.path) else {
       #if DEBUG
-      AppLogging.log({ "[UploadCatchReport] Photo not found at \(url.path)" }, level: .debug, category: .network)
+      AppLogging.log({ "[UploadCatchReport] Photo not found at \(url.path)" }, level: .warn, category: .network)
       #endif
       return nil
     }
@@ -786,7 +786,7 @@ nonisolated final class UploadCatchReport {
 
     guard fm.fileExists(atPath: url.path) else {
       #if DEBUG
-      AppLogging.log({ "[UploadCatchReport] Head photo not found at \(url.path)" }, level: .debug, category: .network)
+      AppLogging.log({ "[UploadCatchReport] Head photo not found at \(url.path)" }, level: .warn, category: .network)
       #endif
       return nil
     }
@@ -804,17 +804,13 @@ nonisolated final class UploadCatchReport {
 
   private func loadVoiceMemo(from report: CatchReport) throws -> CatchDTO.VoiceMemo? {
     guard let noteId = report.voiceNoteId else {
-      #if DEBUG
-      AppLogging.log({ "[UploadCatchReport] No voiceNoteId for report \(report.id)" }, level: .debug, category: .audio)
-      #endif
+      AppLogging.log("[UploadCatchReport] No voiceNoteId for report \(report.id)", level: .debug, category: .audio)
       return nil
     }
 
     let fm = FileManager.default
     guard let docs = fm.urls(for: .documentDirectory, in: .userDomainMask).first else {
-      #if DEBUG
-      AppLogging.log({ "[UploadCatchReport] Could not resolve documents directory" }, level: .debug, category: .audio)
-      #endif
+      AppLogging.log("[UploadCatchReport] Could not resolve documents directory", level: .warn, category: .audio)
       return nil
     }
 
@@ -862,17 +858,13 @@ nonisolated final class UploadCatchReport {
     }
 
     guard let url = finalURL else {
-      #if DEBUG
-      AppLogging.log({ "[UploadCatchReport] No voice memo file found for id=\(noteId.uuidString) in \(notesDir.path)" }, level: .debug, category: .audio)
-      #endif
+      AppLogging.log("[UploadCatchReport] No voice memo file found for id=\(noteId.uuidString) in \(notesDir.path)", level: .error, category: .audio)
       return nil
     }
 
     let data = try Data(contentsOf: url)
     guard !data.isEmpty else {
-      #if DEBUG
-      AppLogging.log({ "[UploadCatchReport] Voice memo file is empty at \(url.path)" }, level: .debug, category: .audio)
-      #endif
+      AppLogging.log("[UploadCatchReport] Voice memo file is empty at \(url.path)", level: .error, category: .audio)
       return nil
     }
 
@@ -901,13 +893,11 @@ nonisolated final class UploadCatchReport {
     let sampleRate = Int(note?.sampleRate ?? Double(report.voiceSampleRate ?? 24000))
     let format = report.voiceFormat ?? inferredFormat
 
-    #if DEBUG
-    AppLogging.log({ "[UploadCatchReport] Loaded voice memo \(url.lastPathComponent) (\(data.count) bytes)" }, level: .debug, category: .audio)
+    AppLogging.log("[UploadCatchReport] Loaded voice memo \(url.lastPathComponent) (\(data.count) bytes)", level: .info, category: .audio)
     AppLogging.log({ "[UploadCatchReport]   transcript: \(finalTranscript.prefix(80))\(finalTranscript.count > 80 ? "…" : "")" }, level: .debug, category: .audio)
     AppLogging.log({ "[UploadCatchReport]   language: \(language), onDevice: \(onDevice), sampleRate: \(sampleRate), format: \(format)" },
       level: .debug, category: .audio
     )
-    #endif
 
     return CatchDTO.VoiceMemo(
       filename: url.lastPathComponent,

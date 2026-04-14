@@ -31,7 +31,7 @@ private enum AnglerFlightsAPI {
   private static func makeURL(path: String, queryItems: [URLQueryItem] = []) throws -> URL {
     AppLogging.log("AnglerFlights makeURL start — base(raw): '\(rawBaseURLString)', base(normalized): '\(baseURLString)', path: '\(path)'", level: .debug, category: .angler)
     guard let base = URL(string: baseURLString), let scheme = base.scheme, let host = base.host else {
-      AppLogging.log("AnglerFlights invalid API_BASE_URL — raw: '\(rawBaseURLString)', normalized: '\(baseURLString)'", level: .debug, category: .angler)
+      AppLogging.log("AnglerFlights invalid API_BASE_URL — raw: '\(rawBaseURLString)', normalized: '\(baseURLString)'", level: .error, category: .angler)
       throw NSError(domain: "AnglerFlights", code: -1000, userInfo: [
         NSLocalizedDescriptionKey: "Invalid API_BASE_URL (raw: '\(rawBaseURLString)', normalized: '\(baseURLString)')"
       ])
@@ -57,7 +57,7 @@ private enum AnglerFlightsAPI {
     }(), level: .debug, category: .angler)
 
     guard let url = comps.url else {
-      AppLogging.log("AnglerFlights makeURL failed to build URL for path: \(path)", level: .debug, category: .angler)
+      AppLogging.log("AnglerFlights makeURL failed to build URL for path: \(path)", level: .error, category: .angler)
       throw NSError(domain: "AnglerFlights", code: -1001, userInfo: [
         NSLocalizedDescriptionKey: "Failed to build URL for path: \(path)"
       ])
@@ -93,14 +93,14 @@ struct AnglerFlights: View {
     // Compose endpoints from config (fall back to environment-aware projectURL if composition fails)
     private let itinerariesEndpoint: URL = {
       do { return try AnglerFlightsAPI.flightDetailsURL() } catch {
-        AppLogging.log("AnglerFlights — failed to compose itinerariesEndpoint, falling back to projectURL: \(error.localizedDescription)", level: .debug, category: .angler)
+        AppLogging.log("AnglerFlights — failed to compose itinerariesEndpoint, falling back to projectURL: \(error.localizedDescription)", level: .warn, category: .angler)
         return AppEnvironment.shared.projectURL.appendingPathComponent("functions/v1/flight-details")
       }
     }()
 
     private let statusEndpoint: URL = {
       do { return try AnglerFlightsAPI.flightStatusURL() } catch {
-        AppLogging.log("AnglerFlights — failed to compose statusEndpoint, falling back to projectURL: \(error.localizedDescription)", level: .debug, category: .angler)
+        AppLogging.log("AnglerFlights — failed to compose statusEndpoint, falling back to projectURL: \(error.localizedDescription)", level: .warn, category: .angler)
         return AppEnvironment.shared.projectURL.appendingPathComponent("functions/v1/flight-status")
       }
     }()
@@ -289,12 +289,12 @@ struct AnglerFlights: View {
       guard (200 ..< 300).contains(code) else {
         let body = String(data: data, encoding: .utf8) ?? ""
         errorText = "Fetch failed (\(code))"
-        AppLogging.log("AnglerFlights — Itineraries GET failed (\(code)) body: \(body)", level: .debug, category: .catch)
+        AppLogging.log("AnglerFlights — Itineraries GET failed (\(code)) body: \(body)", level: .error, category: .angler)
         return
       }
       let decoded = try JSONDecoder().decode(ItinerariesListResponse.self, from: data)
       itineraries = decoded.itineraries
-      AppLogging.log("AnglerFlights — Itineraries GET — Decoded count: \(decoded.itineraries.count)", level: .debug, category: .angler)
+      AppLogging.log("AnglerFlights — Itineraries GET — Decoded count: \(decoded.itineraries.count)", level: .info, category: .angler)
       saveCachedItineraries(itineraries)
     } catch {
       errorText = "Network error: \(error.localizedDescription)"
@@ -346,11 +346,11 @@ struct AnglerFlights: View {
       guard (200 ..< 300).contains(code) else {
         let bodyStr = String(data: data, encoding: .utf8) ?? ""
         errorText = "Save failed (\(code))"
-        AppLogging.log("AnglerFlights — Itinerary POST failed (\(code)) body: \(bodyStr)", level: .debug, category: .catch)
+        AppLogging.log("AnglerFlights — Itinerary POST failed (\(code)) body: \(bodyStr)", level: .error, category: .angler)
         return
       }
       let decoded = try JSONDecoder().decode(UploadItineraryResponse.self, from: data)
-      AppLogging.log("AnglerFlights — Itinerary POST — Message: \(decoded.message)", level: .debug, category: .angler)
+      AppLogging.log("AnglerFlights — Itinerary POST — Message: \(decoded.message)", level: .info, category: .angler)
       infoText = decoded.message
       // Update list (upsert behavior)
       upsertItinerary(decoded.itinerary)
@@ -385,12 +385,12 @@ struct AnglerFlights: View {
       guard (200 ..< 300).contains(code) else {
         let bodyStr = String(data: data, encoding: .utf8) ?? ""
         errorText = "Delete failed (\(code))"
-        AppLogging.log("AnglerFlights — Itinerary DELETE failed (\(code)) body: \(bodyStr)", level: .debug, category: .catch)
+        AppLogging.log("AnglerFlights — Itinerary DELETE failed (\(code)) body: \(bodyStr)", level: .error, category: .angler)
         return
       }
       // Remove locally
       itineraries.removeAll { $0.id == itineraryId }
-      AppLogging.log("AnglerFlights — Itinerary DELETE — removed id=\(itineraryId)", level: .debug, category: .angler)
+      AppLogging.log("AnglerFlights — Itinerary DELETE — removed id=\(itineraryId)", level: .info, category: .angler)
       saveCachedItineraries(itineraries)
       infoText = "Itinerary deleted successfully"
     } catch {
@@ -422,7 +422,7 @@ struct AnglerFlights: View {
     AppLogging.log("AnglerFlights — Status POST — Status: \(code)", level: .debug, category: .angler)
     guard (200 ..< 300).contains(code) else {
       let bodyStr = String(data: data, encoding: .utf8) ?? ""
-      AppLogging.log("AnglerFlights — Status POST failed (\(code)) body: \(bodyStr)", level: .debug, category: .angler)
+      AppLogging.log("AnglerFlights — Status POST failed (\(code)) body: \(bodyStr)", level: .error, category: .angler)
       throw NSError(domain: "FlightStatus", code: code, userInfo: [NSLocalizedDescriptionKey: "Status fetch failed (\(code))"])
     }
 
@@ -436,7 +436,7 @@ struct AnglerFlights: View {
 
     AppLogging.log("AnglerFlights — Status POST — decoding", level: .debug, category: .angler)
     let decoded = try JSONDecoder().decode(FlightStatusResponse.self, from: data)
-    AppLogging.log("AnglerFlights — Status POST — Decoded results count: \(decoded.results.count)", level: .debug, category: .angler)
+    AppLogging.log("AnglerFlights — Status POST — Decoded results count: \(decoded.results.count)", level: .info, category: .angler)
     return decoded.results
   }
 
@@ -614,7 +614,7 @@ private struct ItineraryDetailView: View {
       statusResults = try await statusLoader(segments)
       AppLogging.log("ItineraryDetailView — Load Status — results count=\(statusResults.count)", level: .debug, category: .angler)
     } catch {
-      AppLogging.log("ItineraryDetailView — Load Status — error: \(error.localizedDescription)", level: .debug, category: .angler)
+      AppLogging.log("ItineraryDetailView — Load Status — error: \(error.localizedDescription)", level: .error, category: .angler)
       errorText = error.localizedDescription
     }
     AppLogging.log("ItineraryDetailView — Load Status — end", level: .debug, category: .angler)

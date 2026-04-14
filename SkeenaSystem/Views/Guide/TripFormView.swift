@@ -97,7 +97,7 @@ enum AnglerAPI {
     AppLogging.log("[AnglerLookup] endpoint: \(resolvedEndpoint.absoluteString)", level: .debug, category: .trip)
 
     guard var comps = URLComponents(url: resolvedEndpoint, resolvingAgainstBaseURL: false) else {
-      AppLogging.log("[AnglerLookup] URLComponents failed for: \(resolvedEndpoint)", level: .debug, category: .trip)
+      AppLogging.log("[AnglerLookup] URLComponents failed for: \(resolvedEndpoint)", level: .error, category: .trip)
       throw AnglerLookupError.badRequest("Invalid lookup URL configuration.")
     }
     var items: [URLQueryItem] = []
@@ -110,7 +110,7 @@ enum AnglerAPI {
     comps.queryItems = items
 
     guard let finalURL = comps.url else {
-      AppLogging.log("[AnglerLookup] Failed to build final URL from components", level: .debug, category: .trip)
+      AppLogging.log("[AnglerLookup] Failed to build final URL from components", level: .error, category: .trip)
       throw AnglerLookupError.badRequest("Failed to build lookup URL.")
     }
     AppLogging.log("[AnglerLookup] GET \(finalURL.absoluteString)", level: .debug, category: .trip)

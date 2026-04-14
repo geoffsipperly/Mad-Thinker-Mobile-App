@@ -373,10 +373,10 @@ struct FishingForecastRequestView: View {
           AppLogging.log({ "[Forecast] batch — \(condition.name): type=\(condition.waterType ?? "?"), level=\(condition.waterLevelFt.map { String(format: "%.2f", $0) } ?? "nil")ft, temp=\(condition.waterTempC.map { String(format: "%.1f", $0) } ?? "nil")°C" }, level: .debug, category: .trip)
         }
         self.batchConditions = dict
-        AppLogging.log("[Forecast] batch loaded \(dict.count) conditions for date: \(batch.date)", level: .debug, category: .trip)
+        AppLogging.log("[Forecast] batch loaded \(dict.count) conditions for date: \(batch.date)", level: .info, category: .trip)
 
       } catch {
-        AppLogging.log("[Forecast] batch fetch failed: \(error.localizedDescription)", level: .debug, category: .trip)
+        AppLogging.log("[Forecast] batch fetch failed: \(error.localizedDescription)", level: .warn, category: .trip)
         // Tiles remain functional, just without metrics
       }
       self.batchLoading = false

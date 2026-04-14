@@ -30,7 +30,7 @@ private enum AnglerForecastAPI {
 
   private static func makeURL(path: String, queryItems: [URLQueryItem] = []) throws -> URL {
     guard let base = URL(string: baseURLString), let scheme = base.scheme, let host = base.host else {
-      AppLogging.log("AnglerForecastAPI invalid API_BASE_URL — raw: '\(rawBaseURLString)', normalized: '\(baseURLString)'", level: .debug, category: .angler)
+      AppLogging.log("AnglerForecastAPI invalid API_BASE_URL — raw: '\(rawBaseURLString)', normalized: '\(baseURLString)'", level: .error, category: .angler)
       throw URLError(.badURL)
     }
 

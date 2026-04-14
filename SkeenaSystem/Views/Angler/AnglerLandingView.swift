@@ -713,7 +713,7 @@ struct AnglerLandingView: View {
           hourly: slots,
           source: response.source
         )
-        AppLogging.log("[AnglerLandingView] liveWeather SET — locationName='\(locationName)', temp=\(Int(w.temperature.rounded())), source=\(response.source ?? "unknown")", level: .debug, category: .network)
+        AppLogging.log("[AnglerLandingView] liveWeather SET — locationName='\(locationName)', temp=\(Int(w.temperature.rounded())), source=\(response.source ?? "unknown")", level: .info, category: .network)
       }
     } catch {
       AppLogging.log("[AnglerLandingView] WeatherSnapshotService FAILED: \(error.localizedDescription)", level: .error, category: .network)
