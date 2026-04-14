@@ -26,12 +26,16 @@
 	<string>$(COMMUNITY)</string>
 	<key>COMMUNITY_TAGLINE</key>
 	<string>$(COMMUNITY_TAGLINE)</string>
+	<key>DEFAULT_LEARN_HOST</key>
+	<string>$(DEFAULT_LEARN_HOST)</string>
 	<key>DEFAULT_MAP_LATITUDE</key>
 	<string>$(DEFAULT_MAP_LATITUDE)</string>
 	<key>DEFAULT_MAP_LONGITUDE</key>
 	<string>$(DEFAULT_MAP_LONGITUDE)</string>
 	<key>DEFAULT_RIVER</key>
 	<string>$(DEFAULT_RIVER)</string>
+	<key>DEFAULT_WATER_BODY</key>
+	<string>$(DEFAULT_WATER_BODY)</string>
 	<key>DOWNLOAD_CATCH_URL</key>
 	<string>$(DOWNLOAD_CATCH_URL)</string>
 	<key>E_CATCH_CAROUSEL</key>
@@ -44,16 +48,14 @@
 	<string>$(E_GEAR_CHECKLIST)</string>
 	<key>E_MANAGE_LICENSES</key>
 	<string>$(E_MANAGE_LICENSES)</string>
-<key>E_MEET_STAFF</key>
+	<key>E_MEET_STAFF</key>
 	<string>$(E_MEET_STAFF)</string>
-	<key>E_SELF_ASSESSMENT</key>
-	<string>$(E_SELF_ASSESSMENT)</string>
 	<key>E_PREFERENCES</key>
 	<string>$(E_PREFERENCES)</string>
+	<key>E_SELF_ASSESSMENT</key>
+	<string>$(E_SELF_ASSESSMENT)</string>
 	<key>FISH_BOX_SCALE_FACTOR</key>
 	<string>$(FISH_BOX_SCALE_FACTOR)</string>
-	<key>SPECIES_DETECTION_THRESHOLD</key>
-	<string>$(SPECIES_DETECTION_THRESHOLD)</string>
 	<key>FISH_DETECT_MIN_CONFIDENCE</key>
 	<string>$(FISH_DETECT_MIN_CONFIDENCE)</string>
 	<key>FISH_ESTIMATE_HIGH_FACTOR</key>
@@ -66,32 +68,28 @@
 	<string>$(FISH_MIN_LENGTH_INCHES)</string>
 	<key>FISH_PIXELS_PER_INCH</key>
 	<string>$(FISH_PIXELS_PER_INCH)</string>
-	<key>TACTICS_ENABLED</key>
-	<string>$(TACTICS_ENABLED)</string>
-	<key>FORECAST_LOCATION</key>
-	<string>$(FORECAST_LOCATION)</string>
-	<key>IMAGE_COMPRESSION_QUALITY</key>
-	<string>$(IMAGE_COMPRESSION_QUALITY)</string>
-	<key>FORECAST_NOTES</key>
-	<string>$(FORECAST_NOTES)</string>
 	<key>FLIGHT_DETAILS</key>
 	<string>$(FLIGHT_DETAILS)</string>
 	<key>FLIGHT_STATUS</key>
 	<string>$(FLIGHT_STATUS)</string>
+	<key>FORECAST_LOCATION</key>
+	<string>$(FORECAST_LOCATION)</string>
+	<key>FORECAST_NOTES</key>
+	<string>$(FORECAST_NOTES)</string>
 	<key>GEAR_URL</key>
 	<string>$(GEAR_URL)</string>
+	<key>IMAGE_COMPRESSION_QUALITY</key>
+	<string>$(IMAGE_COMPRESSION_QUALITY)</string>
 	<key>LODGE_RIVERS</key>
 	<string>$(LODGE_RIVERS)</string>
-	<key>DEFAULT_WATER_BODY</key>
-	<string>$(DEFAULT_WATER_BODY)</string>
 	<key>LODGE_WATER_BODIES</key>
 	<string>$(LODGE_WATER_BODIES)</string>
 	<key>LOG_LEVEL</key>
 	<string>$(LOG_LEVEL)</string>
-	<key>MBXAccessToken</key>
-	<string>$(MAPBOX_ACCESS_TOKEN)</string>
 	<key>MANAGE_TRIP_URL</key>
 	<string>$(MANAGE_TRIP_URL)</string>
+	<key>MBXAccessToken</key>
+	<string>$(MAPBOX_ACCESS_TOKEN)</string>
 	<key>MEMBER_PROFILE_FIELDS_URL</key>
 	<string>$(MEMBER_PROFILE_FIELDS_URL)</string>
 	<key>MY_PROFILE_URL</key>
@@ -104,10 +102,16 @@
 	<string>$(OPS_TICKETS_URL)</string>
 	<key>PROFICIENCY_URL</key>
 	<string>$(PROFICIENCY_URL)</string>
-	<key>DEFAULT_LEARN_HOST</key>
-	<string>$(DEFAULT_LEARN_HOST)</string>
 	<key>RIVER_CONDITIONS_URL</key>
 	<string>$(RIVER_CONDITIONS_URL)</string>
+	<key>SPECIES_DETECTION_THRESHOLD</key>
+	<string>$(SPECIES_DETECTION_THRESHOLD)</string>
+	<key>SPLASH_VIDEO_FREQUENCY</key>
+	<string>$(SPLASH_VIDEO_FREQUENCY)</string>
+	<key>SPLASH_VIDEO_MAX_DURATION</key>
+	<string>$(SPLASH_VIDEO_MAX_DURATION)</string>
+	<key>SPLASH_VIDEO_MUTED</key>
+	<string>$(SPLASH_VIDEO_MUTED)</string>
 	<key>STAFF_BIOS</key>
 	<string>$(STAFF_BIOS)</string>
 	<key>STAFF_BIO_DETAIL</key>
@@ -116,17 +120,13 @@
 	<string>$(SUPABASE_ANON_KEY)</string>
 	<key>SUPABASE_PROJECT_URL</key>
 	<string>$(SUPABASE_PROJECT_URL)</string>
+	<key>TACTICS_ENABLED</key>
+	<string>$(TACTICS_ENABLED)</string>
 	<key>TACTICS_RECOMMENDATIONS_URL</key>
 	<string>$(TACTICS_RECOMMENDATIONS_URL)</string>
 	<key>TRIP_ROSTER_URL</key>
 	<string>$(TRIP_ROSTER_URL)</string>
 	<key>UPLOAD_CATCH_URL</key>
 	<string>$(UPLOAD_CATCH_URL)</string>
-	<key>SPLASH_VIDEO_FREQUENCY</key>
-	<string>$(SPLASH_VIDEO_FREQUENCY)</string>
-	<key>SPLASH_VIDEO_MAX_DURATION</key>
-	<string>$(SPLASH_VIDEO_MAX_DURATION)</string>
-	<key>SPLASH_VIDEO_MUTED</key>
-	<string>$(SPLASH_VIDEO_MUTED)</string>
 </dict>
 </plist>

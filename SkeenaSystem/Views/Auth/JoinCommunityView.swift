@@ -3,7 +3,8 @@
 //  SkeenaSystem
 //
 //  Allows authenticated users to join an additional community
-//  by entering a 6-character alphanumeric code.
+//  by entering a 6–8 character alphanumeric code.
+//  Presented as a compact centered popup over a dimmed background.
 //
 
 import SwiftUI
@@ -18,94 +19,99 @@ struct JoinCommunityView: View {
 
     private var isCodeValid: Bool {
         code.trimmingCharacters(in: .whitespacesAndNewlines)
-            .range(of: #"^[A-Za-z0-9]{6}$"#, options: .regularExpression) != nil
+            .range(of: #"^[A-Za-z0-9]{6,8}$"#, options: .regularExpression) != nil
     }
 
     var body: some View {
-        NavigationStack {
-            ZStack {
-                Color.black.ignoresSafeArea()
+        ZStack {
+            // Dimmed backdrop — tap to dismiss
+            Color.black.opacity(0.6)
+                .ignoresSafeArea()
+                .onTapGesture { dismiss() }
 
-                VStack(spacing: 20) {
-                    Text("Enter a community code")
-                        .font(.subheadline)
-                        .foregroundColor(.gray)
-                        .multilineTextAlignment(.center)
-                        .padding(.horizontal)
+            // Compact card
+            VStack(spacing: 14) {
+                // Title + close
+                ZStack {
+                    Text("Join Community")
+                        .font(.headline)
+                        .foregroundColor(.white)
+                    HStack {
+                        Spacer()
+                        Button { dismiss() } label: {
+                            Image(systemName: "xmark.circle.fill")
+                                .font(.title3)
+                                .foregroundColor(.white.opacity(0.5))
+                        }
+                    }
+                }
 
-                    // Code input
-                    TextField("Community Code", text: $code)
+                // Code input + Join button
+                HStack(spacing: 10) {
+                    TextField("Code", text: $code)
                         .textInputAutocapitalization(.characters)
                         .autocorrectionDisabled()
                         .keyboardType(.asciiCapable)
                         .font(.subheadline)
                         .multilineTextAlignment(.center)
-                        .padding()
-                        .background(Color.white.opacity(0.08), in: RoundedRectangle(cornerRadius: 12))
+                        .padding(.vertical, 10)
+                        .padding(.horizontal, 12)
+                        .background(Color.white.opacity(0.1), in: RoundedRectangle(cornerRadius: 10))
                         .foregroundColor(.white)
-                        .padding(.horizontal)
 
-                    if !code.isEmpty {
-                        HStack(spacing: 4) {
-                            Image(systemName: isCodeValid ? "checkmark.circle.fill" : "xmark.circle.fill")
-                                .font(.caption2)
-                                .foregroundColor(isCodeValid ? .green : .red)
-                            Text(isCodeValid ? "Valid format" : "Must be 6 alphanumeric characters")
-                                .font(.caption2)
-                                .foregroundColor(isCodeValid ? .green : .red)
-                        }
-                    }
-
-                    // Error / success messages
-                    if let err = errorText {
-                        Text(err)
-                            .foregroundColor(.red)
-                            .font(.footnote)
-                            .multilineTextAlignment(.center)
-                            .padding(.horizontal)
-                    }
-
-                    if let success = successText {
-                        Text(success)
-                            .foregroundColor(.green)
-                            .font(.footnote)
-                            .multilineTextAlignment(.center)
-                            .padding(.horizontal)
-                    }
-
-                    // Join button
                     Button {
                         Task { await joinTapped() }
                     } label: {
-                        HStack {
+                        HStack(spacing: 6) {
                             if isBusy { ProgressView().tint(.white) }
-                            Text(isBusy ? "Joining..." : "Join Community")
-                                .font(.headline.bold())
+                            Text(isBusy ? "Joining…" : "Join")
+                                .font(.subheadline.bold())
                         }
-                        .frame(maxWidth: .infinity)
-                        .frame(height: 44)
+                        .padding(.vertical, 10)
+                        .padding(.horizontal, 18)
                         .background(
-                            RoundedRectangle(cornerRadius: 12)
-                                .fill(isCodeValid && !isBusy ? Color.blue : Color.blue.opacity(0.4))
+                            RoundedRectangle(cornerRadius: 10)
+                                .fill(isCodeValid && !isBusy ? Color.blue : Color.blue.opacity(0.35))
                         )
                         .foregroundColor(.white)
-                        .padding(.horizontal)
                     }
                     .disabled(!isCodeValid || isBusy)
+                }
 
-                    Spacer()
+                // Validation / feedback
+                if !code.isEmpty && !isCodeValid {
+                    HStack(spacing: 4) {
+                        Image(systemName: "xmark.circle.fill")
+                            .font(.caption2)
+                            .foregroundColor(.red)
+                        Text("Must be 6–8 alphanumeric characters")
+                            .font(.caption2)
+                            .foregroundColor(.red)
+                    }
                 }
-                .padding(.top, 20)
-            }
-            .navigationTitle("Join Community")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("Cancel") { dismiss() }
-                        .foregroundColor(.white)
+
+                if let err = errorText {
+                    Text(err)
+                        .foregroundColor(.red)
+                        .font(.caption)
+                        .multilineTextAlignment(.center)
+                }
+
+                if let success = successText {
+                    Text(success)
+                        .foregroundColor(.green)
+                        .font(.caption)
+                        .multilineTextAlignment(.center)
                 }
             }
+            .padding(20)
+            .background(
+                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                    .fill(Color(white: 0.12))
+            )
+            .padding(.horizontal, 32)
         }
+        .presentationBackground(.clear)
         .preferredColorScheme(.dark)
     }
 
@@ -117,7 +123,6 @@ struct JoinCommunityView: View {
         do {
             let result = try await CommunityService.shared.joinCommunity(code: code)
             successText = "Joined \(result.communityName ?? "community") as \(result.role ?? "member")!"
-            // Brief delay before dismissing
             try? await Task.sleep(nanoseconds: 1_500_000_000)
             dismiss()
         } catch {

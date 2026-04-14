@@ -97,6 +97,7 @@ struct CatchChatView: View {
           }
           .padding(.horizontal, 4)
           .padding(.top, 4)
+          .padding(.bottom, 8)
         }
         .modifier(ScrollIndicatorModifier())
         .onChange(of: viewModel.messages.count) { newCount in
@@ -107,6 +108,14 @@ struct CatchChatView: View {
           DispatchQueue.main.async {
             proxy.scrollTo(lastID, anchor: .bottom)
           }
+        }
+        // Re-scroll when study/sample icons expand so they aren't
+        // clipped behind the input bar.
+        .onChange(of: showStudyTypeIcons) { _ in
+          scrollToBottom(proxy: proxy)
+        }
+        .onChange(of: showSampleTypeIcons) { _ in
+          scrollToBottom(proxy: proxy)
         }
       }
 
@@ -384,6 +393,13 @@ struct CatchChatView: View {
     #if canImport(UIKit)
     UIApplication.shared.endEditing(true)
     #endif
+  }
+
+  private func scrollToBottom(proxy: ScrollViewProxy) {
+    guard let lastID = viewModel.messages.last?.id else { return }
+    DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+      withAnimation { proxy.scrollTo(lastID, anchor: .bottom) }
+    }
   }
 
   // MARK: - Message rows
