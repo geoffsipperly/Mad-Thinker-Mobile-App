@@ -99,7 +99,7 @@ final class TripSyncService {
     let parsedEnd = dto.endDate.flatMap { Self.parseDate($0) }
     local.startDate = parsedStart
     local.endDate = parsedEnd
-    AppLogging.log("[TripSyncService] upsert trip '\(dto.tripName ?? "-")' — raw startDate=\(dto.startDate ?? "nil") endDate=\(dto.endDate ?? "nil") → parsed start=\(parsedStart.map { "\($0)" } ?? "nil") end=\(parsedEnd.map { "\($0)" } ?? "nil") existing=\(existing != nil)", level: .info, category: .trip)
+    AppLogging.log({ "[TripSyncService] upsert trip '\(dto.tripName ?? "-")' — raw startDate=\(dto.startDate ?? "nil") endDate=\(dto.endDate ?? "nil") → parsed start=\(parsedStart.map { "\($0)" } ?? "nil") end=\(parsedEnd.map { "\($0)" } ?? "nil") existing=\(existing != nil)" }, level: .info, category: .trip)
     if let c = dto.createdAt, let d = Self.parseDate(c) { local.createdAt = d }
 
     // Lodge by name – also ensure Community link

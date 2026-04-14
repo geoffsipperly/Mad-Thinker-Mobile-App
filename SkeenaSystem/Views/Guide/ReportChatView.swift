@@ -630,7 +630,7 @@ struct ReportChatView: View {
     let allRequest: NSFetchRequest<Trip> = Trip.fetchRequest()
     if let allTrips = try? context.fetch(allRequest) {
       for t in allTrips {
-        AppLogging.log("[loadTrips] CoreData trip: name='\(t.name ?? "-")' startDate=\(t.startDate.map { "\($0)" } ?? "nil") endDate=\(t.endDate.map { "\($0)" } ?? "nil") tripId=\(t.tripId?.uuidString ?? "nil") createdAt=\(t.createdAt.map { "\($0)" } ?? "nil")", level: .info, category: .trip)
+        AppLogging.log({ "[loadTrips] CoreData trip: name='\(t.name ?? "-")' startDate=\(t.startDate.map { "\($0)" } ?? "nil") endDate=\(t.endDate.map { "\($0)" } ?? "nil") tripId=\(t.tripId?.uuidString ?? "nil") createdAt=\(t.createdAt.map { "\($0)" } ?? "nil")" }, level: .info, category: .trip)
       }
       AppLogging.log("[loadTrips] Total trips in Core Data: \(allTrips.count)", level: .info, category: .trip)
     }

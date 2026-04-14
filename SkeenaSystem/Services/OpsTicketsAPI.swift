@@ -232,7 +232,7 @@ struct OpsTicketsAPI {
         struct OwnersResponse: Decodable { let owners: [TicketOwner]? }
         if let decoded = try? JSONDecoder().decode(OwnersResponse.self, from: data),
            let owners = decoded.owners {
-            AppLogging.log("[OpsTicketsAPI] get_owners decoded \(owners.count) owner(s): \(owners.map { "\($0.name) (\($0.userId))" }.joined(separator: ", "))", level: .info, category: .auth)
+            AppLogging.log({ "[OpsTicketsAPI] get_owners decoded \(owners.count) owner(s): \(owners.map { "\($0.name) (\($0.userId))" }.joined(separator: ", "))" }, level: .info, category: .auth)
             return owners
         }
         // Fallback: raw array

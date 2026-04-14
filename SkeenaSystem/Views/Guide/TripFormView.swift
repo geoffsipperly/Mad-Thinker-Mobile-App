@@ -122,7 +122,7 @@ enum AnglerAPI {
 
     let (data, resp) = try await URLSession.shared.data(for: req)
     guard let http = resp as? HTTPURLResponse else { throw AnglerLookupError.unknown }
-    AppLogging.log("[AnglerLookup] HTTP \(http.statusCode), body: \(String(data: data, encoding: .utf8)?.prefix(300) ?? "<nil>")", level: .debug, category: .trip)
+    AppLogging.log({ "[AnglerLookup] HTTP \(http.statusCode), body: \(String(data: data, encoding: .utf8)?.prefix(300) ?? "<nil>")" }, level: .debug, category: .trip)
 
     switch http.statusCode {
     case 200:

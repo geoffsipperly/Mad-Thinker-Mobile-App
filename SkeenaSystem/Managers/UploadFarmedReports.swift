@@ -214,7 +214,7 @@ nonisolated final class UploadFarmedReports {
 
     #if DEBUG
     if let jsonString = String(data: bodyData, encoding: .utf8) {
-      AppLogging.log("[UploadFarmedReports] Payload (\(bodyData.count) bytes):\n\(jsonString.prefix(2000))", level: .debug, category: .network)
+      AppLogging.log({ "[UploadFarmedReports] Payload (\(bodyData.count) bytes):\n\(jsonString.prefix(2000))" }, level: .debug, category: .network)
     }
     #endif
 
@@ -240,7 +240,7 @@ nonisolated final class UploadFarmedReports {
       let body = data.flatMap { String(data: $0, encoding: .utf8) } ?? ""
 
       #if DEBUG
-      AppLogging.log("[UploadFarmedReports] Response \(statusCode): \(body.prefix(1000))", level: .debug, category: .network)
+      AppLogging.log({ "[UploadFarmedReports] Response \(statusCode): \(body.prefix(1000))" }, level: .debug, category: .network)
       #endif
 
       guard (200...299).contains(statusCode) else {

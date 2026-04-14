@@ -357,7 +357,7 @@ struct FishingForecastRequestView: View {
         }
 
         let rawResponse = String(data: data, encoding: .utf8) ?? "<non-utf8>"
-        AppLogging.log("[Forecast] batch response HTTP \(http.statusCode): \(rawResponse.prefix(500))", level: .debug, category: .trip)
+        AppLogging.log({ "[Forecast] batch response HTTP \(http.statusCode): \(rawResponse.prefix(500))" }, level: .debug, category: .trip)
 
         let dec = JSONDecoder()
         dec.keyDecodingStrategy = .convertFromSnakeCase
@@ -370,7 +370,7 @@ struct FishingForecastRequestView: View {
           // Water bodies: "Puget Sound" → "Puget Sound" (exact match)
           let displayName = allSources.first(where: { AppEnvironment.stripRiverSuffix($0) == condition.name }) ?? condition.name
           dict[displayName] = condition
-          AppLogging.log("[Forecast] batch — \(condition.name): type=\(condition.waterType ?? "?"), level=\(condition.waterLevelFt.map { String(format: "%.2f", $0) } ?? "nil")ft, temp=\(condition.waterTempC.map { String(format: "%.1f", $0) } ?? "nil")°C", level: .debug, category: .trip)
+          AppLogging.log({ "[Forecast] batch — \(condition.name): type=\(condition.waterType ?? "?"), level=\(condition.waterLevelFt.map { String(format: "%.2f", $0) } ?? "nil")ft, temp=\(condition.waterTempC.map { String(format: "%.1f", $0) } ?? "nil")°C" }, level: .debug, category: .trip)
         }
         self.batchConditions = dict
         AppLogging.log("[Forecast] batch loaded \(dict.count) conditions for date: \(batch.date)", level: .debug, category: .trip)

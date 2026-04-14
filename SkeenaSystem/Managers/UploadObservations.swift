@@ -261,7 +261,7 @@ nonisolated final class UploadObservations {
       let statusCode = (response as? HTTPURLResponse)?.statusCode ?? 0
       let body = data.flatMap { String(data: $0, encoding: .utf8) } ?? ""
 
-      AppLogging.log("[UploadObservations] Response \(statusCode): \(body.prefix(2000))", level: .info, category: .network)
+      AppLogging.log({ "[UploadObservations] Response \(statusCode): \(body.prefix(2000))" }, level: .info, category: .network)
 
       guard statusCode == 200 else {
         AppLogging.log("[UploadObservations] FAILED \(statusCode): \(body)", level: .error, category: .network)

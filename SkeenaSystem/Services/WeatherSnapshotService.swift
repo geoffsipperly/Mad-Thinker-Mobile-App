@@ -109,7 +109,7 @@ enum WeatherSnapshotService {
     AppLogging.log("[Weather] attempt \(attempt) — HTTP \(code), \(data.count) bytes", level: .debug, category: .weather)
     guard (200..<300).contains(code) else {
       let bodyStr = String(data: data, encoding: .utf8) ?? "<binary>"
-      AppLogging.log("[Weather] attempt \(attempt) — HTTP \(code): \(bodyStr.prefix(500))", level: .error, category: .weather)
+      AppLogging.log({ "[Weather] attempt \(attempt) — HTTP \(code): \(bodyStr.prefix(500))" }, level: .error, category: .weather)
       throw URLError(.badServerResponse)
     }
     let decoded = try JSONDecoder().decode(WeatherSnapshotResponse.self, from: data)
