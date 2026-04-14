@@ -34,7 +34,6 @@ final class FeatureFlagTests: XCTestCase {
       "E_MANAGE_LICENSES",
       "E_SELF_ASSESSMENT",
       "E_CATCH_CAROUSEL",
-      "E_THE_BUZZ",
       "E_CATCH_MAP",
     ]
 
@@ -56,7 +55,6 @@ final class FeatureFlagTests: XCTestCase {
       "E_MANAGE_LICENSES",
       "E_SELF_ASSESSMENT",
       "E_CATCH_CAROUSEL",
-      "E_THE_BUZZ",
       "E_CATCH_MAP",
     ]
 

@@ -259,12 +259,15 @@ final class AnglerLandingViewTests: XCTestCase {
   // MARK: - Routing Logic
 
   /// Replicates the app's routing logic: user type determines which landing view to show.
-  private func landingViewName(for userType: AuthService.UserType?) -> String {
+  /// Note: ConservationLandingView was deprecated — anglers always route to
+  /// AnglerLandingView regardless of community type.
+  private func landingViewName(for userType: AuthService.UserType?, isConservation: Bool = false) -> String {
     guard let t = userType else { return "LoginView" }
     switch t {
-    case .guide: return "LandingView"
-    case .angler: return "AnglerLandingView"
-    case .public: return "PublicLandingView"
+    case .guide:      return "GuideLandingView"
+    case .angler:     return "AnglerLandingView"
+    case .public:     return "PublicLandingView"
+    case .researcher: return isConservation ? "ResearcherLandingView" : "PublicLandingView"
     }
   }
 
@@ -274,7 +277,7 @@ final class AnglerLandingViewTests: XCTestCase {
   }
 
   func testRouting_guideType_routesToLandingView() {
-    XCTAssertEqual(landingViewName(for: .guide), "LandingView",
+    XCTAssertEqual(landingViewName(for: .guide), "GuideLandingView",
                    "Guide user type should route to LandingView")
   }
 

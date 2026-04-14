@@ -17,23 +17,33 @@ struct TripDetailView: View {
   let trip: TripAPI.TripSummary
 
   @Environment(\.dismiss) private var dismiss
+  @ObservedObject private var communityService = CommunityService.shared
+
+  private var E_MANAGE_LICENSES: Bool { communityService.activeCommunityConfig.flag("E_MANAGE_LICENSES") }
 
   // Freeze "now" while screen is visible so status doesn't flicker
   @State private var nowSnapshot: Date = .init()
 
   // MARK: - Status
 
+  /// Parse an ISO8601 or date-only string into a Date.
+  private func parseDate(_ s: String?) -> Date? {
+    guard let s = s else { return nil }
+    return DateFormatting.parseISO(s) ?? DateFormatting.ymd.date(from: s)
+  }
+
   private func computeStatus(startStr: String?, endStr: String?, now: Date) -> TripStatus {
-    let iso = ISO8601DateFormatter()
-    iso.formatOptions = [.withInternetDateTime]
-    guard let sStr = startStr, let s = iso.date(from: sStr) else { return .notStarted }
-    let startOfToday = Calendar.current.startOfDay(for: now)
-    // Compare start date at day granularity so a trip starting "today" is always in-progress
-    let startDay = Calendar.current.startOfDay(for: s)
+    let cal = Calendar.current
+    guard let s = parseDate(startStr) else { return .notStarted }
+    let startOfToday = cal.startOfDay(for: now)
+    let startDay = cal.startOfDay(for: s)
     if startDay > startOfToday { return .notStarted }
-    let end = endStr.flatMap { iso.date(from: $0) }
-    let inProgress = (startDay <= startOfToday) && (end == nil || (end ?? now) >= startOfToday)
-    return inProgress ? .inProgress : .completed
+    if let e = parseDate(endStr) {
+      let endDay = cal.startOfDay(for: e)
+      return endDay >= startOfToday ? .inProgress : .completed
+    }
+    // No end date — 1-day trip, in progress if today is the start day
+    return startDay == startOfToday ? .inProgress : .completed
   }
 
   private var status: TripStatus {
@@ -69,9 +79,9 @@ struct TripDetailView: View {
               .foregroundColor(.secondary)
           }
           HStack {
-            Text("Dates")
+            Text(trip.endDate != nil && dayString(trip.endDate) != dayString(trip.startDate) ? "Dates" : "Date")
             Spacer()
-            Text("\(dayString(trip.startDate)) – \(dayString(trip.endDate))")
+            Text(dateRangeString(start: trip.startDate, end: trip.endDate))
               .foregroundColor(.secondary)
           }
           HStack {
@@ -92,16 +102,12 @@ struct TripDetailView: View {
               let displayName = [angler.firstName ?? "", angler.lastName ?? ""]
                 .filter { !$0.isEmpty }
                 .joined(separator: " ")
-              let community = CommunityService.shared.activeCommunityName
-              let lodge = CommunityService.shared.activeCommunityName
 
               NavigationLink {
                 AnglerDetailsSheetView(
-                  anglerID: angler.id,
+                  memberID: angler.id,
                   displayName: displayName.isEmpty ? "(Unnamed)" : displayName,
-                  memberNumber: angler.memberId,
-                  community: community,
-                  lodge: lodge
+                  memberNumber: angler.memberId
                 )
               } label: {
                 anglerRow(angler: angler)
@@ -122,10 +128,7 @@ struct TripDetailView: View {
           Button {
             dismiss()
           } label: {
-            HStack {
-              Image(systemName: "chevron.backward")
-              Text("Back")
-            }
+            Image(systemName: "chevron.backward")
           }
         }
       }
@@ -139,10 +142,17 @@ struct TripDetailView: View {
 
   private func dayString(_ isoStr: String?) -> String {
     guard let s = isoStr else { return "-" }
-    let iso = ISO8601DateFormatter()
-    iso.formatOptions = [.withInternetDateTime]
-    guard let d = iso.date(from: s) else { return "-" }
-    return d.formatted(date: .abbreviated, time: .omitted)
+    if let d = DateFormatting.parseISO(s) ?? DateFormatting.ymd.date(from: s) {
+      return d.formatted(date: .abbreviated, time: .omitted)
+    }
+    return "-"
+  }
+
+  private func dateRangeString(start: String?, end: String?) -> String {
+    let s = dayString(start)
+    let e = dayString(end)
+    if e == "-" || e == s { return s }
+    return "\(s) – \(e)"
   }
 
   @ViewBuilder
@@ -162,50 +172,48 @@ struct TripDetailView: View {
           .foregroundColor(.secondary)
       }
 
-      let licenses = angler.licenses ?? []
-      if licenses.isEmpty {
-        Text("No Classified Waters licences.")
-          .font(.caption)
-          .foregroundColor(.secondary)
-      } else {
-        VStack(alignment: .leading, spacing: 6) {
-          Text("Classified Waters")
-            .font(.caption).fontWeight(.semibold)
+      if E_MANAGE_LICENSES {
+        let licenses = angler.licenses ?? []
+        if licenses.isEmpty {
+          Text("No Classified Waters licences.")
+            .font(.caption)
             .foregroundColor(.secondary)
+        } else {
+          VStack(alignment: .leading, spacing: 6) {
+            Text("Classified Waters")
+              .font(.caption).fontWeight(.semibold)
+              .foregroundColor(.secondary)
 
-          ForEach(licenses, id: \.id) { lic in
-            VStack(alignment: .leading, spacing: 2) {
-              Text("\(lic.riverName ?? "—") • \(lic.licenseNumber ?? "—")")
-                .font(.callout)
-                .foregroundColor(.white)
-              HStack(spacing: 8) {
-                if let from = lic.startDate {
-                  Text("From: \(formatDateString(from))")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-                }
-                if let to = lic.endDate {
-                  Text("To: \(formatDateString(to))")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
+            ForEach(licenses, id: \.id) { lic in
+              VStack(alignment: .leading, spacing: 2) {
+                Text("\(lic.riverName ?? "—") • \(lic.licenseNumber ?? "—")")
+                  .font(.callout)
+                  .foregroundColor(.white)
+                HStack(spacing: 8) {
+                  if let from = lic.startDate {
+                    Text("From: \(formatDateString(from))")
+                      .font(.caption)
+                      .foregroundColor(.secondary)
+                  }
+                  if let to = lic.endDate {
+                    Text("To: \(formatDateString(to))")
+                      .font(.caption)
+                      .foregroundColor(.secondary)
+                  }
                 }
               }
-            }
-            .padding(.vertical, 2)
+              .padding(.vertical, 2)
           }
         }
         .padding(.top, 2)
+        }
       }
     }
     .padding(.vertical, 6)
   }
 
   private func formatDateString(_ dateStr: String) -> String {
-    let ymd = DateFormatter()
-    ymd.calendar = Calendar(identifier: .gregorian)
-    ymd.dateFormat = "yyyy-MM-dd"
-    ymd.timeZone = TimeZone(secondsFromGMT: 0)
-    guard let d = ymd.date(from: dateStr) else { return dateStr }
+    guard let d = DateFormatting.ymd.date(from: dateStr) else { return dateStr }
     return d.formatted(date: .abbreviated, time: .omitted)
   }
 }

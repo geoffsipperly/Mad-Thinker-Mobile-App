@@ -230,14 +230,6 @@ struct ObservationsListView: View {
     .toolbar {
       ToolbarItem(placement: .navigationBarTrailing) {
         Button {
-          showRecordObservation = true
-        } label: {
-          Image(systemName: "plus")
-            .font(.title3)
-        }
-      }
-      ToolbarItem(placement: .navigationBarTrailing) {
-        Button {
           startUpload()
         } label: {
           Image(systemName: "arrow.up.circle")
@@ -279,8 +271,14 @@ struct ObservationsListView: View {
     Task {
       await AuthStore.shared.refreshFromSupabase()
 
+      // v5: read the member_number on MainActor and pass it through. The
+      // uploader is intentionally `nonisolated` and cannot touch
+      // AuthService.shared directly.
+      let memberId = AuthService.shared.currentMemberId ?? ""
+
       uploader.upload(
         observations: pendingObservations,
+        memberId: memberId,
         progress: { p in
           DispatchQueue.main.async { self.uploadProgress = p }
         },

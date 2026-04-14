@@ -1,176 +1,75 @@
 // Bend Fly Shop
 // AnglerAboutYou.swift
+//
+// Self-assessment view driven by the member-profile-fields API (category=proficiency).
+// Field definitions (label, question, slider labels) come from the server.
+// Uses shared MemberProfileFieldsAPI for URL composition.
 
 import SwiftUI
 import Foundation
 
-private struct AnglerContextResponse: Decodable {
-  let contexts: [AnglerContext]
-}
+// MARK: - Models
 
-private struct AnglerContext: Decodable {
+struct ProficiencyField: Decodable, Identifiable {
   let id: String
-  let community: String?
-  let learning_style_question: String?
-  let learning_style_context: String?
-  let learning_style_low: String?
-  let learning_style_medium: String?
-  let learning_style_high: String?
-  let casting_question: String?
-  let casting_context: String?
-  let casting_low: String?
-  let casting_medium: String?
-  let casting_high: String?
-  // Backward compatibility (mobility/gear) and new categories
-  let mobility_question: String?
-  let mobility_context: String?
-  let mobility_low: String?
-  let mobility_medium: String?
-  let mobility_high: String?
-  let wading_question: String?
-  let wading_context: String?
-  let wading_low: String?
-  let wading_medium: String?
-  let wading_high: String?
-  let hiking_question: String?
-  let hiking_context: String?
-  let hiking_low: String?
-  let hiking_medium: String?
-  let hiking_high: String?
-  let gear_question: String?
-  let gear_context: String?
-  let gear_low: String?
-  let gear_medium: String?
-  let gear_high: String?
-  let species: NamedEntity?
-  let tactics: NamedEntity?
-  let lodges: NamedEntity?
-
-  struct NamedEntity: Decodable { let id: String; let name: String }
+  let field_name: String
+  let field_label: String
+  let field_type: String
+  let question_text: String?
+  let context_text: String?
+  let options: ProficiencyOptions?
+  let is_required: Bool
+  let sort_order: Int
+  let value: String?
 }
 
-// MARK: - URL composition (mirrors other files)
+struct ProficiencyOptions: Decodable {
+  let min: Int?
+  let max: Int?
+  // Server may use either naming convention
+  let low: String?
+  let medium: String?
+  let high: String?
+  let low_label: String?
+  let mid_label: String?
+  let high_label: String?
 
-private enum AnglerAboutYouAPI {
-  private static let rawBaseURLString: String = {
-    (Bundle.main.object(forInfoDictionaryKey: "API_BASE_URL") as? String)?
-      .trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
-  }()
-
-  private static let baseURLString: String = {
-    var s = rawBaseURLString
-    if !s.isEmpty, URL(string: s)?.scheme == nil {
-      s = "https://" + s
-    }
-    return s
-  }()
-
-  private static let proficiencyPath: String = {
-    (Bundle.main.object(forInfoDictionaryKey: "PROFICIENCY_URL") as? String)?
-      .trimmingCharacters(in: .whitespacesAndNewlines) ?? "/functions/v1/proficiency"
-  }()
-
-  private static let anglerContextPath: String = {
-    (Bundle.main.object(forInfoDictionaryKey: "ANGLER_CONTEXT_URL") as? String)?
-      .trimmingCharacters(in: .whitespacesAndNewlines) ?? "/functions/v1/angler-context"
-  }()
-
-  private static func logConfig() {
-    AppLogging.log("AnglerAboutYou config — API_BASE_URL (raw): '\(rawBaseURLString)'", level: .debug, category: .trip)
-    AppLogging.log("AnglerAboutYou config — API_BASE_URL (normalized): '\(baseURLString)'", level: .debug, category: .trip)
-    AppLogging.log("AnglerAboutYou config — PROFICIENCY_URL: '\(proficiencyPath)'", level: .debug, category: .trip)
-    AppLogging.log("AnglerAboutYou config — API_BASE_URL (raw): '\(rawBaseURLString)'", level: .debug, category: .angler)
-    AppLogging.log("AnglerAboutYou config — API_BASE_URL (normalized): '\(baseURLString)'", level: .debug, category: .angler)
-    AppLogging.log("AnglerAboutYou config — PROFICIENCY_URL: '\(proficiencyPath)'", level: .debug, category: .angler)
-    AppLogging.log("AnglerAboutYou config — ANGLER_CONTEXT_URL: '\(anglerContextPath)'", level: .debug, category: .angler)
-  }
-
-  private static func makeURL(path: String, queryItems: [URLQueryItem] = []) throws -> URL {
-    AppLogging.log("AnglerAboutYou makeURL start — base(raw): '\(rawBaseURLString)', base(normalized): '\(baseURLString)', path: '\(path)'", level: .debug, category: .angler)
-    guard let base = URL(string: baseURLString), let scheme = base.scheme, let host = base.host else {
-      AppLogging.log("AnglerAboutYou invalid API_BASE_URL — raw: '\(rawBaseURLString)', normalized: '\(baseURLString)'", level: .debug, category: .trip)
-      AppLogging.log("AnglerAboutYou makeURL invalid base — raw: '\(rawBaseURLString)', normalized: '\(baseURLString)'", level: .debug, category: .angler)
-      throw NSError(domain: "AnglerAboutYou", code: -1000, userInfo: [
-        NSLocalizedDescriptionKey: "Invalid API_BASE_URL (raw: '\(rawBaseURLString)', normalized: '\(baseURLString)')"
-      ])
-    }
-
-    var comps = URLComponents()
-    comps.scheme = scheme
-    comps.host = host
-    comps.port = base.port
-
-    let basePath = base.path
-    let normalizedBasePath = basePath == "/" ? "" : (basePath.hasSuffix("/") ? String(basePath.dropLast()) : basePath)
-    let normalizedPath = path.hasPrefix("/") ? path : "/" + path
-    AppLogging.log("AnglerAboutYou makeURL components — scheme: \(scheme), host: \(host), port: \(String(describing: base.port)), basePath: '\(base.path)', normalizedBasePath: '\(normalizedBasePath)', normalizedPath: '\(normalizedPath)'", level: .debug, category: .angler)
-    comps.path = normalizedBasePath + normalizedPath
-
-    let existing = base.query != nil ? (URLComponents(string: base.absoluteString)?.queryItems ?? []) : []
-    let merged = existing + queryItems
-    comps.queryItems = merged.isEmpty ? nil : merged
-    AppLogging.log({
-      let qi = comps.queryItems?.map { "\($0.name)=\($0.value ?? "")" }.joined(separator: "&") ?? "<none>"
-      return "AnglerAboutYou makeURL composed — path: '\(comps.path)', query: \(qi)"
-    }, level: .debug, category: .angler)
-
-    guard let url = comps.url else {
-      AppLogging.log("AnglerAboutYou makeURL failed to build URL for path: \(path)", level: .debug, category: .angler)
-      throw NSError(domain: "AnglerAboutYou", code: -1001, userInfo: [
-        NSLocalizedDescriptionKey: "Failed to build URL for path: \(path)"
-      ])
-    }
-    AppLogging.log("AnglerAboutYou makeURL success — URL: \(url.absoluteString)", level: .debug, category: .angler)
-    return url
-  }
-
-  static func proficiencyURL() throws -> URL {
-    logConfig()
-    let url = try makeURL(path: proficiencyPath)
-    AppLogging.log("AnglerAboutYou proficiencyURL => \(url.absoluteString)", level: .debug, category: .angler)
-    return url
-  }
-    static func anglerContextURL() throws -> URL {
-        logConfig()
-        return try makeURL(path: anglerContextPath)
-      }
+  var lowText: String? { low_label ?? low }
+  var midText: String? { mid_label ?? medium }
+  var highText: String? { high_label ?? high }
 }
+
+// MARK: - View
 
 struct AnglerAboutYou: View {
   @Environment(\.dismiss) private var dismiss
   @StateObject private var auth = AuthService.shared
-  @State private var showUnsavedConfirm = false
+  @ObservedObject private var communityService = CommunityService.shared
 
-  @State private var isSaving = false
-  @State private var infoText: String?
-  @State private var showSavedAlert = false
+  @State private var fields: [ProficiencyField] = []
+  @State private var values: [String: Double] = [:]          // field_id -> slider value
+  @State private var originalValues: [String: Double] = [:]
+
   @State private var isLoading = false
+  @State private var isSaving = false
   @State private var errorText: String?
+  @State private var infoText: String?
+  @State private var showUnsavedConfirm = false
+  @State private var showSavedAlert = false
 
-  // API-provided context (we'll use the first available context for display)
-  @State private var context: AnglerContext?
+  private var communityId: String? { communityService.activeCommunityId }
 
-  // Local cache key helper (uses IDs now)
-  private func cacheKey(anglerId: String, species: String, tactic: String) -> String {
-    "proficiency_\(anglerId)_\(species)_\(tactic)"
+  private var hasUnsavedChanges: Bool {
+    for (key, val) in values {
+      if abs(val - (originalValues[key] ?? 50)) > 0.0001 { return true }
+    }
+    return false
   }
 
-  // Slider values 1..100 for each category
-  @State private var learningStyleValue: Double = 50
-  @State private var castingValue: Double = 50
-  @State private var wadingValue: Double = 50
-  @State private var hikingValue: Double = 50
-
-  // Originals for dirty tracking
-  @State private var originalLearningStyleValue: Double = 50
-  @State private var originalCastingValue: Double = 50
-  @State private var originalWadingValue: Double = 50
-  @State private var originalHikingValue: Double = 50
-  private var isDirty: Bool {
-    abs(learningStyleValue - originalLearningStyleValue) > 0.0001 ||
-    abs(castingValue - originalCastingValue) > 0.0001 ||
-    abs(wadingValue - originalWadingValue) > 0.0001 ||
-    abs(hikingValue - originalHikingValue) > 0.0001
+  private var cacheKey: String {
+    let cid = communityId ?? "unknown"
+    let mid = auth.currentMemberId ?? "unknown"
+    return "proficiency_fields_\(mid)_\(cid)"
   }
 
   var body: some View {
@@ -181,59 +80,32 @@ struct AnglerAboutYou: View {
           if let err = errorText { Text(err).foregroundColor(.red).font(.footnote) }
           if let info = infoText { Text(info).foregroundColor(.gray).font(.footnote) }
 
-          if isLoading {
+          if isLoading && fields.isEmpty {
             ProgressView().tint(.blue)
-          } else if let ctx = context {
-            Text("Instructions: Please answer a few quick questions to personalize your experience. Drag the slider toward the option that fits best. If you’re between two options, place it somewhere in the middle")
+          } else if fields.isEmpty {
+            Text("No proficiency fields configured for this community.")
+              .foregroundColor(.gray)
+          } else {
+            Text("Instructions: Please answer a few quick questions to personalize your experience. Drag the slider toward the option that fits best. If you're between two options, place it somewhere in the middle")
               .foregroundColor(.white)
               .font(.subheadline)
 
-            // Learning Style
-            CategoryCard(
-              title: "Learning Style",
-              contextText: ctx.learning_style_context,
-              question: ctx.learning_style_question,
-              low: ctx.learning_style_low,
-              medium: ctx.learning_style_medium,
-              high: ctx.learning_style_high,
-              slider: Binding(get: { learningStyleValue }, set: { learningStyleValue = $0 })
-            )
-
-            // Casting
-            CategoryCard(
-              title: "Casting",
-              contextText: ctx.casting_context,
-              question: ctx.casting_question,
-              low: ctx.casting_low,
-              medium: ctx.casting_medium,
-              high: ctx.casting_high,
-              slider: Binding(get: { castingValue }, set: { castingValue = $0 })
-            )
-
-            // Wading
-            CategoryCard(
-              title: "Wading",
-              contextText: ctx.wading_context ?? ctx.mobility_context,
-              question: ctx.wading_question ?? ctx.mobility_question,
-              low: ctx.wading_low ?? ctx.mobility_low,
-              medium: ctx.wading_medium ?? ctx.mobility_medium,
-              high: ctx.wading_high ?? ctx.mobility_high,
-              slider: Binding(get: { wadingValue }, set: { wadingValue = $0 })
-            )
-
-            // Hiking
-            CategoryCard(
-              title: "Hiking",
-              contextText: ctx.hiking_context ?? ctx.gear_context,
-              question: ctx.hiking_question ?? ctx.gear_question,
-              low: ctx.hiking_low ?? ctx.gear_low,
-              medium: ctx.hiking_medium ?? ctx.gear_medium,
-              high: ctx.hiking_high ?? ctx.gear_high,
-              slider: Binding(get: { hikingValue }, set: { hikingValue = $0 })
-            )
-          } else {
-            Text("No context available.")
-              .foregroundColor(.gray)
+            ForEach(fields) { field in
+              CategoryCard(
+                title: field.field_label,
+                contextText: field.context_text,
+                question: field.question_text,
+                low: field.options?.lowText,
+                medium: field.options?.midText,
+                high: field.options?.highText,
+                minVal: Double(field.options?.min ?? 1),
+                maxVal: Double(field.options?.max ?? 100),
+                slider: Binding(
+                  get: { values[field.id] ?? 50 },
+                  set: { values[field.id] = $0 }
+                )
+              )
+            }
           }
 
           Spacer(minLength: 12)
@@ -242,14 +114,14 @@ struct AnglerAboutYou: View {
         .padding(.top)
       }
     }
-    .task { await loadContext() }
+    .task { await loadProficiency() }
     .navigationTitle("Self-assessment")
     .navigationBarTitleDisplayMode(.inline)
     .navigationBarBackButtonHidden(true)
     .toolbar {
       ToolbarItem(placement: .navigationBarLeading) {
         Button(action: {
-          if isDirty { showUnsavedConfirm = true } else { dismiss() }
+          if hasUnsavedChanges { showUnsavedConfirm = true } else { dismiss() }
         }) {
           Image(systemName: "chevron.left")
         }
@@ -257,13 +129,10 @@ struct AnglerAboutYou: View {
       ToolbarItem(placement: .navigationBarTrailing) {
         Button(action: { Task {
           isSaving = true
-          let ok = await saveAboutYou()
+          let ok = await saveProficiency()
           isSaving = false
           if ok {
-            originalLearningStyleValue = learningStyleValue
-            originalCastingValue = castingValue
-            originalWadingValue = wadingValue
-            originalHikingValue = hikingValue
+            originalValues = values
             dismiss()
           }
         } }) {
@@ -274,12 +143,12 @@ struct AnglerAboutYou: View {
               .foregroundColor(.white)
               .padding(.horizontal, 12)
               .padding(.vertical, 6)
-              .background((isDirty && !isSaving && auth.currentMemberId != nil) ? Color.blue : Color.gray)
+              .background((hasUnsavedChanges && !isSaving) ? Color.blue : Color.gray)
               .clipShape(Capsule())
           }
         }
         .buttonStyle(.plain)
-        .disabled(auth.currentMemberId == nil || !isDirty || isSaving)
+        .disabled(!hasUnsavedChanges || isSaving)
       }
     }
     .alert("Thank you", isPresented: $showSavedAlert) {
@@ -293,12 +162,14 @@ struct AnglerAboutYou: View {
       isPresented: $showUnsavedConfirm,
       titleVisibility: .visible
     ) {
-      Button("Save Changes") { Task { _ = await saveAboutYou(); dismiss() } }
+      Button("Save Changes") { Task { _ = await saveProficiency(); dismiss() } }
       Button("Discard Changes", role: .destructive) { dismiss() }
       Button("Cancel", role: .cancel) {}
     }
     .preferredColorScheme(.dark)
   }
+
+  // MARK: - CategoryCard (slider UI)
 
   private struct CategoryCard: View {
     let title: String
@@ -307,7 +178,9 @@ struct AnglerAboutYou: View {
     let low: String?
     let medium: String?
     let high: String?
-    @Binding var slider: Double // 1..100
+    var minVal: Double = 1
+    var maxVal: Double = 100
+    @Binding var slider: Double
 
     var body: some View {
       VStack(alignment: .leading, spacing: 12) {
@@ -328,7 +201,8 @@ struct AnglerAboutYou: View {
             .foregroundColor(.white)
         }
 
-        Slider(value: $slider, in: 1...100, step: 1)
+        Slider(value: $slider, in: minVal...maxVal, step: 1)
+          .gesture(DragGesture(minimumDistance: 0))  // Prioritize slider over ScrollView
 
         HStack(alignment: .top) {
           VStack(alignment: .leading) {
@@ -361,123 +235,36 @@ struct AnglerAboutYou: View {
     }
   }
 
-  // Save results to server
-  private func saveAboutYou() async -> Bool {
-    guard let anglerId = auth.currentMemberId, !anglerId.isEmpty else { return false }
-    let tokenOpt = await auth.currentAccessToken()
-    guard let token = tokenOpt, !token.isEmpty else { return false }
+  // MARK: - Networking
 
-    AppLogging.log("AnglerAboutYou saveAboutYou — token present=\(!token.isEmpty), anglerId=\(anglerId)", level: .debug, category: .angler)
-
-    let speciesId = context?.species?.id ?? ""
-    let tacticId = context?.tactics?.id ?? ""
-    let lodgeId = context?.lodges?.id ?? ""
-
-    do {
-      struct ProficiencyBody: Encodable {
-        let member_id: String
-        let species_id: String
-        let tactic_id: String
-        let lodge_id: String
-        let casting: Int
-        let wading: Int
-        let hiking: Int
-        let learning_style: Int
-      }
-
-      let postURL = try AnglerAboutYouAPI.proficiencyURL()
-      var postReq = URLRequest(url: postURL)
-      postReq.httpMethod = "POST"
-      postReq.setValue("application/json", forHTTPHeaderField: "Content-Type")
-      postReq.setValue("application/json", forHTTPHeaderField: "Accept")
-      postReq.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
-      postReq.setValue(auth.publicAnonKey, forHTTPHeaderField: "apikey")
-
-      AppLogging.log("AnglerAboutYou POST — URL: \(postURL.absoluteString)", level: .debug, category: .angler)
-      AppLogging.log("AnglerAboutYou POST — Method: \(postReq.httpMethod ?? "<nil>")", level: .debug, category: .angler)
-      AppLogging.log("AnglerAboutYou POST — Headers: Authorization=Bearer <redacted>, apikey prefix=\(auth.publicAnonKey.prefix(8))…", level: .debug, category: .angler)
-
-      let body = ProficiencyBody(
-        member_id: anglerId,
-        species_id: speciesId,
-        tactic_id: tacticId,
-        lodge_id: lodgeId,
-        casting: Int(castingValue.rounded()),
-        wading: Int(wadingValue.rounded()),
-        hiking: Int(hikingValue.rounded()),
-        learning_style: Int(learningStyleValue.rounded())
-      )
-      postReq.httpBody = try JSONEncoder().encode(body)
-
-      if let httpBody = postReq.httpBody,
-         let obj = try? JSONSerialization.jsonObject(with: httpBody),
-         let pretty = try? JSONSerialization.data(withJSONObject: obj, options: [.prettyPrinted, .sortedKeys]),
-         let prettyStr = String(data: pretty, encoding: .utf8) {
-        AppLogging.log("AnglerAboutYou POST — Body =>\n\(prettyStr)", level: .debug, category: .angler)
-      }
-
-      let (data, response) = try await URLSession.shared.data(for: postReq)
-
-      let status = (response as? HTTPURLResponse)?.statusCode ?? -1
-      AppLogging.log("AnglerAboutYou POST — Status: \(status)", level: .debug, category: .angler)
-      if let obj = try? JSONSerialization.jsonObject(with: data),
-         let pretty = try? JSONSerialization.data(withJSONObject: obj, options: [.prettyPrinted, .sortedKeys]),
-         let prettyStr = String(data: pretty, encoding: .utf8) {
-        AppLogging.log("AnglerAboutYou POST — Response JSON =>\n\(prettyStr)", level: .debug, category: .angler)
-      } else if let raw = String(data: data, encoding: .utf8) {
-        AppLogging.log("AnglerAboutYou POST — Response raw =>\n\(raw)", level: .debug, category: .angler)
-      }
-
-      guard (200..<300).contains(status) else {
-        let body = String(data: data, encoding: .utf8) ?? ""
-        AppLogging.log("AnglerAboutYou save failed (\(status)) body: \(body)", level: .debug, category: .trip)
-        if !body.isEmpty { errorText = "Save failed (\(status)): \(body)" } else { errorText = "Save failed (\(status))." }
-        return false
-      }
-
-      // On success, sync originals
-      originalLearningStyleValue = learningStyleValue
-      originalCastingValue = castingValue
-      originalWadingValue = wadingValue
-      originalHikingValue = hikingValue
-
-      // Cache locally
-      if let anglerId = auth.currentMemberId {
-        let key = cacheKey(anglerId: anglerId, species: speciesId, tactic: tacticId)
-        let dict: [String: Int] = [
-          "learning_style": Int(learningStyleValue.rounded()),
-          "casting": Int(castingValue.rounded()),
-          "wading": Int(wadingValue.rounded()),
-          "hiking": Int(hikingValue.rounded())
-        ]
-        UserDefaults.standard.set(dict, forKey: key)
-      }
-
-      return true
-    } catch {
-      errorText = error.localizedDescription
-      return false
-    }
-  }
-
-  private func loadContext() async {
-    isLoading = true
+  private func loadProficiency() async {
     errorText = nil
+    infoText = nil
+    isLoading = true
     defer { isLoading = false }
 
-    let tokenOpt = await auth.currentAccessToken()
-    guard let token = tokenOpt, !token.isEmpty else { errorText = "You are not signed in."; return }
+    guard let cid = communityId, !cid.isEmpty else {
+      loadFromCache()
+      return
+    }
 
-    AppLogging.log("AnglerAboutYou loadContext — token present=\(!token.isEmpty)", level: .debug, category: .angler)
-    AppLogging.log("AnglerAboutYou loadContext — anglerContextURL=\(String(describing: AppEnvironment.shared.anglerContextURL))", level: .debug, category: .angler)
+    guard let token = await auth.currentAccessToken(), !token.isEmpty else {
+      loadFromCache()
+      return
+    }
 
-      let url: URL
-      do {
-        url = try AnglerAboutYouAPI.anglerContextURL()
-      } catch {
-        errorText = error.localizedDescription
-        return
-      }
+    let url: URL
+    do {
+      url = try MemberProfileFieldsAPI.url(communityId: cid, category: "proficiency")
+    } catch {
+      errorText = "Unsupported URL (check API_BASE_URL / MEMBER_PROFILE_FIELDS_URL)."
+      loadFromCache()
+      return
+    }
+
+    #if DEBUG
+    print("[SelfAssessment] loadProficiency URL: \(url.absoluteString)")
+    #endif
 
     var req = URLRequest(url: url)
     req.httpMethod = "GET"
@@ -485,146 +272,187 @@ struct AnglerAboutYou: View {
     req.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
     req.setValue(auth.publicAnonKey, forHTTPHeaderField: "apikey")
 
-    AppLogging.log("AnglerAboutYou Context GET — URL: \(url.absoluteString)", level: .debug, category: .angler)
-    AppLogging.log("AnglerAboutYou Context GET — Method: \(req.httpMethod ?? "<nil>")", level: .debug, category: .angler)
-    AppLogging.log("AnglerAboutYou Context GET — Headers: Authorization=Bearer <redacted>, apikey prefix=\(auth.publicAnonKey.prefix(8))…", level: .debug, category: .angler)
-
     do {
       let (data, resp) = try await URLSession.shared.data(for: req)
       let code = (resp as? HTTPURLResponse)?.statusCode ?? -1
-      AppLogging.log("AnglerAboutYou Context GET — Status: \(code)", level: .debug, category: .angler)
-      if let obj = try? JSONSerialization.jsonObject(with: data),
-         let pretty = try? JSONSerialization.data(withJSONObject: obj, options: [.prettyPrinted, .sortedKeys]),
-         let prettyStr = String(data: pretty, encoding: .utf8) {
-        AppLogging.log("AnglerAboutYou Context GET — Response JSON =>\n\(prettyStr)", level: .debug, category: .angler)
-      } else if let raw = String(data: data, encoding: .utf8) {
-        AppLogging.log("AnglerAboutYou Context GET — Response raw =>\n\(raw)", level: .debug, category: .angler)
+
+      #if DEBUG
+      print("[SelfAssessment] loadProficiency status: \(code)")
+      let preview = String(data: data.prefix(800), encoding: .utf8) ?? "<non-UTF8>"
+      print("[SelfAssessment] loadProficiency body preview:\n\(preview)")
+      #endif
+
+      guard (200..<300).contains(code) else {
+        errorText = "Load failed (\(code))."
+        loadFromCache()
+        return
       }
-      guard (200..<300).contains(code) else { errorText = "Load failed (\(code))."; return }
-      let decoded = try JSONDecoder().decode(AnglerContextResponse.self, from: data)
-      context = decoded.contexts.first
 
-      let speciesId = context?.species?.id ?? ""
-      let tacticId = context?.tactics?.id ?? ""
-
-      // First try server GET
-      do {
-        let profURL = try AnglerAboutYouAPI.proficiencyURL()
-        var pReq = URLRequest(url: profURL)
-        pReq.httpMethod = "GET"
-        pReq.setValue("application/json", forHTTPHeaderField: "Accept")
-        pReq.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
-        pReq.setValue(auth.publicAnonKey, forHTTPHeaderField: "apikey")
-
-        AppLogging.log("AnglerAboutYou Proficiency GET — URL: \(profURL.absoluteString)", level: .debug, category: .angler)
-        AppLogging.log("AnglerAboutYou Proficiency GET — Method: \(pReq.httpMethod ?? "<nil>")", level: .debug, category: .angler)
-        AppLogging.log("AnglerAboutYou Proficiency GET — Headers: Authorization=Bearer <redacted>, apikey prefix=\(auth.publicAnonKey.prefix(8))…", level: .debug, category: .angler)
-
-        let (pData, pResp) = try await URLSession.shared.data(for: pReq)
-        let pCode = (pResp as? HTTPURLResponse)?.statusCode ?? -1
-        AppLogging.log("AnglerAboutYou Proficiency GET — Status: \(pCode)", level: .debug, category: .angler)
-        if let obj = try? JSONSerialization.jsonObject(with: pData),
-           let pretty = try? JSONSerialization.data(withJSONObject: obj, options: [.prettyPrinted, .sortedKeys]),
-           let prettyStr = String(data: pretty, encoding: .utf8) {
-          AppLogging.log("AnglerAboutYou Proficiency GET — Response JSON =>\n\(prettyStr)", level: .debug, category: .angler)
-        } else if let raw = String(data: pData, encoding: .utf8) {
-          AppLogging.log("AnglerAboutYou Proficiency GET — Response raw =>\n\(raw)", level: .debug, category: .angler)
-        }
-
-        if (200..<300).contains(pCode) {
-          struct ProficiencyResponse: Decodable { let proficiencies: [Proficiency] }
-          struct Proficiency: Decodable {
-            let species_id: String
-            let tactic_id: String
-            let lodge_id: String?
-            let casting: Int?
-            let wading: Int?
-            let hiking: Int?
-            let learning_style: Int?
-          }
-
-          let profDecoded = try JSONDecoder().decode(ProficiencyResponse.self, from: pData)
-
-          let lodgeId = context?.lodges?.id
-          let exact = profDecoded.proficiencies.first { p in
-            let lodgeOk = (lodgeId == nil) || (p.lodge_id == lodgeId)
-            return p.species_id == speciesId && p.tactic_id == tacticId && lodgeOk
-          }
-          let speciesTactic = profDecoded.proficiencies.first { p in p.species_id == speciesId && p.tactic_id == tacticId }
-          let speciesOnly = profDecoded.proficiencies.first { p in p.species_id == speciesId }
-          let match = exact ?? speciesTactic ?? speciesOnly ?? profDecoded.proficiencies.first
-
-          if let m = match {
-            learningStyleValue = Double(m.learning_style ?? 50)
-            castingValue = Double(m.casting ?? 50)
-            wadingValue = Double(m.wading ?? 50)
-            hikingValue = Double(m.hiking ?? 50)
-            originalLearningStyleValue = learningStyleValue
-            originalCastingValue = castingValue
-            originalWadingValue = wadingValue
-            originalHikingValue = hikingValue
-          } else {
-            // No server record; try local cache
-            if let anglerId = auth.currentMemberId {
-              let key = cacheKey(anglerId: anglerId, species: speciesId, tactic: tacticId)
-              if let dict = UserDefaults.standard.dictionary(forKey: key) as? [String: Int] {
-                learningStyleValue = Double(dict["learning_style"] ?? 50)
-                castingValue = Double(dict["casting"] ?? 50)
-                wadingValue = Double(dict["wading"] ?? 50)
-                hikingValue = Double(dict["hiking"] ?? 50)
-              } else {
-                learningStyleValue = 50
-                castingValue = 50
-                wadingValue = 50
-                hikingValue = 50
-              }
-              originalLearningStyleValue = learningStyleValue
-              originalCastingValue = castingValue
-              originalWadingValue = wadingValue
-              originalHikingValue = hikingValue
-            }
-          }
-        } else {
-          // Server GET failed; use local cache if available
-          let key = auth.currentMemberId.map { cacheKey(anglerId: $0, species: speciesId, tactic: tacticId) }
-          if let key, let dict = UserDefaults.standard.dictionary(forKey: key) as? [String: Int] {
-            learningStyleValue = Double(dict["learning_style"] ?? 50)
-            castingValue = Double(dict["casting"] ?? 50)
-            wadingValue = Double(dict["wading"] ?? 50)
-            hikingValue = Double(dict["hiking"] ?? 50)
-          } else {
-            learningStyleValue = 50
-            castingValue = 50
-            wadingValue = 50
-            hikingValue = 50
-          }
-          originalLearningStyleValue = learningStyleValue
-          originalCastingValue = castingValue
-          originalWadingValue = wadingValue
-          originalHikingValue = hikingValue
-        }
-      } catch {
-        // Network or decode error; fall back to local cache or defaults
-        let key = auth.currentMemberId.map { cacheKey(anglerId: $0, species: speciesId, tactic: tacticId) }
-        if let key, let dict = UserDefaults.standard.dictionary(forKey: key) as? [String: Int] {
-          learningStyleValue = Double(dict["learning_style"] ?? 50)
-          castingValue = Double(dict["casting"] ?? 50)
-          wadingValue = Double(dict["wading"] ?? 50)
-          hikingValue = Double(dict["hiking"] ?? 50)
-        } else {
-          learningStyleValue = 50
-          castingValue = 50
-          wadingValue = 50
-          hikingValue = 50
-        }
-        originalLearningStyleValue = learningStyleValue
-        originalCastingValue = castingValue
-        originalWadingValue = wadingValue
-        originalHikingValue = hikingValue
+      struct Resp: Decodable {
+        let proficiencies: [ProficiencyField]
       }
+
+      let decoded = try JSONDecoder().decode(Resp.self, from: data)
+      fields = decoded.proficiencies.sorted { $0.sort_order < $1.sort_order }
+
+      var loaded: [String: Double] = [:]
+      for field in fields {
+        let defaultVal = Double((field.options?.min ?? 1) + (field.options?.max ?? 100)) / 2.0
+        if let valStr = field.value, let val = Double(valStr) {
+          loaded[field.id] = val
+        } else {
+          loaded[field.id] = defaultVal
+        }
+      }
+      values = loaded
+      originalValues = loaded
+
+      saveToCache()
     } catch {
       errorText = error.localizedDescription
+      loadFromCache()
     }
+  }
+
+  private func saveProficiency() async -> Bool {
+    guard let token = await auth.currentAccessToken(), !token.isEmpty else {
+      errorText = "You are not signed in."
+      return false
+    }
+
+    guard let cid = communityId, !cid.isEmpty else {
+      errorText = "No community selected."
+      return false
+    }
+
+    let url: URL
+    do {
+      url = try MemberProfileFieldsAPI.postURL()
+    } catch {
+      errorText = "Unsupported URL."
+      return false
+    }
+
+    #if DEBUG
+    print("[SelfAssessment] saveProficiency URL: \(url.absoluteString)")
+    #endif
+
+    var req = URLRequest(url: url)
+    req.httpMethod = "POST"
+    req.setValue("application/json", forHTTPHeaderField: "Accept")
+    req.setValue("application/json", forHTTPHeaderField: "Content-Type")
+    req.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+    req.setValue(auth.publicAnonKey, forHTTPHeaderField: "apikey")
+
+    let valuesArray = values.map { (fieldId, val) -> [String: String] in
+      ["field_definition_id": fieldId, "value": "\(Int(val.rounded()))"]
+    }
+
+    let body: [String: Any] = [
+      "community_id": cid,
+      "values": valuesArray
+    ]
+
+    do {
+      req.httpBody = try JSONSerialization.data(withJSONObject: body, options: [])
+
+      let (data, resp) = try await URLSession.shared.data(for: req)
+      let code = (resp as? HTTPURLResponse)?.statusCode ?? -1
+
+      #if DEBUG
+      print("[SelfAssessment] saveProficiency status: \(code)")
+      let preview = String(data: data.prefix(800), encoding: .utf8) ?? "<non-UTF8>"
+      print("[SelfAssessment] saveProficiency body preview:\n\(preview)")
+      #endif
+
+      guard (200..<300).contains(code) else {
+        let msg = String(data: data, encoding: .utf8) ?? "Save failed."
+        errorText = "Save failed (\(code)): \(msg)"
+        return false
+      }
+
+      originalValues = values
+      saveToCache()
+      return true
+    } catch {
+      errorText = error.localizedDescription
+      return false
+    }
+  }
+
+  // MARK: - Cache
+
+  private func saveToCache() {
+    guard !fields.isEmpty else { return }
+    let cached: [[String: Any]] = fields.map { field -> [String: Any] in
+      var dict: [String: Any] = [:]
+      dict["id"] = field.id
+      dict["field_name"] = field.field_name
+      dict["field_label"] = field.field_label
+      dict["field_type"] = field.field_type
+      dict["question_text"] = field.question_text ?? ""
+      dict["context_text"] = field.context_text ?? ""
+      dict["min"] = field.options?.min ?? 1
+      dict["max"] = field.options?.max ?? 100
+      dict["low_label"] = field.options?.lowText ?? ""
+      dict["mid_label"] = field.options?.midText ?? ""
+      dict["high_label"] = field.options?.highText ?? ""
+      dict["is_required"] = field.is_required
+      dict["sort_order"] = field.sort_order
+      dict["value"] = values[field.id].map { String(Int($0.rounded())) } ?? ""
+      return dict
+    }
+    UserDefaults.standard.set(cached, forKey: cacheKey)
+  }
+
+  private func loadFromCache() {
+    guard let cached = UserDefaults.standard.array(forKey: cacheKey) as? [[String: Any]] else { return }
+
+    var cachedFields: [ProficiencyField] = []
+    var cachedValues: [String: Double] = [:]
+
+    for dict in cached {
+      guard let id = dict["id"] as? String,
+            let fieldName = dict["field_name"] as? String,
+            let fieldLabel = dict["field_label"] as? String,
+            let fieldType = dict["field_type"] as? String
+      else { continue }
+
+      let minVal = dict["min"] as? Int ?? 1
+      let maxVal = dict["max"] as? Int ?? 100
+      let options = ProficiencyOptions(
+        min: minVal,
+        max: maxVal,
+        low: nil,
+        medium: nil,
+        high: nil,
+        low_label: dict["low_label"] as? String,
+        mid_label: dict["mid_label"] as? String,
+        high_label: dict["high_label"] as? String
+      )
+
+      let valStr = dict["value"] as? String ?? ""
+      let val = Double(valStr) ?? Double(minVal + maxVal) / 2.0
+
+      let field = ProficiencyField(
+        id: id,
+        field_name: fieldName,
+        field_label: fieldLabel,
+        field_type: fieldType,
+        question_text: dict["question_text"] as? String,
+        context_text: dict["context_text"] as? String,
+        options: options,
+        is_required: dict["is_required"] as? Bool ?? false,
+        sort_order: dict["sort_order"] as? Int ?? 0,
+        value: valStr.isEmpty ? nil : valStr
+      )
+      cachedFields.append(field)
+      cachedValues[id] = val
+    }
+
+    fields = cachedFields.sorted { $0.sort_order < $1.sort_order }
+    values = cachedValues
+    originalValues = cachedValues
   }
 }
 

@@ -51,9 +51,15 @@ public struct FarmedReport: Identifiable, Codable, Equatable {
   // Optional angler
   public var memberId: String?
 
+  /// Active community at the time the report was created. Required for the
+  /// per-member/per-community storage scoping in `FarmedReportStore`. Optional
+  /// in the model so that legacy JSON on disk (which predates this field) can
+  /// still be decoded — the migration path drops such records.
+  public var communityId: String?
+
   // Coding keys with default for backward compatibility with existing JSON on disk
   enum CodingKeys: String, CodingKey {
-    case id, createdAt, status, eventType, guideName, lat, lon, memberId
+    case id, createdAt, status, eventType, guideName, lat, lon, memberId, communityId
   }
 
   public init(from decoder: Decoder) throws {
@@ -66,6 +72,7 @@ public struct FarmedReport: Identifiable, Codable, Equatable {
     lat = try container.decodeIfPresent(Double.self, forKey: .lat)
     lon = try container.decodeIfPresent(Double.self, forKey: .lon)
     memberId = try container.decodeIfPresent(String.self, forKey: .memberId)
+    communityId = try container.decodeIfPresent(String.self, forKey: .communityId)
   }
 
   public init(
@@ -76,7 +83,8 @@ public struct FarmedReport: Identifiable, Codable, Equatable {
     guideName: String,
     lat: Double? = nil,
     lon: Double? = nil,
-    memberId: String? = nil
+    memberId: String? = nil,
+    communityId: String? = nil
   ) {
     self.id = id
     self.createdAt = createdAt
@@ -86,6 +94,7 @@ public struct FarmedReport: Identifiable, Codable, Equatable {
     self.lat = lat
     self.lon = lon
     self.memberId = memberId
+    self.communityId = communityId
   }
 
   // Convenience

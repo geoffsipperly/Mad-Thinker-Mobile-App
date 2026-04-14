@@ -127,9 +127,7 @@ struct OpsTicketCreateView: View {
         isSaving = true
         defer { isSaving = false }
 
-        let fmt = DateFormatter()
-        fmt.dateFormat = "yyyy-MM-dd"
-        let dueDateString = hasDueDate ? fmt.string(from: dueDate) : nil
+        let dueDateString = hasDueDate ? DateFormatting.ymd.string(from: dueDate) : nil
 
         do {
             let created = try await OpsTicketsAPI.createTicket(

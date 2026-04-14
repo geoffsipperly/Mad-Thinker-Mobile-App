@@ -12,8 +12,30 @@ struct CatchChatView: View {
   // Voice memo sheet
   @State private var showVoiceNoteSheet = false
 
+  /// Whether the chat uses the scientific visual style ("Science mode" label).
+  private var isResearcherMode: Bool { viewModel.isResearcherMode }
+
   var body: some View {
     VStack(spacing: 0) {
+      // Conservation-mode banner — shown only when a guide has routed
+      // themselves into the research-grade flow via the Conservation toggle.
+      // Researchers already get the scientific visual style and don't need
+      // this cue (they know they're in research mode).
+      if viewModel.conservationMode && !isResearcherMode {
+        HStack(spacing: 6) {
+          Image(systemName: "leaf.fill")
+            .font(.caption)
+            .foregroundColor(.green)
+          Text("Conservation mode")
+            .font(.caption.weight(.semibold))
+            .foregroundColor(.white)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 6)
+        .background(Color.green.opacity(0.15))
+        .accessibilityIdentifier("conservationModeBanner")
+      }
+
       // Messages + inline capture options
       ScrollViewReader { proxy in
         ScrollView {
@@ -25,7 +47,11 @@ struct CatchChatView: View {
             // Typing / analyzing indicator
             if viewModel.isAssistantTyping {
               HStack(spacing: 8) {
-                CommunityLogoView(config: CommunityService.shared.activeCommunityConfig, size: 24)
+                Image(systemName: "leaf.circle.fill")
+                  .resizable()
+                  .scaledToFit()
+                  .frame(width: 24, height: 24)
+                  .foregroundColor(.green)
                   .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
 
                 HStack(spacing: 6) {
@@ -153,6 +179,148 @@ struct CatchChatView: View {
     .padding(.horizontal, 4)
   }
 
+  // MARK: - Researcher step buttons
+
+  // MARK: - Inline choice buttons (rendered below message)
+
+  @ViewBuilder
+  private var researcherInlineChoices: some View {
+    let step = viewModel.researcherFlow?.currentStep
+
+    if step == .studyParticipation {
+      HStack(spacing: 12) {
+        choiceButton("Pit", icon: "tag.fill", disabled: true) {}
+        choiceButton("Floy", icon: "tag.fill", disabled: false) {
+          viewModel.researcherSelectStudy(.floy)
+        }
+        choiceButton("Radio", icon: "antenna.radiowaves.left.and.right", disabled: true) {}
+        choiceButton("No", icon: "forward.fill", disabled: false) {
+          viewModel.researcherConfirm()
+        }
+      }
+    } else if step == .sampleCollection {
+      HStack(spacing: 12) {
+        choiceButton("Scale", icon: "fish.fill", disabled: false) {
+          viewModel.researcherSelectSample(.scale)
+        }
+        choiceButton("Fin Tip", icon: "scissors", disabled: false) {
+          viewModel.researcherSelectSample(.finTip)
+        }
+        choiceButton("Both", icon: "plus.circle.fill", disabled: false) {
+          viewModel.researcherSelectSample(.both)
+        }
+        choiceButton("No", icon: "forward.fill", disabled: false) {
+          viewModel.researcherConfirm()
+        }
+      }
+    }
+  }
+
+  private func choiceButton(_ label: String, icon: String, disabled: Bool, action: @escaping () -> Void) -> some View {
+    Button(action: action) {
+      VStack(spacing: 4) {
+        Image(systemName: icon)
+          .font(.title3)
+        Text(label)
+          .font(.caption)
+      }
+      .foregroundColor(disabled ? .gray : .white)
+      .frame(minWidth: 56)
+      .padding(.vertical, 8)
+      .padding(.horizontal, 4)
+      .background(Color.white.opacity(disabled ? 0.05 : 0.12))
+      .cornerRadius(12)
+    }
+    .disabled(disabled)
+  }
+
+  // MARK: - Researcher side buttons (right of message)
+
+  @ViewBuilder
+  private var researcherStepButtons: some View {
+    let step = viewModel.researcherFlow?.currentStep
+
+    if step == .floyTagID {
+      // Only show Confirm once a tag number has been entered
+      if let tag = viewModel.researcherFlow?.floyTagNumber, !tag.isEmpty {
+        Button {
+          viewModel.researcherConfirm()
+        } label: {
+          VStack(spacing: 4) {
+            Image(systemName: "checkmark.circle.fill")
+              .font(.title2)
+            Text("Confirm")
+              .font(.footnote)
+          }
+        }
+      }
+    } else if step == .scaleScan {
+      // User types the Scale Card ID in the chat input. Show Confirm once
+      // they've entered a value; Skip is always available.
+      if let code = viewModel.researcherFlow?.scaleSampleBarcode, !code.isEmpty {
+        Button {
+          viewModel.researcherConfirm()
+        } label: {
+          VStack(spacing: 4) {
+            Image(systemName: "checkmark.circle.fill")
+              .font(.title2)
+            Text("Confirm")
+              .font(.footnote)
+          }
+        }
+      }
+
+      Button {
+        viewModel.researcherConfirm()
+      } label: {
+        VStack(spacing: 4) {
+          Image(systemName: "forward.fill")
+            .font(.title2)
+          Text("Skip")
+            .font(.footnote)
+        }
+      }
+    } else if step == .finTipScan {
+      // User types the Fin Tip ID in the chat input. Same pattern as scale.
+      if let code = viewModel.researcherFlow?.finTipSampleBarcode, !code.isEmpty {
+        Button {
+          viewModel.researcherConfirm()
+        } label: {
+          VStack(spacing: 4) {
+            Image(systemName: "checkmark.circle.fill")
+              .font(.title2)
+            Text("Confirm")
+              .font(.footnote)
+          }
+        }
+      }
+
+      Button {
+        viewModel.researcherConfirm()
+      } label: {
+        VStack(spacing: 4) {
+          Image(systemName: "forward.fill")
+            .font(.title2)
+          Text("Skip")
+            .font(.footnote)
+        }
+      }
+    } else {
+      // identification, confirmLength, confirmGirth, finalSummary
+      let useConfirmStyle = step == .identification || step == .finalSummary
+      Button {
+        viewModel.researcherConfirm()
+      } label: {
+        VStack(spacing: 4) {
+          Image(systemName: useConfirmStyle ? "checkmark.circle.fill" : "arrow.right.circle.fill")
+            .font(.title2)
+          Text(useConfirmStyle ? "Confirm" : "Next")
+            .font(.footnote)
+        }
+      }
+    }
+  }
+
   private func hideKeyboard() {
     #if canImport(UIKit)
     UIApplication.shared.endEditing(true)
@@ -161,85 +329,162 @@ struct CatchChatView: View {
 
   // MARK: - Message rows
 
+  /// Whether the current researcher step renders choice buttons below the message.
+  private var researcherStepUsesInlineChoices: Bool {
+    guard let step = viewModel.researcherFlow?.currentStep else { return false }
+    return step == .studyParticipation || step == .sampleCollection
+  }
+
   @ViewBuilder
   private func messageRow(_ message: ChatMessage, index: Int) -> some View {
-    HStack(alignment: .center, spacing: 8) {
-      if message.sender == .assistant {
-        Image(AppEnvironment.shared.appLogoAsset)
-          .resizable()
-          .scaledToFit()
-          .frame(width: 24, height: 24)
-          .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
+    let showResearcherButtons = (viewModel.researcherFlow?.confirmAnchorID == message.id)
+    let showChoicesBelow = showResearcherButtons && researcherStepUsesInlineChoices
 
-        bubble(message, isUser: false)
+    VStack(alignment: .leading, spacing: 8) {
+      HStack(alignment: .center, spacing: 8) {
+        if message.sender == .assistant {
+          Image(systemName: "leaf.circle.fill")
+            .resizable()
+            .scaledToFit()
+            .frame(width: 24, height: 24)
+            .foregroundColor(.green)
+            .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
 
-        Spacer(minLength: 16)
+          bubble(message, isUser: false)
 
-        let showPhotoButton = viewModel.showCaptureOptions && index == 0
-        let showVoiceButton = (viewModel.voiceMemoAnchorMessageID == message.id)
-        let showConfirmButton = (viewModel.confirmAnalysisMessageID == message.id)
+          Spacer(minLength: 16)
 
-        if showPhotoButton || showVoiceButton || showConfirmButton {
-          HStack(spacing: 16) {
-            if showPhotoButton {
-              Button {
-                AppLogging.log("Upload button tapped for photo source selection", level: .debug, category: .angler)
-                showSourceActionSheet = true
-              } label: {
-                VStack(spacing: 4) {
-                  Image(systemName: "photo.on.rectangle")
-                    .font(.title2)
-                  Text("Upload")
-                    .font(.footnote)
+          // The Upload button follows the explicit anchor when set (so it
+          // can move from the head-photo prompt to the fish-photo prompt in
+          // conservation mode). Falls back to the first message when no
+          // anchor is set (legacy single-prompt behavior).
+          let showPhotoButton: Bool = {
+            guard viewModel.showCaptureOptions else { return false }
+            if let anchor = viewModel.uploadAnchorMessageID {
+              return anchor == message.id
+            }
+            return index == 0
+          }()
+          let showVoiceButton = (viewModel.voiceMemoAnchorMessageID == message.id)
+          let showHeadConfirmButtons = (viewModel.headConfirmAnchorMessageID == message.id)
+          let showActivityChoice = (viewModel.activityChoiceAnchorMessageID == message.id && viewModel.awaitingActivityChoice)
+          // Side buttons: everything except study/sample choice steps
+          let showSideResearcherButtons = showResearcherButtons && !showChoicesBelow
+          if showPhotoButton || showVoiceButton || showSideResearcherButtons || showHeadConfirmButtons || showActivityChoice {
+            HStack(spacing: 16) {
+              if showPhotoButton {
+                Button {
+                  AppLogging.log("Upload button tapped for photo source selection", level: .debug, category: .angler)
+                  showSourceActionSheet = true
+                } label: {
+                  VStack(spacing: 4) {
+                    Image(systemName: "photo.on.rectangle")
+                      .font(.title2)
+                    Text("Upload")
+                      .font(.footnote)
+                  }
                 }
+              }
+
+              // Confirm / Retake for the conservation head-photo capture.
+              // Anchored to the "How does this look?" prompt that
+              // CatchChatViewModel.handleHeadPhotoSelected appends after
+              // the user uploads a head shot.
+              if showHeadConfirmButtons {
+                Button {
+                  viewModel.confirmHeadPhoto()
+                } label: {
+                  VStack(spacing: 4) {
+                    Image(systemName: "checkmark.circle.fill")
+                      .font(.title2)
+                    Text("Confirm")
+                      .font(.footnote)
+                  }
+                }
+
+                Button {
+                  viewModel.retakeHeadPhoto()
+                } label: {
+                  VStack(spacing: 4) {
+                    Image(systemName: "arrow.counterclockwise")
+                      .font(.title2)
+                    Text("Retake")
+                      .font(.footnote)
+                  }
+                }
+              }
+
+              // Activity choice: catch (pencil) or observation (mic).
+              // Shown on the first researcher prompt before any flow begins.
+              if showActivityChoice {
+                Button {
+                  viewModel.chooseCatch()
+                } label: {
+                  VStack(spacing: 4) {
+                    Image(systemName: "square.and.pencil")
+                      .font(.title2)
+                    Text("Catch")
+                      .font(.footnote)
+                  }
+                }
+
+                Button {
+                  viewModel.chooseObservation()
+                } label: {
+                  VStack(spacing: 4) {
+                    Image(systemName: "mic.fill")
+                      .font(.title2)
+                    Text("Observe")
+                      .font(.footnote)
+                  }
+                }
+              }
+
+              // Voice memo buttons appear at the .voiceMemo step of the
+              // unified ResearcherCatchFlowManager-driven flow for every role.
+              if showVoiceButton {
+                Button {
+                  showVoiceNoteSheet = true
+                } label: {
+                  VStack(spacing: 4) {
+                    Image(systemName: "mic.fill")
+                      .font(.title2)
+                    Text("Memo")
+                      .font(.footnote)
+                  }
+                }
+
+                Button {
+                  viewModel.researcherSkipVoiceMemo()
+                } label: {
+                  VStack(spacing: 4) {
+                    Image(systemName: "forward.fill")
+                      .font(.title2)
+                    Text("Skip")
+                      .font(.footnote)
+                  }
+                }
+              }
+
+              if showSideResearcherButtons {
+                researcherStepButtons
               }
             }
-
-            if showVoiceButton {
-              Button {
-                showVoiceNoteSheet = true
-              } label: {
-                VStack(spacing: 4) {
-                  Image(systemName: "mic.fill")
-                    .font(.title2)
-                  Text("Memo")
-                    .font(.footnote)
-                }
-              }
-
-              Button {
-                viewModel.deferVoiceMemoToLater()
-              } label: {
-                VStack(spacing: 4) {
-                  Image(systemName: "clock.arrow.circlepath")
-                    .font(.title2)
-                  Text("Later")
-                    .font(.footnote)
-                }
-              }
-            }
-
-            if showConfirmButton {
-              Button {
-                viewModel.confirmAnalysisFromButton()
-              } label: {
-                VStack(spacing: 4) {
-                  Image(systemName: "checkmark.circle.fill")
-                    .font(.title2)
-                  Text("Confirm")
-                    .font(.footnote)
-                }
-              }
-            }
+            .foregroundColor(.white)
+          } else {
+            Spacer(minLength: 24)
           }
-          .foregroundColor(.white)
-        } else {
-          Spacer(minLength: 24)
-        }
 
-      } else {
-        Spacer(minLength: 40)
-        bubble(message, isUser: true)
+        } else {
+          Spacer(minLength: 40)
+          bubble(message, isUser: true)
+        }
+      }
+
+      // Choice buttons rendered below the message for study/sample steps
+      if showChoicesBelow {
+        researcherInlineChoices
+          .padding(.leading, 32) // align under the bubble (past the logo)
       }
     }
   }
@@ -258,14 +503,79 @@ struct CatchChatView: View {
         )
         .padding(2)
     } else if let text = message.text {
-      Text(text)
+      // Style "Final Analysis" / "Final Measurements" title in blue when it's the first line
+      if !isUser && (text.hasPrefix("Final Analysis") || text.hasPrefix("Final Measurements")) {
+        finalAnalysisBubble(text)
+      } else if !isUser && text.contains("§") {
+        // The "§" separator splits primary content (estimates, prompts)
+        // from secondary supporting text (hints, calculation metadata).
+        // Used by every role now that the unified flow runs through
+        // ResearcherCatchFlowManager — not just researchers.
+        researcherBubble(text)
+      } else {
+        Text(text)
+          .font(.subheadline)
+          .foregroundColor(.white)
+          .padding(.horizontal, 12)
+          .padding(.vertical, 8)
+          .background(isUser ? Color.blue : Color.white.opacity(0.12))
+          .cornerRadius(16)
+      }
+    }
+  }
+  /// Renders a researcher-mode bubble where text before "§" is primary (estimates/actuals)
+  /// and text after "§" is secondary (smaller, grey supporting text).
+  private func researcherBubble(_ text: String) -> some View {
+    let parts = text.components(separatedBy: "\n§\n")
+    let primary = parts.first ?? text
+    let secondary = parts.count > 1 ? parts.dropFirst().joined(separator: "\n").trimmingCharacters(in: .whitespacesAndNewlines) : nil
+
+    return VStack(alignment: .leading, spacing: 6) {
+      Text(primary)
         .font(.subheadline)
         .foregroundColor(.white)
-        .padding(.horizontal, 12)
-        .padding(.vertical, 8)
-        .background(isUser ? Color.blue : Color.white.opacity(0.12))
-        .cornerRadius(16)
+      if let secondary, !secondary.isEmpty {
+        Text(secondary)
+          .font(.caption)
+          .foregroundColor(.gray)
+      }
     }
+    .padding(.horizontal, 12)
+    .padding(.vertical, 8)
+    .background(Color.white.opacity(0.12))
+    .cornerRadius(16)
+  }
+
+  /// Renders the final analysis bubble with a blue title line.
+  /// In researcher mode, text after "§" is rendered as smaller grey supporting text.
+  private func finalAnalysisBubble(_ text: String) -> some View {
+    let sections = text.components(separatedBy: "\n§\n")
+    let mainSection = sections.first ?? text
+    let supporting = sections.count > 1 ? sections.dropFirst().joined(separator: "\n").trimmingCharacters(in: .whitespacesAndNewlines) : nil
+
+    let lines = mainSection.components(separatedBy: "\n")
+    let title = lines.first ?? ""
+    let body = lines.dropFirst().joined(separator: "\n")
+
+    return VStack(alignment: .leading, spacing: 4) {
+      Text(title)
+        .font(.subheadline.weight(.semibold))
+        .foregroundColor(.blue)
+      if !body.isEmpty {
+        Text(body)
+          .font(.subheadline)
+          .foregroundColor(.white)
+      }
+      if isResearcherMode, let supporting, !supporting.isEmpty {
+        Text(supporting)
+          .font(.caption)
+          .foregroundColor(.gray)
+      }
+    }
+    .padding(.horizontal, 12)
+    .padding(.vertical, 8)
+    .background(Color.white.opacity(0.12))
+    .cornerRadius(16)
   }
 }
 

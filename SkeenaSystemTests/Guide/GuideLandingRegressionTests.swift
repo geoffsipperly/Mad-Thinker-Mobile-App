@@ -23,6 +23,7 @@ final class GuideRegressionTests: XCTestCase {
     AuthService.resetSharedForTests()
     clearAuthKeychainEntries()
     UserDefaults.standard.removeObject(forKey: "OfflineLastEmail")
+    ConservationModeStore.shared.resetForTests()
   }
 
   override func tearDown() {
@@ -30,6 +31,7 @@ final class GuideRegressionTests: XCTestCase {
     MockURLProtocol.requestHandler = nil
     clearAuthKeychainEntries()
     UserDefaults.standard.removeObject(forKey: "OfflineLastEmail")
+    ConservationModeStore.shared.resetForTests()
     super.tearDown()
   }
 
@@ -242,15 +244,16 @@ final class GuideRegressionTests: XCTestCase {
     XCTAssertTrue(auth.isAuthenticated)
     XCTAssertEqual(auth.currentUserType, .guide)
 
-    func landingViewName(for userType: AuthService.UserType?) -> String {
+    func landingViewName(for userType: AuthService.UserType?, isConservation: Bool = false) -> String {
       guard let t = userType else { return "LoginView" }
       switch t {
-      case .guide:   return "LandingView"
-      case .angler:  return "AnglerLandingView"
-      case .public:  return "PublicLandingView"
+      case .guide:      return "GuideLandingView"
+      case .angler:     return "AnglerLandingView"
+      case .public:     return "PublicLandingView"
+      case .researcher: return isConservation ? "ResearcherLandingView" : "PublicLandingView"
       }
     }
-    XCTAssertEqual(landingViewName(for: auth.currentUserType), "LandingView")
+    XCTAssertEqual(landingViewName(for: auth.currentUserType), "GuideLandingView")
   }
 
   func testGuideDashboard_loadsExpectedFields() async throws {
@@ -560,5 +563,54 @@ final class GuideRegressionTests: XCTestCase {
     }
     return nil
   }
+
+  // MARK: - Conservation toggle (GuideLandingView)
+
+  /// The Conservation opt-in must default to OFF so a guide never accidentally
+  /// routes a catch through the research-grade flow without explicitly opting in.
+  func test_conservationModeStore_defaultsToFalse() {
+    // setUp already called resetForTests(), which removes the UserDefaults key
+    // and clears the in-memory value.
+    XCTAssertFalse(ConservationModeStore.shared.isEnabled,
+                   "Conservation toggle must default to false on a fresh install")
+    XCTAssertNil(UserDefaults.standard.object(forKey: ConservationModeStore.defaultsKey),
+                 "Reset should remove the UserDefaults key entirely")
+  }
+
+  /// Toggling on must synchronously write through to UserDefaults. This is the
+  /// mechanism that survives app launches — if this breaks, the toggle regresses
+  /// to a session-only flag.
+  func test_conservationModeStore_writeIsPersistedToUserDefaults() {
+    ConservationModeStore.shared.isEnabled = true
+
+    // In-memory state reflects the new value.
+    XCTAssertTrue(ConservationModeStore.shared.isEnabled)
+
+    // Read directly from UserDefaults to verify the write actually landed on
+    // the backing store (not just the @Published wrapper).
+    let persisted = UserDefaults.standard.bool(forKey: ConservationModeStore.defaultsKey)
+    XCTAssertTrue(persisted,
+                  "Setting isEnabled=true must synchronously write to UserDefaults")
+  }
+
+  /// Toggling off must also persist. Flipping the switch back to false should
+  /// not leave a lingering `true` in UserDefaults.
+  func test_conservationModeStore_toggleOffIsPersisted() {
+    ConservationModeStore.shared.isEnabled = true
+    ConservationModeStore.shared.isEnabled = false
+
+    XCTAssertFalse(ConservationModeStore.shared.isEnabled)
+    let persisted = UserDefaults.standard.bool(forKey: ConservationModeStore.defaultsKey)
+    XCTAssertFalse(persisted,
+                   "Setting isEnabled=false must overwrite any prior true value")
+  }
+
+  // NOTE: A property-level test on CatchChatViewModel.conservationMode is
+  // intentionally omitted. Instantiating the VM eagerly builds a
+  // CatchPhotoAnalyzer, which loads CoreML models and crashes on the iOS 26.2
+  // simulator (see CLAUDE.md on MpsGraph/actor-isolation issues). The routing
+  // behavior (isResearcherRole || conservationMode → beginResearcherFlow) is
+  // exercised end-to-end in the Phase 5 integration tests that drive a full
+  // photo-analysis cycle through a stubbed analyzer.
 }
 

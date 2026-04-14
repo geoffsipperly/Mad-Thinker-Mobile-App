@@ -1,10 +1,11 @@
 // Bend Fly Shop
 // ManageProfileView.swift
 //
-// Drop-in refactor:
-// - loadProfile() and saveProfile() now compose URL using:
-//     API_BASE_URL + MY_PROFILE_URL
-//   (both read from Info.plist, with safe normalization)
+// Profile-only view (name, phone, DOB).
+// Preferences are managed separately via the member-profile-fields API.
+//
+// URL composition:
+//   API_BASE_URL + MY_PROFILE_URL (both from Info.plist)
 
 import SwiftUI
 import Foundation
@@ -19,49 +20,10 @@ struct MyProfile: Codable, Equatable {
   var phoneNumber: String?
 }
 
-struct Preferences: Codable, Equatable {
-  var drinks: Bool?
-  var drinksText: String?
-  var food: Bool?
-  var foodText: String?
-  var health: Bool?
-  var healthText: String?
-  var occasion: Bool?
-  var occasionText: String?
-  var allergies: Bool?
-  var allergiesText: String?
-  var cpap: Bool?
-  var cpapText: String?
-}
-
-// MARK: - UI Helpers
-
-struct Checkbox: View {
-  var isOn: Bool
-  var label: String
-  var action: () -> Void
-  var body: some View {
-    Button(action: action) {
-      HStack(spacing: 4) {
-        Image(systemName: isOn ? "checkmark.square" : "square")
-          .foregroundColor(.white)
-          .font(.subheadline)
-        if !label.isEmpty {
-          Text(label)
-            .foregroundColor(.white)
-            .font(.footnote)
-        }
-      }
-    }
-    .buttonStyle(.plain)
-  }
-}
-
 // MARK: - API Helper (URL composition convention)
 
 enum ManageProfileAPI {
-  // Change this if your endpoint expects POST/PATCH instead of PUT
-  static let saveMethod = "PUT" // "PATCH" or "POST" if needed
+  static let saveMethod = "PUT"
 
   private static let rawBaseURLString: String = {
     (Bundle.main.object(forInfoDictionaryKey: "API_BASE_URL") as? String)?
@@ -93,7 +55,6 @@ enum ManageProfileAPI {
     comps.host = host
     comps.port = base.port
 
-    // Allow API_BASE_URL to include an optional base path
     let basePath = base.path
     let normalizedBasePath =
       basePath == "/" ? "" : (basePath.hasSuffix("/") ? String(basePath.dropLast()) : basePath)
@@ -101,7 +62,6 @@ enum ManageProfileAPI {
     let normalizedPath = profilePath.hasPrefix("/") ? profilePath : "/" + profilePath
     comps.path = normalizedBasePath + normalizedPath
 
-    // Preserve any query items already present in API_BASE_URL (rare, but safe)
     let existing = base.query != nil
       ? (URLComponents(string: base.absoluteString)?.queryItems ?? [])
       : []
@@ -127,10 +87,9 @@ struct ManageProfileView: View {
   @State private var showUnsavedConfirm = false
 
   @State private var dobDate: Date = Date()
-  @State private var preferences = Preferences()
-  @State private var originalPreferences = Preferences()
+  @State private var originalDobDate: Date = Date()
 
-  private var hasUnsavedChanges: Bool { (originalProfile != profile) || (originalPreferences != preferences) }
+  private var hasUnsavedChanges: Bool { originalProfile != profile || dobDate != originalDobDate }
 
   var body: some View {
     DarkPageTemplate {
@@ -144,181 +103,13 @@ struct ManageProfileView: View {
 
         if #available(iOS 16.0, *) {
           Form {
-            Section {
-              HStack {
-                Text("First Name").foregroundColor(.blue).font(.callout)
-                Spacer()
-                TextField("First name", text: Binding(get: { profile.firstName ?? "" }, set: { profile.firstName = $0 }))
-                  .multilineTextAlignment(.trailing)
-                  .foregroundColor(.white)
-                  .font(.callout)
-              }
-              HStack {
-                Text("Last Name").foregroundColor(.blue).font(.callout)
-                Spacer()
-                TextField("Last name", text: Binding(get: { profile.lastName ?? "" }, set: { profile.lastName = $0 }))
-                  .multilineTextAlignment(.trailing)
-                  .foregroundColor(.white)
-                  .font(.callout)
-              }
-              HStack {
-                Text("Date of Birth").foregroundColor(.blue).font(.callout)
-                Spacer()
-                DatePicker("Date of Birth", selection: $dobDate, displayedComponents: .date)
-                  .labelsHidden()
-                  .foregroundColor(.white)
-              }
-              VStack(alignment: .leading, spacing: 4) {
-                HStack {
-                  Text("Phone Number").foregroundColor(.blue).font(.callout)
-                  Spacer()
-                  TextField("Phone number", text: Binding(get: { profile.phoneNumber ?? "" }, set: { profile.phoneNumber = $0 }))
-                    .multilineTextAlignment(.trailing)
-                    .foregroundColor(.white)
-                    .font(.callout)
-                }
-                if let phone = profile.phoneNumber, !phone.isEmpty, !isValidPhone(phone) {
-                  Text("Please enter a valid phone number (10–15 digits, digits only or formatted).")
-                    .font(.caption)
-                    .foregroundColor(.red)
-                }
-              }
-            }
-
-            Section(header: Text("Set preferences").foregroundColor(.blue)) { EmptyView() }
-
-            preferenceYesNoSection(
-              title: "While on the river do you have any beverage requests beyond water and coffee?",
-              value: Binding(get: { preferences.drinks }, set: { preferences.drinks = $0 }),
-              text: Binding(get: { preferences.drinksText ?? "" }, set: { preferences.drinksText = $0 }),
-              placeholder: "Tell us what you’d like (e.g., Coke, Coke Zero, sparkling water, sports drinks, beer)"
-            )
-
-            preferenceYesNoSection(
-              title: "Are there any foods you prefer not to be served at the lodge?",
-              value: Binding(get: { preferences.food }, set: { preferences.food = $0 }),
-              text: Binding(get: { preferences.foodText ?? "" }, set: { preferences.foodText = $0 }),
-              placeholder: "Tell us what to avoid (e.g., seafood, mushrooms, spicy foods, cilantro)."
-            )
-
-            preferenceYesNoSection(
-              title: "Do you have any health conditions we should know about?",
-              value: Binding(get: { preferences.health }, set: { preferences.health = $0 }),
-              text: Binding(get: { preferences.healthText ?? "" }, set: { preferences.healthText = $0 }),
-              placeholder: "Please describe (e.g., asthma, diabetes, heart condition, recent injury, mobility limits)."
-            )
-
-            preferenceYesNoSection(
-              title: "Are you celebrating a special occasion on this trip?",
-              value: Binding(get: { preferences.occasion }, set: { preferences.occasion = $0 }),
-              text: Binding(get: { preferences.occasionText ?? "" }, set: { preferences.occasionText = $0 }),
-              placeholder: "What are you celebrating? (e.g., birthday, anniversary, honeymoon, graduation)"
-            )
-
-            preferenceYesNoSection(
-              title: "Do you have any food or medication allergies?",
-              value: Binding(get: { preferences.allergies }, set: { preferences.allergies = $0 }),
-              text: Binding(get: { preferences.allergiesText ?? "" }, set: { preferences.allergiesText = $0 }),
-              placeholder: "List the allergy and severity (e.g., peanuts—anaphylaxis; penicillin—rash)."
-            )
-
-            preferenceYesNoSection(
-              title: "Will you bring a CPAP or other medical device that needs power?",
-              value: Binding(get: { preferences.cpap }, set: { preferences.cpap = $0 }),
-              text: Binding(get: { preferences.cpapText ?? "" }, set: { preferences.cpapText = $0 }),
-              placeholder: "What device is it, and when do you need power? (e.g., overnight CPAP, charger, nebulizer)."
-            )
+            profileFields
           }
           .scrollContentBackground(.hidden)
           .background(Color.black)
         } else {
-          // iOS 15 fallback (keeps your layout behavior)
           Form {
-            Section {
-              HStack {
-                Text("First Name").foregroundColor(.blue).font(.callout)
-                Spacer()
-                TextField("First name", text: Binding(get: { profile.firstName ?? "" }, set: { profile.firstName = $0 }))
-                  .multilineTextAlignment(.trailing)
-                  .foregroundColor(.white)
-                  .font(.callout)
-              }
-              HStack {
-                Text("Last Name").foregroundColor(.blue).font(.callout)
-                Spacer()
-                TextField("Last name", text: Binding(get: { profile.lastName ?? "" }, set: { profile.lastName = $0 }))
-                  .multilineTextAlignment(.trailing)
-                  .foregroundColor(.white)
-                  .font(.callout)
-              }
-              HStack {
-                Text("Date of Birth").foregroundColor(.blue).font(.callout)
-                Spacer()
-                DatePicker("Date of Birth", selection: $dobDate, displayedComponents: .date)
-                  .labelsHidden()
-                  .foregroundColor(.white)
-              }
-              VStack(alignment: .leading, spacing: 4) {
-                HStack {
-                  Text("Phone Number").foregroundColor(.blue).font(.callout)
-                  Spacer()
-                  TextField("Phone number", text: Binding(get: { profile.phoneNumber ?? "" }, set: { profile.phoneNumber = $0 }))
-                    .multilineTextAlignment(.trailing)
-                    .foregroundColor(.white)
-                    .font(.callout)
-                }
-                if let phone = profile.phoneNumber, !phone.isEmpty, !isValidPhone(phone) {
-                  Text("Please enter a valid phone number (10–15 digits, digits only or formatted).")
-                    .font(.caption)
-                    .foregroundColor(.red)
-                }
-              }
-            }
-
-            Section(header: Text("Preferences").foregroundColor(.blue)) { EmptyView() }
-
-            // Keep your existing iOS 15 preference UI behavior
-            preferenceYesNoSection_iOS15(
-              title: "Do you have any beverage requests beyond water and coffee?",
-              value: Binding(get: { preferences.drinks }, set: { preferences.drinks = $0 }),
-              text: Binding(get: { preferences.drinksText ?? "" }, set: { preferences.drinksText = $0 }),
-              placeholder: "Tell us what you’d like (e.g., Coke, Coke Zero, sparkling water, sports drinks, beer)"
-            )
-
-            preferenceYesNoSection_iOS15(
-              title: "Are there any foods you prefer not to be served at the lodge?",
-              value: Binding(get: { preferences.food }, set: { preferences.food = $0 }),
-              text: Binding(get: { preferences.foodText ?? "" }, set: { preferences.foodText = $0 }),
-              placeholder: "Tell us what to avoid (e.g., seafood, mushrooms, spicy foods, cilantro)."
-            )
-
-            preferenceYesNoSection_iOS15(
-              title: "Do you have any health conditions we should know about?",
-              value: Binding(get: { preferences.health }, set: { preferences.health = $0 }),
-              text: Binding(get: { preferences.healthText ?? "" }, set: { preferences.healthText = $0 }),
-              placeholder: "Please describe (e.g., asthma, diabetes, heart condition, recent injury, mobility limits)."
-            )
-
-            preferenceYesNoSection_iOS15(
-              title: "Are you celebrating a special occasion on this trip?",
-              value: Binding(get: { preferences.occasion }, set: { preferences.occasion = $0 }),
-              text: Binding(get: { preferences.occasionText ?? "" }, set: { preferences.occasionText = $0 }),
-              placeholder: "What are you celebrating? (e.g., birthday, anniversary, honeymoon, graduation)"
-            )
-
-            preferenceYesNoSection_iOS15(
-              title: "Do you have any food or medication allergies?",
-              value: Binding(get: { preferences.allergies }, set: { preferences.allergies = $0 }),
-              text: Binding(get: { preferences.allergiesText ?? "" }, set: { preferences.allergiesText = $0 }),
-              placeholder: "List the allergy and severity (e.g., peanuts—anaphylaxis; penicillin—rash)."
-            )
-
-            preferenceYesNoSection_iOS15(
-              title: "Will you bring a CPAP or other medical device that needs power?",
-              value: Binding(get: { preferences.cpap }, set: { preferences.cpap = $0 }),
-              text: Binding(get: { preferences.cpapText ?? "" }, set: { preferences.cpapText = $0 }),
-              placeholder: "What device is it, and when do you need power? (e.g., overnight CPAP, charger, nebulizer)."
-            )
+            profileFields
           }
           .background(Color.black)
         }
@@ -333,7 +124,7 @@ struct ManageProfileView: View {
       ToolbarItem(placement: .navigationBarLeading) {
         Button(action: {
           if hasUnsavedChanges { showUnsavedConfirm = true } else { dismiss() }
-        }) { Image(systemName: "chevron.left") 
+        }) { Image(systemName: "chevron.left")
         }
       }
       ToolbarItem(placement: .navigationBarTrailing) {
@@ -365,69 +156,57 @@ struct ManageProfileView: View {
     .task { await loadProfile() }
   }
 
-  // MARK: - Preference UI helpers (shared)
+  // MARK: - Profile Fields
 
   @ViewBuilder
-  @available(iOS 16.0, *)
-  private func preferenceYesNoSection(
-    title: String,
-    value: Binding<Bool?>,
-    text: Binding<String>,
-    placeholder: String
-  ) -> some View {
+  private var profileFields: some View {
     Section {
-      HStack(alignment: .center) {
-        Text(title)
-          .foregroundColor(.white)
-          .font(.callout)
-          .frame(maxWidth: .infinity, alignment: .leading)
-
-        HStack(spacing: 0) {
-          Checkbox(isOn: !(value.wrappedValue ?? false), label: "No", action: { value.wrappedValue = false })
-            .frame(width: 56, alignment: .center)
-          Checkbox(isOn: (value.wrappedValue ?? false), label: "Yes", action: { value.wrappedValue = true })
-            .frame(width: 56, alignment: .center)
+      if let memberId = profile.memberId, !memberId.isEmpty {
+        HStack {
+          Text("Member #").foregroundColor(.blue).font(.callout)
+          Spacer()
+          Text(memberId)
+            .foregroundColor(.gray)
+            .font(.callout)
         }
       }
-
-      if value.wrappedValue == true {
-        TextField(placeholder, text: text, axis: .vertical)
-          .lineLimit(3, reservesSpace: true)
-          .foregroundColor(.white)
-      }
-    }
-  }
-
-  @ViewBuilder
-  private func preferenceYesNoSection_iOS15(
-    title: String,
-    value: Binding<Bool?>,
-    text: Binding<String>,
-    placeholder: String
-  ) -> some View {
-    Section {
-      HStack(alignment: .center) {
-        Text(title)
+      HStack {
+        Text("First Name").foregroundColor(.blue).font(.callout)
+        Spacer()
+        TextField("First name", text: Binding(get: { profile.firstName ?? "" }, set: { profile.firstName = $0 }))
+          .multilineTextAlignment(.trailing)
           .foregroundColor(.white)
           .font(.callout)
-          .frame(maxWidth: .infinity, alignment: .leading)
-
-        HStack(spacing: 0) {
-          Checkbox(isOn: !(value.wrappedValue ?? false), label: "No", action: { value.wrappedValue = false })
-            .frame(width: 56, alignment: .center)
-          Checkbox(isOn: (value.wrappedValue ?? false), label: "Yes", action: { value.wrappedValue = true })
-            .frame(width: 56, alignment: .center)
-        }
       }
-
-      if (text.wrappedValue).isEmpty {
-        Text(placeholder).foregroundColor(.gray).font(.caption)
-      }
-
-      if value.wrappedValue == true {
-        TextEditor(text: text)
+      HStack {
+        Text("Last Name").foregroundColor(.blue).font(.callout)
+        Spacer()
+        TextField("Last name", text: Binding(get: { profile.lastName ?? "" }, set: { profile.lastName = $0 }))
+          .multilineTextAlignment(.trailing)
           .foregroundColor(.white)
-          .frame(minHeight: 72)
+          .font(.callout)
+      }
+      HStack {
+        Text("Date of Birth").foregroundColor(.blue).font(.callout)
+        Spacer()
+        DatePicker("Date of Birth", selection: $dobDate, displayedComponents: .date)
+          .labelsHidden()
+          .foregroundColor(.white)
+      }
+      VStack(alignment: .leading, spacing: 4) {
+        HStack {
+          Text("Phone Number").foregroundColor(.blue).font(.callout)
+          Spacer()
+          TextField("Phone number", text: Binding(get: { profile.phoneNumber ?? "" }, set: { profile.phoneNumber = $0 }))
+            .multilineTextAlignment(.trailing)
+            .foregroundColor(.white)
+            .font(.callout)
+        }
+        if let phone = profile.phoneNumber, !phone.isEmpty, !isValidPhone(phone) {
+          Text("Please enter a valid phone number (10\u{2013}15 digits, digits only or formatted).")
+            .font(.caption)
+            .foregroundColor(.red)
+        }
       }
     }
   }
@@ -439,7 +218,7 @@ struct ManageProfileView: View {
     return digits.count >= 10 && digits.count <= 15
   }
 
-  // MARK: - Networking (refactored to composed URL)
+  // MARK: - Networking
 
   private func loadProfile() async {
     errorText = nil
@@ -490,15 +269,12 @@ struct ManageProfileView: View {
 
       struct Resp: Decodable {
         let profile: MyProfile
-        let preferences: Preferences?
       }
 
       let decoded = try JSONDecoder().decode(Resp.self, from: data)
 
       profile = decoded.profile
-      preferences = decoded.preferences ?? Preferences()
 
-      // Parse DOB into DatePicker state
       if let dob = profile.dateOfBirth, !dob.isEmpty {
         let f = DateFormatter()
         f.calendar = Calendar(identifier: .gregorian)
@@ -509,7 +285,7 @@ struct ManageProfileView: View {
       }
 
       originalProfile = profile
-      originalPreferences = preferences
+      originalDobDate = dobDate
     } catch {
       errorText = error.localizedDescription
     }
@@ -531,7 +307,6 @@ struct ManageProfileView: View {
       return
     }
 
-    // Sync dobDate back to yyyy-MM-dd
     let df = DateFormatter()
     df.calendar = Calendar(identifier: .gregorian)
     df.locale = Locale(identifier: "en_US_POSIX")
@@ -561,25 +336,11 @@ struct ManageProfileView: View {
     req.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
     req.setValue(auth.publicAnonKey, forHTTPHeaderField: "apikey")
 
-    // Body (keep your “only send meaningful fields” behavior, but include booleans when set)
     var body: [String: Any] = [:]
     if let v = profile.firstName, !v.isEmpty { body["firstName"] = v }
     if let v = profile.lastName, !v.isEmpty { body["lastName"] = v }
     if let v = profile.phoneNumber, !v.isEmpty { body["phoneNumber"] = v }
     if let v = profile.dateOfBirth, !v.isEmpty { body["dateOfBirth"] = v }
-
-    if let v = preferences.drinks { body["drinks"] = v }
-    if let v = preferences.drinksText, !v.isEmpty { body["drinksText"] = v }
-    if let v = preferences.food { body["food"] = v }
-    if let v = preferences.foodText, !v.isEmpty { body["foodText"] = v }
-    if let v = preferences.health { body["health"] = v }
-    if let v = preferences.healthText, !v.isEmpty { body["healthText"] = v }
-    if let v = preferences.occasion { body["occasion"] = v }
-    if let v = preferences.occasionText, !v.isEmpty { body["occasionText"] = v }
-    if let v = preferences.allergies { body["allergies"] = v }
-    if let v = preferences.allergiesText, !v.isEmpty { body["allergiesText"] = v }
-    if let v = preferences.cpap { body["cpap"] = v }
-    if let v = preferences.cpapText, !v.isEmpty { body["cpapText"] = v }
 
     do {
       req.httpBody = try JSONSerialization.data(withJSONObject: body, options: [])
@@ -599,11 +360,9 @@ struct ManageProfileView: View {
         return
       }
 
-      // If server echoes back updated profile/preferences, you can decode it here.
-      // We keep your original behavior: accept success and dismiss.
       infoText = "Saved."
       originalProfile = profile
-      originalPreferences = preferences
+      originalDobDate = dobDate
       dismiss()
     } catch {
       errorText = error.localizedDescription

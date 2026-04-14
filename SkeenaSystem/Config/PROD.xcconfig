@@ -24,16 +24,15 @@ E_MEET_STAFF = true
 E_GEAR_CHECKLIST = true
 E_MANAGE_LICENSES = true
 E_SELF_ASSESSMENT = true
+E_PREFERENCES = true
 E_CATCH_CAROUSEL = true
-E_THE_BUZZ = true
 E_CATCH_MAP = true
-E_MANAGE_OPS = true
 
 // ──────────────────────────────────────────────
 // MARK: - API Endpoints (Edge Functions)
 // ──────────────────────────────────────────────
 
-UPLOAD_CATCH_URL = /functions/v1/upload-catch-reports-v3
+UPLOAD_CATCH_URL = /functions/v1/upload-catch-reports-v5
 MANAGE_TRIP_URL = functions/v1/manage-trip
 DOWNLOAD_CATCH_URL = /functions/v1/download-catch-reports
 RIVER_CONDITIONS_URL = /functions/v1/river-conditions
@@ -45,6 +44,7 @@ ANGLER_DETAILS_URL = /functions/v1/angler-details
 MY_PROFILE_URL = /functions/v1/my-profile
 PROFICIENCY_URL = /functions/v1/proficiency
 GEAR_URL = /functions/v1/gear
+MEMBER_PROFILE_FIELDS_URL = /functions/v1/member-profile-fields
 CLASSIFIED_LICENSES_URL = /functions/v1/classified-licenses
 CATCH_STORY_URL = /functions/v1/catch-story
 // Host+path only (no protocol) — xcconfig treats // as a comment.
@@ -54,13 +54,6 @@ TRIP_ROSTER_URL = /functions/v1/trip-roster
 OBSERVATIONS_URL = /functions/v1/observations
 OPS_TICKETS_URL = /functions/v1/ops-tickets
 
-// ──────────────────────────────────────────────
-// MARK: - Forum / Community Feed
-// ──────────────────────────────────────────────
-
-FORUM_BASE = /rest/v1
-FORUM_API_KEY = $(SUPABASE_ANON_KEY)
-BUZZ_CATEGORY_ID = d7f7900f-97b3-43a2-9c7e-03bab95b7002
 
 // ──────────────────────────────────────────────
 // MARK: - App Branding

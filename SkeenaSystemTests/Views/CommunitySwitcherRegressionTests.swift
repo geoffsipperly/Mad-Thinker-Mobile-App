@@ -91,6 +91,7 @@ final class CommunitySwitcherRegressionTests: XCTestCase {
       "id": UUID().uuidString,
       "community_id": communityId,
       "role": role,
+      "is_active": true,
       "communities": [
         "id": communityId,
         "name": communityName,

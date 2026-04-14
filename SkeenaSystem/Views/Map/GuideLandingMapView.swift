@@ -39,6 +39,8 @@ struct GuideLandingAnnotation: Identifiable {
 
 struct GuideLandingMapView: View {
   let reports: [MapReportDTO]
+  /// Optional user GPS coordinate — used as a viewport fallback when no reports exist.
+  var userLocation: CLLocationCoordinate2D? = nil
 
   @State private var selectedAnnotation: GuideLandingAnnotation? = nil
 
@@ -76,6 +78,10 @@ struct GuideLandingMapView: View {
     // Center on most recent report
     if let latest = annotations.sorted(by: { $0.date > $1.date }).first {
       return .camera(center: latest.coordinate, zoom: 9, bearing: 0, pitch: 0)
+    }
+    // Fallback to user's current GPS location
+    if let loc = userLocation {
+      return .camera(center: loc, zoom: 9, bearing: 0, pitch: 0)
     }
     // Fallback to community geography
     let config = CommunityService.shared.activeCommunityConfig

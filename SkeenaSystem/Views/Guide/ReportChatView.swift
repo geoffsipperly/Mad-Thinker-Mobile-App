@@ -29,13 +29,18 @@ struct ReportChatView: View {
     self._isSoloMode = State(initialValue: alwaysSolo)
   }
 
-  @StateObject private var vm = ReportFormViewModel()
+  @StateObject private var vm = CatchCaptureContext()
   @StateObject private var loc = LocationManager()
 
   @StateObject private var chatVM = CatchChatViewModel()
 
   // Trips (in-progress)
   @State private var trips: [Trip] = []
+
+  /// True while a TripSyncService run kicked off by this view is in flight.
+  /// Drives the "Loading trips…" placeholder so first-login users don't see
+  /// "No trips created" while the background hydrate is still running.
+  @State private var isSyncingTrips: Bool = false
 
   @State private var selectedTripID: NSManagedObjectID?
   @State private var selectedClientID: NSManagedObjectID?
@@ -65,14 +70,20 @@ struct ReportChatView: View {
     ZStack {
       Color.black.ignoresSafeArea()
 
-      VStack(spacing: 0) {
-        header
-        Spacer().frame(height: 40)
-        captureButton
-        Spacer()
+      if directToChat && !showChatFullScreen {
+        // Show nothing while auto-transitioning to the chat screen
+        ProgressView()
+          .tint(.white)
+      } else if !directToChat {
+        VStack(spacing: 0) {
+          header
+          Spacer().frame(height: 40)
+          captureButton
+          Spacer()
+        }
       }
     }
-    .navigationTitle("Record a catch")
+    .navigationTitle("Record catch")
     .navigationBarTitleDisplayMode(.inline)
     .preferredColorScheme(.dark)
     .toolbar {
@@ -106,7 +117,7 @@ struct ReportChatView: View {
     // Watch for saveRequested flag from the chat VM
     .onChange(of: chatVM.saveRequested) { newValue in
       if newValue {
-        savePicMemoCatchIfPossible()
+        saveCatchReportIfPossible()
       }
     }
     .fullScreenCover(isPresented: $showChatFullScreen) {
@@ -137,8 +148,23 @@ struct ReportChatView: View {
     loc.request()
     loc.start()
 
-    // Reload trips from Core Data, then pick a default if needed
+    // Reload trips from Core Data, then pick a default if needed.
     loadTrips()
+
+    // Defensive sync: on first login the GuideLandingView background sync
+    // can still be running by the time the user taps "Record a Catch" — at
+    // which point loadTrips() above returns 0 rows. Kick off the same
+    // idempotent sync here (TripSyncService.isSyncing prevents overlap) and
+    // surface a "Loading trips…" placeholder while it runs. Once the sync
+    // saves Core Data the existing NSManagedObjectContextDidSave listener
+    // will reload trips automatically.
+    if trips.isEmpty {
+      isSyncingTrips = true
+      Task {
+        await TripSyncService.shared.syncTripsIfNeeded(context: context)
+        await MainActor.run { isSyncingTrips = false }
+      }
+    }
 
     // Seed chat VM with the logged-in guide (not the trip's guide)
     let loggedInGuide = (AuthService.shared.currentFirstName ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
@@ -146,6 +172,11 @@ struct ReportChatView: View {
     chatVM.updateGuideContext(guide: loggedInGuide)
     chatVM.updateAnglerContext(angler: currentClientText())
     chatVM.updateTripContext(trip: currentTripText())
+
+    // Honor the persistent Conservation toggle on GuideLandingView.
+    // When on, the catch chat will route through the research-grade flow
+    // (see CatchChatViewModel.handlePhotoSelected).
+    chatVM.conservationMode = ConservationModeStore.shared.isEnabled
 
     // Public users are always in solo mode — configure immediately
     if alwaysSolo {
@@ -167,7 +198,9 @@ struct ReportChatView: View {
       if !isSoloMode {
         tripCard
         clientCard
-        licenceCard
+        if CommunityService.shared.activeCommunityConfig.flag("E_MANAGE_LICENSES") {
+          licenceCard
+        }
       }
     }
     .padding(.top, 6)
@@ -241,11 +274,19 @@ struct ReportChatView: View {
             .truncationMode(.tail)
             .minimumScaleFactor(0.85)
           Spacer(minLength: 4)
-          Image(systemName: "chevron.down")
-            .font(.footnote)
-            .foregroundColor(.white.opacity(0.7))
+          if trips.isEmpty && isSyncingTrips {
+            ProgressView()
+              .progressViewStyle(.circular)
+              .scaleEffect(0.7)
+              .tint(.white)
+          } else {
+            Image(systemName: "chevron.down")
+              .font(.footnote)
+              .foregroundColor(.white.opacity(0.7))
+          }
         }
       }
+      .disabled(trips.isEmpty)
     }
     .padding()
     .frame(maxWidth: .infinity, alignment: .leading)
@@ -451,7 +492,7 @@ struct ReportChatView: View {
   }
 
   private func saveSoloMemberId() async {
-    let trimmed = soloMemberIdInput.trimmingCharacters(in: .whitespacesAndNewlines)
+    let trimmed = MemberNumber.normalize(soloMemberIdInput.trimmingCharacters(in: .whitespacesAndNewlines))
     guard !trimmed.isEmpty else { return }
     do {
       try await AuthService.shared.updateMemberId(trimmed)
@@ -489,9 +530,7 @@ struct ReportChatView: View {
     let guideName = (AuthService.shared.currentFirstName ?? "Guide").trimmingCharacters(in: .whitespacesAndNewlines)
 
     // Look for an existing solo trip created today by this guide
-    let df = DateFormatter()
-    df.dateFormat = "ddMMyyyy"
-    let todayTripName = "\(guideName) - \(df.string(from: Date()))"
+    let todayTripName = "\(guideName) - \(DateFormatting.ddMMyyyy.string(from: Date()))"
 
     let request: NSFetchRequest<Trip> = Trip.fetchRequest()
     request.predicate = NSCompoundPredicate(andPredicateWithSubpredicates: [
@@ -537,13 +576,11 @@ struct ReportChatView: View {
       AppLogging.log("[Solo] Created solo trip: \(todayTripName) id=\(trip.tripId?.uuidString ?? "?")", level: .info, category: .trip)
 
       // Upload the solo trip to the server (fire-and-forget)
-      let iso = ISO8601DateFormatter()
-      iso.formatOptions = [.withInternetDateTime]
       let upsert = TripAPI.UpsertTripRequest(
         tripId: trip.tripId?.uuidString ?? UUID().uuidString,
         tripName: todayTripName,
-        startDate: iso.string(from: today),
-        endDate: iso.string(from: today),
+        startDate: DateFormatting.iso8601.string(from: today),
+        endDate: DateFormatting.iso8601.string(from: today),
         guideName: guideName,
         clientName: nil,
         community: CommunityService.shared.activeCommunityName,
@@ -587,6 +624,17 @@ struct ReportChatView: View {
     // Compare at end-of-day so trips starting "today" are included regardless of stored time
     let endOfToday = Calendar.current.date(byAdding: .day, value: 1, to: startOfToday)! as NSDate
 
+    AppLogging.log("[loadTrips] now=\(now) startOfToday=\(startOfToday) endOfToday=\(endOfToday)", level: .info, category: .trip)
+
+    // First: fetch ALL trips to see what's in Core Data
+    let allRequest: NSFetchRequest<Trip> = Trip.fetchRequest()
+    if let allTrips = try? context.fetch(allRequest) {
+      for t in allTrips {
+        AppLogging.log("[loadTrips] CoreData trip: name='\(t.name ?? "-")' startDate=\(t.startDate.map { "\($0)" } ?? "nil") endDate=\(t.endDate.map { "\($0)" } ?? "nil") tripId=\(t.tripId?.uuidString ?? "nil") createdAt=\(t.createdAt.map { "\($0)" } ?? "nil")", level: .info, category: .trip)
+      }
+      AppLogging.log("[loadTrips] Total trips in Core Data: \(allTrips.count)", level: .info, category: .trip)
+    }
+
     let startedPredicate = NSPredicate(format: "startDate < %@", endOfToday)
     let openOrRecentlyEndedPredicate = NSPredicate(
       format: "endDate == nil OR endDate >= %@", startOfToday as NSDate
@@ -612,11 +660,11 @@ struct ReportChatView: View {
         return "{id=\(id), label=\(label)}"
       }
       AppLogging.log({
-        "loadTrips fetched \(trips.count) trip(s): \n\(summaries.joined(separator: "\n"))"
-      }, level: .debug, category: .trip)
+        "[loadTrips] After predicate filter: \(trips.count) trip(s): \n\(summaries.joined(separator: "\n"))"
+      }, level: .info, category: .trip)
       setDefaultTripIfNeeded()
     } catch {
-      print("❌ Failed to fetch trips: \(error)")
+      AppLogging.log("[loadTrips] Fetch FAILED: \(error)", level: .error, category: .trip)
     }
   }
 
@@ -640,6 +688,14 @@ struct ReportChatView: View {
     guard let id = selectedTripID,
           let t = trips.first(where: { $0.objectID == id })
     else {
+      // While the first-login background sync is still running, surface a
+      // "Loading…" placeholder instead of the misleading "No trips created"
+      // message. Once trips arrive the NSManagedObjectContextDidSave
+      // listener reloads them and selectedTripID gets set by
+      // setDefaultTripIfNeeded().
+      if trips.isEmpty && isSyncingTrips {
+        return "Loading trips…"
+      }
       return "No trips created"
     }
     return tripDisplay(t)
@@ -791,10 +847,10 @@ struct ReportChatView: View {
     return "\(water) • \(num) (\(from)–\(to))"
   }
 
-  // MARK: - PicMemo Save (now using createFromChat)
+  // MARK: - Catch Save (uses CatchReportStore.createFromChat)
 
-  private func savePicMemoCatchIfPossible() {
-    guard let snapshot = chatVM.makePicMemoSnapshot() else {
+  private func saveCatchReportIfPossible() {
+    guard let snapshot = chatVM.makeCatchSnapshot() else {
       return
     }
 
@@ -814,7 +870,14 @@ struct ReportChatView: View {
     let appVersion = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String
     let deviceDescription = "\(UIDevice.current.model) \(UIDevice.current.systemVersion)"
 
-    // Derive a human-readable trip name for v2 API (match PicMemo display)
+    // Fix: the Combine auto-rebind may not have fired yet — force a
+    // rebind so the store is scoped before we write.
+    if !CatchReportStore.shared.isBound, !memberId.isEmpty, communityId != nil {
+      AppLogging.log("[GuideSave] store unbound — forcing rebind before save", level: .debug, category: .catch)
+      CatchReportStore.shared.rebind(memberId: memberId, communityId: communityId)
+    }
+
+    // Derive a human-readable trip name for v2 API (match catch display)
     let rawTripName = trip?.name?.trimmingCharacters(in: .whitespacesAndNewlines)
     let tripNameValue: String? = {
       if let n = rawTripName, !n.isEmpty { return n }
@@ -823,11 +886,10 @@ struct ReportChatView: View {
       return label
     }()
 
-    CatchReportPicMemoStore.shared.createFromChat(
+    CatchReportStore.shared.createFromChat(
       memberId: memberId.isEmpty ? "Unknown" : memberId,
       species: snapshot.species,
       sex: snapshot.sex,
-      origin: "Wild",
       lengthInches: snapshot.lengthInches ?? 0,
       lifecycleStage: snapshot.lifecycleStage,
       river: snapshot.riverName,
@@ -835,6 +897,7 @@ struct ReportChatView: View {
       lat: snapshot.latitude,
       lon: snapshot.longitude,
       photoFilename: snapshot.photoFilename,
+      headPhotoFilename: snapshot.headPhotoFilename,
       voiceNoteId: snapshot.voiceNoteId,
       tripId: tripIdString,
       tripName: tripNameValue,
@@ -852,6 +915,24 @@ struct ReportChatView: View {
       mlFeatureVector: snapshot.mlFeatureVector,
       lengthSource: snapshot.lengthSource,
       modelVersion: snapshot.modelVersion,
+      girthInches: snapshot.girthInches,
+      weightLbs: snapshot.weightLbs,
+      weightDivisor: snapshot.weightDivisor,
+      weightDivisorSource: snapshot.weightDivisorSource,
+      girthRatio: snapshot.girthRatio,
+      girthRatioSource: snapshot.girthRatioSource,
+      initialLengthForMeasurements: snapshot.initialLengthForMeasurements,
+      initialGirthInches: snapshot.initialGirthInches,
+      initialWeightLbs: snapshot.initialWeightLbs,
+      initialWeightDivisor: snapshot.initialWeightDivisor,
+      initialWeightDivisorSource: snapshot.initialWeightDivisorSource,
+      initialGirthRatio: snapshot.initialGirthRatio,
+      initialGirthRatioSource: snapshot.initialGirthRatioSource,
+      conservationOptIn: snapshot.conservationOptIn,
+      floyId: snapshot.floyId,
+      pitId: snapshot.pitId,
+      scaleCardId: snapshot.scaleCardId,
+      dnaNumber: snapshot.dnaNumber,
       appVersion: appVersion,
       deviceDescription: deviceDescription,
       platform: "iOS",
@@ -900,7 +981,7 @@ private struct CatchChatFullScreenView: View {
         // 1) dismiss the full-screen chat
         dismissCover()
 
-        // 2) then dismiss ReportChatView back to LandingView
+        // 2) then dismiss ReportChatView back to GuideLandingView
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
           onCatchSaved()
         }

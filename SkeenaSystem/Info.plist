@@ -16,8 +16,6 @@
 	<string>$(APP_DISPLAY_NAME)</string>
 	<key>APP_LOGO_ASSET</key>
 	<string>$(APP_LOGO_ASSET)</string>
-	<key>BUZZ_CATEGORY_ID</key>
-	<string>$(BUZZ_CATEGORY_ID)</string>
 	<key>BETA_RELEASE</key>
 	<string>$(BETA_RELEASE)</string>
 	<key>CATCH_STORY_URL</key>
@@ -46,14 +44,12 @@
 	<string>$(E_GEAR_CHECKLIST)</string>
 	<key>E_MANAGE_LICENSES</key>
 	<string>$(E_MANAGE_LICENSES)</string>
-	<key>E_MANAGE_OPS</key>
-	<string>$(E_MANAGE_OPS)</string>
-	<key>E_MEET_STAFF</key>
+<key>E_MEET_STAFF</key>
 	<string>$(E_MEET_STAFF)</string>
 	<key>E_SELF_ASSESSMENT</key>
 	<string>$(E_SELF_ASSESSMENT)</string>
-	<key>E_THE_BUZZ</key>
-	<string>$(E_THE_BUZZ)</string>
+	<key>E_PREFERENCES</key>
+	<string>$(E_PREFERENCES)</string>
 	<key>FISH_BOX_SCALE_FACTOR</key>
 	<string>$(FISH_BOX_SCALE_FACTOR)</string>
 	<key>SPECIES_DETECTION_THRESHOLD</key>
@@ -82,10 +78,6 @@
 	<string>$(FLIGHT_DETAILS)</string>
 	<key>FLIGHT_STATUS</key>
 	<string>$(FLIGHT_STATUS)</string>
-	<key>FORUM_API_KEY</key>
-	<string>$(FORUM_API_KEY)</string>
-	<key>FORUM_BASE</key>
-	<string>$(FORUM_BASE)</string>
 	<key>GEAR_URL</key>
 	<string>$(GEAR_URL)</string>
 	<key>LODGE_RIVERS</key>
@@ -100,6 +92,8 @@
 	<string>$(MAPBOX_ACCESS_TOKEN)</string>
 	<key>MANAGE_TRIP_URL</key>
 	<string>$(MANAGE_TRIP_URL)</string>
+	<key>MEMBER_PROFILE_FIELDS_URL</key>
+	<string>$(MEMBER_PROFILE_FIELDS_URL)</string>
 	<key>MY_PROFILE_URL</key>
 	<string>$(MY_PROFILE_URL)</string>
 	<key>NOTES_UPLOAD_URL</key>

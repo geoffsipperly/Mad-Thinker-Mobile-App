@@ -15,6 +15,13 @@ struct CatchReportDTO: Decodable, Identifiable {
   let photo_url: String?
   let notes: String?
 
+  // Catch measurements
+  let species: String?
+  let sex: String?
+  let length_inches: Int?
+  let girth_inches: Double?
+  let weight_lbs: Double?
+
   // Convenience
   var id: String { catch_id }
   var createdAt: String { created_at }
@@ -30,6 +37,6 @@ struct CatchReportDTO: Decodable, Identifiable {
     if let lat = latitude, let lon = longitude {
       return String(format: "%.4f, %.4f", lat, lon)
     }
-    return "Unable to detect via GPS"
+    return "-"
   }
 }

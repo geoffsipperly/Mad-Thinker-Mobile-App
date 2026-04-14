@@ -5,8 +5,21 @@ import Foundation
 import UIKit
 
 // MARK: - Upload service for farmed reports
+//
+// Explicitly `nonisolated`: the project sets SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor,
+// which would otherwise make this class `@MainActor`. That routes its deinit through
+// `swift_task_deinitOnExecutorMainActorBackDeploy`, which hits a TaskLocal scope
+// double-free in iOS 26.2 simruntime when the enclosing SwiftUI View is destroyed.
+// The class has no stored properties that require main-thread access, so nonisolated
+// is the semantically correct choice.
 
-final class UploadFarmedReports {
+nonisolated final class UploadFarmedReports {
+
+  private static let sharedEncoder: JSONEncoder = {
+    let e = JSONEncoder()
+    e.outputFormatting = [.withoutEscapingSlashes]
+    return e
+  }()
 
   // MARK: - Error types
 
@@ -166,8 +179,7 @@ final class UploadFarmedReports {
     }
 
     // Build DTOs (only after confirming we have reports to send)
-    let isoFormatter = ISO8601DateFormatter()
-    isoFormatter.formatOptions = [.withInternetDateTime]
+    let isoFormatter = DateFormatting.iso8601
 
     let appVersion = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "0.0.0"
     let device = "\(UIDevice.current.model) \(UIDevice.current.systemVersion)"
@@ -194,9 +206,8 @@ final class UploadFarmedReports {
       )
     }
 
-    // Encode
-    let encoder = JSONEncoder()
-    encoder.outputFormatting = [.withoutEscapingSlashes]
+    // Encode (reuse static instance)
+    let encoder = Self.sharedEncoder
 
     let bodyData: Data
     do {

@@ -40,14 +40,35 @@ struct AppRootView: View {
           }
         } else if communityService.activeCommunityId == nil {
           CommunityPickerView()
-        } else {
-          switch auth.currentUserType ?? AuthService.UserType.guide {
+        } else if !communityService.isMemberActive {
+          InactiveMemberView()
+        } else if let userType = auth.currentUserType {
+          switch userType {
           case .guide:
-            LandingView()
+            GuideLandingView()
           case .angler:
+            // Anglers see the same landing view regardless of community type.
+            // The former `isConservation ? ConservationLandingView()` branch
+            // was deprecated — conservation anglers are no longer a supported
+            // user-type / community combination.
             AnglerLandingView()
           case .public:
             PublicLandingView()
+          case .researcher:
+            if communityService.isConservation {
+              ResearcherLandingView()
+            } else {
+              PublicLandingView()
+            }
+          }
+        } else {
+          // currentUserType not yet synced from CommunityService — show a
+          // brief loading state rather than defaulting to .guide, which
+          // would flash GuideLandingView for non-guide roles and fire
+          // extraneous onAppear work (weather fetch, trip sync, etc.).
+          ZStack {
+            Color.black.ignoresSafeArea()
+            ProgressView().tint(.white)
           }
         }
       } else {

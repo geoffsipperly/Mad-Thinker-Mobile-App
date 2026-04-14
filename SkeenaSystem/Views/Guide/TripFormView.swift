@@ -15,7 +15,7 @@ struct TripClientDraft: Identifiable, Hashable {
   var name: String = ""
   var licenseNumber: String = ""
   var licences: [ClassifiedLicenceDraft] = []
-  // Optional profile details (if available via OCR or lookup)
+  // Optional profile details (if available via lookup)
   var dateOfBirth: Date?
   var residency: String? // e.g., "US", "CA", "other"
   var sex: String? // "male", "female", "other"
@@ -204,7 +204,7 @@ final class TripFormViewModel: ObservableObject {
     Binding(
       get: { [weak self] in self?.clients.indices.contains(index) == true ? (self?.clients[index].licenseNumber ?? "") : "" },
       set: { [weak self] newValue in
-        self?.updateClient(at: index) { $0.licenseNumber = newValue }
+        self?.updateClient(at: index) { $0.licenseNumber = MemberNumber.normalize(newValue) }
       }
     )
   }
@@ -358,10 +358,7 @@ struct TripFormView: View {
     .toolbar {
       ToolbarItem(placement: .navigationBarLeading) {
         Button { dismiss() } label: {
-          HStack(spacing: 4) {
-            Image(systemName: "chevron.backward")
-            Text("Back")
-          }
+          Image(systemName: "chevron.backward")
         }
       }
       ToolbarItem(placement: .navigationBarTrailing) {
@@ -587,8 +584,9 @@ struct TripFormView: View {
           .foregroundColor(.orange)
       }
 
-      // Show licences if populated via lookup
-      if !vm.clients[index].licences.isEmpty {
+      // Show licences if populated via lookup (gated by entitlement)
+      if CommunityService.shared.activeCommunityConfig.flag("E_MANAGE_LICENSES"),
+         !vm.clients[index].licences.isEmpty {
         licencesList(for: index)
       }
     }
@@ -614,7 +612,8 @@ struct TripFormView: View {
               Text("# \(profile.memberId)")
                 .font(.caption)
                 .foregroundColor(.gray)
-              if !profile.classifiedWatersLicenses.isEmpty {
+              if CommunityService.shared.activeCommunityConfig.flag("E_MANAGE_LICENSES"),
+                 !profile.classifiedWatersLicenses.isEmpty {
                 Text("\(profile.classifiedWatersLicenses.count) licence(s)")
                   .font(.caption2)
                   .foregroundColor(.blue)
@@ -812,24 +811,16 @@ struct TripFormView: View {
 // MARK: - Date helpers
 
 private func parseYMD(_ s: String) -> Date? {
-  let f = DateFormatter()
-  f.calendar = Calendar(identifier: .gregorian)
-  f.dateFormat = "yyyy-MM-dd"
-  return f.date(from: s)
+  DateFormatting.ymd.date(from: s)
 }
 
 private extension Date {
   var iso8601ZString: String {
-    let f = ISO8601DateFormatter()
-    f.formatOptions = [.withInternetDateTime]
-    return f.string(from: self)
+    DateFormatting.iso8601.string(from: self)
   }
 
   var yyyyMMdd: String {
-    let f = DateFormatter()
-    f.calendar = Calendar(identifier: .gregorian)
-    f.dateFormat = "yyyy-MM-dd"
-    return f.string(from: self)
+    DateFormatting.ymd.string(from: self)
   }
 }
 
@@ -859,10 +850,7 @@ private struct DatePickerSheet: View {
       .toolbar {
         ToolbarItem(placement: .navigationBarLeading) {
           Button(action: { dismiss() }) {
-            HStack(spacing: 4) {
-              Image(systemName: "chevron.backward")
-              Text("Back")
-            }
+            Image(systemName: "chevron.backward")
           }
         }
         ToolbarItem(placement: .navigationBarTrailing) {

@@ -19,6 +19,7 @@ final class CommunityService: ObservableObject {
     @Published var activeCommunityId: String?
     @Published private(set) var activeRole: String?  // "guide", "angler", or "public"
     @Published private(set) var activeCommunityTypeId: String?
+    @Published private(set) var activeCommunityTypeName: String?
     @Published private(set) var activeCommunityConfig: CommunityConfig = .default
     /// The user's chosen default community. Survives logout so subsequent logins
     /// auto-select this community and skip the picker. Cleared only when the user
@@ -28,11 +29,27 @@ final class CommunityService: ObservableObject {
     /// wait for this before rendering community-dependent content.
     @Published private(set) var hasFetchedMemberships = false
 
+    /// Whether the current user's membership in the active community is active.
+    /// False means the member has been deactivated by a guide/admin.
+    @Published private(set) var isMemberActive: Bool = true
+
+    /// Per-community add-on flags fetched from the `community_addons` table.
+    /// Keyed by addon_name (e.g. "Social"), value is `is_active`.
+    @Published private(set) var addons: [String: Bool] = [:]
+
+    /// Whether the Social add-on is active for the current community.
+    var isSocialActive: Bool { addons["Social"] ?? false }
+
+    /// Whether the active community is a Conservation-type community.
+    /// Used to gate researcher-specific views and features.
+    var isConservation: Bool { activeCommunityTypeName == "Conservation" }
+
     // MARK: - Persistence keys
 
     private let kActiveCommunityId = "CommunityService.activeCommunityId"
     private let kActiveRole = "CommunityService.activeRole"
     private let kActiveCommunityTypeId = "CommunityService.activeCommunityTypeId"
+    private let kActiveCommunityTypeName = "CommunityService.activeCommunityTypeName"
     private let kActiveCommunityConfig = "CommunityService.activeCommunityConfig"
     private let kDefaultCommunityId = "CommunityService.defaultCommunityId"
 
@@ -46,6 +63,7 @@ final class CommunityService: ObservableObject {
         activeCommunityId = UserDefaults.standard.string(forKey: kActiveCommunityId)
         activeRole = UserDefaults.standard.string(forKey: kActiveRole)
         activeCommunityTypeId = UserDefaults.standard.string(forKey: kActiveCommunityTypeId)
+        activeCommunityTypeName = UserDefaults.standard.string(forKey: kActiveCommunityTypeName)
         defaultCommunityId = UserDefaults.standard.string(forKey: kDefaultCommunityId)
 
         // Restore cached community config for instant cold-launch rendering
@@ -110,7 +128,7 @@ final class CommunityService: ObservableObject {
         // Build URL: GET /rest/v1/user_communities with nested joins for branding, geography + entitlements
         var comps = URLComponents(url: projectURL.appendingPathComponent("/rest/v1/user_communities"), resolvingAgainstBaseURL: false)!
         comps.queryItems = [
-            URLQueryItem(name: "select", value: "id,community_id,role,communities(id,name,code,is_active,community_type_id,logo_url,logo_asset_name,tagline,display_name,learn_url,geography,units,community_types(id,name,entitlements))")
+            URLQueryItem(name: "select", value: "id,community_id,role,is_active,communities(id,name,code,is_active,community_type_id,logo_url,logo_asset_name,tagline,display_name,learn_url,geography,units,community_types(id,name,entitlements))")
         ]
 
         var request = URLRequest(url: comps.url!)
@@ -160,7 +178,9 @@ final class CommunityService: ObservableObject {
                         if let membership = fetched.first(where: { $0.communityId == cachedId }) {
                             self.activeRole = membership.role
                             self.activeCommunityTypeId = membership.communities.communityTypeId
+                            self.activeCommunityTypeName = membership.communities.communityTypes?.name
                             self.activeCommunityConfig = membership.communities.config
+                            self.isMemberActive = membership.isActive
                             persistActiveState()
 
                             // Sync role to AuthService so AppRootView routes to the correct landing view
@@ -169,13 +189,14 @@ final class CommunityService: ObservableObject {
                             }
 
                             let typeName = membership.communities.communityTypes?.name ?? "nil"
-                            AppLogging.log("[CommunityService] Refreshed cached community: id=\(cachedId) role=\(membership.role) type=\(typeName) flags=\(self.activeCommunityConfig.entitlements.count)", level: .debug, category: .auth)
+                            AppLogging.log("[CommunityService] Refreshed cached community: id=\(cachedId) role=\(membership.role) type=\(typeName) memberActive=\(membership.isActive) flags=\(self.activeCommunityConfig.entitlements.count)", level: .debug, category: .auth)
                         }
                     } else {
                         // Cached community no longer valid — clear selection so picker is shown
                         self.activeCommunityId = nil
                         self.activeRole = nil
                         self.activeCommunityTypeId = nil
+                        self.activeCommunityTypeName = nil
                         self.activeCommunityConfig = .default
                         persistActiveState()
                         AppLogging.log("[CommunityService] Cached community no longer valid — showing picker for \(fetched.count) communities", level: .info, category: .auth)
@@ -215,18 +236,28 @@ final class CommunityService: ObservableObject {
         let membership = memberships.first(where: { $0.communityId == id })
         activeRole = membership?.role
         activeCommunityTypeId = membership?.communities.communityTypeId
+        activeCommunityTypeName = membership?.communities.communityTypes?.name
         activeCommunityConfig = membership?.communities.config ?? .default
+        isMemberActive = membership?.isActive ?? true
         persistActiveState()
 
-        // Sync role to AuthService so existing views that read auth.currentUserType continue to work
+        // Sync role to AuthService synchronously so existing views that read
+        // auth.currentUserType see the correct value on the same render pass.
+        // Previously this was wrapped in Task { @MainActor in ... }, which
+        // deferred the update and caused AppRootView to briefly render
+        // GuideLandingView (the default branch) for non-guide roles before
+        // swapping. setActiveCommunity is always called on the main actor
+        // (SwiftUI view taps and the fetchMemberships MainActor.run block),
+        // so a direct call is safe.
         if let role = activeRole, let userType = AuthService.UserType(rawValue: role) {
-            Task { @MainActor in
-                AuthService.shared.updateUserType(userType)
-            }
+            AuthService.shared.updateUserType(userType)
         }
 
         let typeName = membership?.communities.communityTypes?.name ?? "nil"
-        AppLogging.log("[CommunityService] Active community set: id=\(id) role=\(activeRole ?? "nil") type=\(typeName) flags=\(activeCommunityConfig.entitlements.count) logo=\(activeCommunityConfig.logoUrl ?? "bundled") name=\(activeCommunityName)", level: .info, category: .auth)
+        AppLogging.log("[CommunityService] Active community set: id=\(id) role=\(activeRole ?? "nil") type=\(typeName) memberActive=\(isMemberActive) flags=\(activeCommunityConfig.entitlements.count) logo=\(activeCommunityConfig.logoUrl ?? "bundled") name=\(activeCommunityName)", level: .info, category: .auth)
+
+        // Fetch add-ons for the newly active community
+        Task { await fetchAddons() }
     }
 
     // MARK: - Default community
@@ -252,7 +283,10 @@ final class CommunityService: ObservableObject {
         activeCommunityId = nil
         activeRole = nil
         activeCommunityTypeId = nil
+        activeCommunityTypeName = nil
         activeCommunityConfig = .default
+        isMemberActive = true
+        addons = [:]
         persistActiveState()
         AppLogging.log("[CommunityService] Active community cleared — showing picker", level: .info, category: .auth)
     }
@@ -307,6 +341,50 @@ final class CommunityService: ObservableObject {
         }
     }
 
+    // MARK: - Fetch add-ons
+
+    /// Fetches community_addons for the active community from the REST API.
+    /// Updates the `addons` dictionary with addon_name → is_active mappings.
+    func fetchAddons() async {
+        guard let communityId = await MainActor.run(body: { self.activeCommunityId }),
+              let token = await AuthService.shared.currentAccessToken() else {
+            return
+        }
+
+        var comps = URLComponents(url: projectURL.appendingPathComponent("/rest/v1/community_addons"), resolvingAgainstBaseURL: false)!
+        comps.queryItems = [
+            URLQueryItem(name: "select", value: "addon_name,is_active"),
+            URLQueryItem(name: "community_id", value: "eq.\(communityId)")
+        ]
+
+        var request = URLRequest(url: comps.url!)
+        request.httpMethod = "GET"
+        request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        request.setValue(anonKey, forHTTPHeaderField: "apikey")
+
+        do {
+            let (data, response) = try await URLSession.shared.data(for: request)
+            let statusCode = (response as? HTTPURLResponse)?.statusCode ?? -1
+            guard (200..<300).contains(statusCode) else {
+                AppLogging.log("[CommunityService] Fetch addons failed status=\(statusCode)", level: .error, category: .auth)
+                return
+            }
+
+            struct AddonRow: Decodable {
+                let addon_name: String
+                let is_active: Bool
+            }
+            let rows = try JSONDecoder().decode([AddonRow].self, from: data)
+            let dict = Dictionary(uniqueKeysWithValues: rows.map { ($0.addon_name, $0.is_active) })
+            await MainActor.run {
+                self.addons = dict
+            }
+            AppLogging.log("[CommunityService] Fetched \(rows.count) addon(s): \(dict)", level: .info, category: .auth)
+        } catch {
+            AppLogging.log("[CommunityService] Fetch addons error: \(error)", level: .error, category: .auth)
+        }
+    }
+
     // MARK: - Clear on logout
 
     func clear() {
@@ -315,11 +393,15 @@ final class CommunityService: ObservableObject {
         activeCommunityId = nil
         activeRole = nil
         activeCommunityTypeId = nil
+        activeCommunityTypeName = nil
         activeCommunityConfig = .default
+        isMemberActive = true
+        addons = [:]
         hasFetchedMemberships = false
         UserDefaults.standard.removeObject(forKey: kActiveCommunityId)
         UserDefaults.standard.removeObject(forKey: kActiveRole)
         UserDefaults.standard.removeObject(forKey: kActiveCommunityTypeId)
+        UserDefaults.standard.removeObject(forKey: kActiveCommunityTypeName)
         UserDefaults.standard.removeObject(forKey: kActiveCommunityConfig)
     }
 
@@ -337,6 +419,7 @@ final class CommunityService: ObservableObject {
         UserDefaults.standard.set(activeCommunityId, forKey: kActiveCommunityId)
         UserDefaults.standard.set(activeRole, forKey: kActiveRole)
         UserDefaults.standard.set(activeCommunityTypeId, forKey: kActiveCommunityTypeId)
+        UserDefaults.standard.set(activeCommunityTypeName, forKey: kActiveCommunityTypeName)
         if let configData = try? JSONEncoder().encode(activeCommunityConfig) {
             UserDefaults.standard.set(configData, forKey: kActiveCommunityConfig)
         }

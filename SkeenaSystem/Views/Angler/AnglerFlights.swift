@@ -598,19 +598,8 @@ private struct ItineraryDetailView: View {
   }
 
   private func formattedDateTime(_ isoString: String) -> String {
-    // Try ISO8601 with fractional seconds and without
-    let isoFormatter = ISO8601DateFormatter()
-    isoFormatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-    var date: Date? = isoFormatter.date(from: isoString)
-    if date == nil {
-      isoFormatter.formatOptions = [.withInternetDateTime]
-      date = isoFormatter.date(from: isoString)
-    }
-    guard let d = date else { return isoString }
-    let out = DateFormatter()
-    out.dateStyle = .medium
-    out.timeStyle = .short
-    return out.string(from: d)
+    guard let d = DateFormatting.parseISO(isoString) else { return isoString }
+    return DateFormatting.mediumDateTime.string(from: d)
   }
 
   private func loadStatus() async {

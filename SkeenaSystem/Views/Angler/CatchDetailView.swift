@@ -52,6 +52,32 @@ struct CatchDetailView: View {
             }
           }
 
+          // Catch measurements (displayed when available)
+          if report.species != nil || report.length_inches != nil
+              || report.girth_inches != nil || report.weight_lbs != nil {
+            VStack(alignment: .leading, spacing: 8) {
+              if let species = report.species, !species.isEmpty {
+                detailRow(label: "Species", value: species)
+              }
+              if let sex = report.sex, !sex.isEmpty {
+                detailRow(label: "Sex", value: sex)
+              }
+              if let length = report.length_inches {
+                detailRow(label: "Length (in)", value: "\(length)")
+              }
+              if let girth = report.girth_inches {
+                detailRow(label: "Girth (in)", value: String(format: "%.1f", girth))
+              }
+              if let weight = report.weight_lbs {
+                detailRow(label: "Weight (lbs)", value: String(format: "%.1f", weight))
+              }
+            }
+            .padding(.vertical, 8)
+            .padding(.horizontal, 12)
+            .background(Color.white.opacity(0.06))
+            .cornerRadius(12)
+          }
+
           // Summary / states
           Group {
             if isLoading {
@@ -119,6 +145,21 @@ struct CatchDetailView: View {
     .preferredColorScheme(.dark)
   }
 
+  // MARK: - Detail Row Helper
+
+  private func detailRow(label: String, value: String) -> some View {
+    HStack {
+      Text(label)
+        .font(.subheadline)
+        .foregroundColor(.gray)
+        .frame(width: 70, alignment: .leading)
+      Text(value)
+        .font(.subheadline)
+        .foregroundColor(.white)
+      Spacer()
+    }
+  }
+
   // Load (cached if possible; otherwise request and cache)
   private func loadStory() async {
     isLoading = true
@@ -146,18 +187,11 @@ struct CatchDetailView: View {
   }
 
   private static func fmtDate(_ iso: String) -> String {
-    if let d = parseISO(iso) {
-      let f = DateFormatter()
-      f.dateStyle = .medium
-      f.timeStyle = .short
-      return f.string(from: d)
-    }
+    if let d = DateFormatting.parseISO(iso) { return DateFormatting.mediumDateTime.string(from: d) }
     return iso
   }
 
   private static func parseISO(_ iso: String) -> Date? {
-    let f = ISO8601DateFormatter()
-    f.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-    return f.date(from: iso) ?? ISO8601DateFormatter().date(from: iso)
+    DateFormatting.parseISO(iso)
   }
 }

@@ -11,7 +11,6 @@ public enum LogLevel: Int {
 
 public enum LogCategory: String, CaseIterable, Hashable {
   case auth = "auth"
-  case ocr = "ocr"
   case network = "network"
   case trip = "trip"
   case ui = "ui"
@@ -19,7 +18,6 @@ public enum LogCategory: String, CaseIterable, Hashable {
   case ml = "ml"         // Core ML / Vision inference pipelines
   case persistence = "persistence" // Core Data and other storage
   case audio = "audio" // Voice memo / audio processing
-  case forum = "forum" 
   case angler = "angler"
 }
 
@@ -56,7 +54,6 @@ public struct AppLogging {
 
   // Category-specific os.Logger instances
   private static let authLogger = Logger(subsystem: subsystem, category: LogCategory.auth.rawValue)
-  private static let ocrLogger = Logger(subsystem: subsystem, category: LogCategory.ocr.rawValue)
   private static let networkLogger = Logger(subsystem: subsystem, category: LogCategory.network.rawValue)
   private static let tripLogger = Logger(subsystem: subsystem, category: LogCategory.trip.rawValue)
   private static let uiLogger = Logger(subsystem: subsystem, category: LogCategory.ui.rawValue)
@@ -64,7 +61,6 @@ public struct AppLogging {
   private static let mlLogger = Logger(subsystem: subsystem, category: LogCategory.ml.rawValue)
   private static let persistenceLogger = Logger(subsystem: subsystem, category: LogCategory.persistence.rawValue)
   private static let audioLogger = Logger(subsystem: subsystem, category: LogCategory.audio.rawValue)
-  private static let forumLogger = Logger(subsystem: subsystem, category: LogCategory.forum.rawValue)
   private static let anglerLogger = Logger(subsystem: subsystem, category: LogCategory.angler.rawValue)
 
   // One-time diagnostic: log resolved LOG_LEVEL using os.Logger directly (unfiltered)
@@ -89,7 +85,6 @@ public struct AppLogging {
     let logger: Logger = {
       switch category {
       case .auth: return authLogger
-      case .ocr: return ocrLogger
       case .network: return networkLogger
       case .trip: return tripLogger
       case .ui: return uiLogger
@@ -97,7 +92,6 @@ public struct AppLogging {
       case .ml: return mlLogger
       case .persistence: return persistenceLogger
       case .audio: return audioLogger
-      case .forum: return forumLogger
       case .angler: return anglerLogger
       }
     }()

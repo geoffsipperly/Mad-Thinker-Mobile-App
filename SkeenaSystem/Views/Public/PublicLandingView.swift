@@ -61,7 +61,7 @@ private enum PublicLandingAPI {
 // MARK: - PublicLandingView
 //
 // Landing screen for users with the "public" community role.
-// Identical to LandingView except:
+// Identical to GuideLandingView except:
 //   - No trip sync on appear (public users have no trip concept)
 //   - No trip navigation destination
 //   - ReportChatView opened in alwaysSolo mode
@@ -84,31 +84,13 @@ struct PublicLandingView: View {
   @State private var errorText: String?
   @State private var goToCatchMap = false
 
-  // Map reports (same data source as guide LandingView)
+  // Map reports (same data source as GuideLandingView)
   @State private var mapReports: [MapReportDTO] = []
 
   // Location (for weather)
   @StateObject private var locationManager = LocationManager()
 
   // Live weather
-  private struct LiveWeather {
-    let locationName: String
-    let condition: String
-    let icon: String
-    let temp: Int
-    let windDir: String
-    let windSpeed: Int
-    let pressureVal: Int
-    let pressureTrend: WeatherPressureTrend
-    struct HourlySlot: Identifiable {
-      var id: String { hour }
-      let hour: String
-      let icon: String
-      let temp: Int
-      let precipChance: Int
-    }
-    let hourly: [HourlySlot]
-  }
   @State private var liveWeather: LiveWeather? = nil
 
   // Path-based nav for toolbar navigation
@@ -122,7 +104,9 @@ struct PublicLandingView: View {
         content
       }
       .navigationDestination(isPresented: $goToAssistant) {
-        ReportChatView(alwaysSolo: true, directToChat: true)
+        ReportChatView(alwaysSolo: true, directToChat: true, onSaved: {
+          goToAssistant = false
+        })
           .navigationBarTitleDisplayMode(.inline)
       }
       .navigationDestination(isPresented: $showRecordActivity) {
@@ -149,16 +133,16 @@ struct PublicLandingView: View {
             .environment(\.userRole, .public)
             .environment(\.guideNavigateTo, handleNavigateTo)
         case .community:
-          CommunityForumView()
+          SocialFeedView()
             .environment(\.userRole, .public)
             .environment(\.guideNavigateTo, handleNavigateTo)
-            .environmentObject(auth)
-        case .catches:
-          ReportsListViewPicMemo()
+        case .activities:
+          ActivitiesView()
             .environment(\.userRole, .public)
             .environment(\.guideNavigateTo, handleNavigateTo)
         case .observations:
-          ObservationsListView()
+          // Standalone observations removed — now inside Activities → Observations tab.
+          ActivitiesView()
             .environment(\.userRole, .public)
             .environment(\.guideNavigateTo, handleNavigateTo)
         case .trips:
@@ -183,9 +167,9 @@ struct PublicLandingView: View {
           Button(action: logoutTapped) {
             HStack(spacing: 6) {
               Image(systemName: "person.crop.circle.badge.xmark")
-                .font(.title3.weight(.semibold))
+                .font(.subheadline)
               Text("Log out")
-                .font(.footnote.weight(.semibold))
+                .font(.caption)
             }
           }
           .accessibilityIdentifier("logoutCapsule")
@@ -194,14 +178,32 @@ struct PublicLandingView: View {
       .onAppear {
         locationManager.request()
         locationManager.start()
+        Task {
+          await fetchReports()
+          await fetchMapReports()
+        }
       }
       .onChange(of: locationManager.lastLocation) { loc in
         guard liveWeather == nil, let loc else { return }
         Task { await fetchWeather(location: loc) }
       }
-      .task {
-        if reports.isEmpty { await fetchReports() }
-        await fetchMapReports()
+      .onChange(of: communityService.activeCommunityId) { newValue in
+        AppLogging.log("[PublicLandingView] onChange(activeCommunityId) -> \(newValue ?? "nil") — clearing stale reports and refetching", level: .info, category: .catch)
+        reports = []
+        mapReports = []
+        Task {
+          await fetchReports()
+          await fetchMapReports()
+        }
+      }
+      .onChange(of: auth.currentMemberId) { newValue in
+        AppLogging.log("[PublicLandingView] onChange(currentMemberId) -> \(newValue ?? "nil") — clearing stale reports and refetching", level: .info, category: .catch)
+        reports = []
+        mapReports = []
+        Task {
+          await fetchReports()
+          await fetchMapReports()
+        }
       }
     }
     .environment(\.userRole, .public)
@@ -575,7 +577,8 @@ struct PublicLandingView: View {
           windSpeed: Int(w.windSpeed.rounded()),
           pressureVal: Int(w.pressure.rounded()),
           pressureTrend: WeatherSnapshotService.pressureTrend(current: w.pressure, hourly: response.hourlyForecast),
-          hourly: slots
+          hourly: slots,
+          source: response.source
         )
       }
     } catch {
@@ -623,17 +626,11 @@ struct PublicLandingView: View {
   // MARK: - Helpers
 
   private static func parseISO(_ iso: String) -> Date? {
-    let f = ISO8601DateFormatter()
-    f.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-    return f.date(from: iso) ?? ISO8601DateFormatter().date(from: iso)
+    DateFormatting.parseISO(iso)
   }
 
   private static func fmtDate(_ iso: String) -> String {
-    if let d = parseISO(iso) {
-      let f = DateFormatter()
-      f.dateStyle = .medium; f.timeStyle = .short
-      return f.string(from: d)
-    }
+    if let d = parseISO(iso) { return DateFormatting.mediumDateTime.string(from: d) }
     return iso
   }
 }

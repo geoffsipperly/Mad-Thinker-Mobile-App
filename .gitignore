@@ -17,6 +17,10 @@ Pods/
 # Secrets (API keys, tokens)
 SkeenaSystem/Config/Secrets.xcconfig
 
-# Claude Code
-.claude/
+# Claude Code — commit shared context & commands, keep personal files local
+.claude/*
+!.claude/CLAUDE.md
+!.claude/commands/
+!.claude/agents/
+!.claude/settings.json
 

@@ -51,7 +51,7 @@ struct ManageTripsView: View {
                         Text(trip.name.isEmpty ? "-" : trip.name)
                           .foregroundColor(.white)
                           .font(.headline)
-                        Text("\(dayString(trip.startDate)) – \(dayString(trip.endDate))")
+                        Text(dateRangeString(start: trip.startDate, end: trip.endDate))
                           .font(.caption)
                           .foregroundColor(.secondary)
                       }
@@ -98,6 +98,19 @@ struct ManageTripsView: View {
     return d.formatted(date: .abbreviated, time: .omitted)
   }
 
+  private func dateRangeString(start: Date?, end: Date?) -> String {
+    let s = dayString(start)
+    let e = dayString(end)
+    if e == "-" || e == s { return s }
+    return "\(s) – \(e)"
+  }
+
+  /// Parse an ISO8601 or date-only string into a Date.
+  private func parseDate(_ s: String?) -> Date? {
+    guard let s = s else { return nil }
+    return DateFormatting.parseISO(s) ?? DateFormatting.ymd.date(from: s)
+  }
+
   private func fetchServerTrips() {
     isLoading = true
     loadError = nil
@@ -114,13 +127,11 @@ struct ManageTripsView: View {
       do {
         let trips = try await TripAPI.getTrips(jwt: jwt)
         let mapped: [ServerTripItem] = trips.map { t in
-          let iso = ISO8601DateFormatter()
-          iso.formatOptions = [.withInternetDateTime]
-          return ServerTripItem(
+          ServerTripItem(
             summary: t,
             name: t.tripName ?? "",
-            startDate: t.startDate.flatMap { iso.date(from: $0) },
-            endDate: t.endDate.flatMap { iso.date(from: $0) }
+            startDate: parseDate(t.startDate),
+            endDate: parseDate(t.endDate)
           )
         }
         await MainActor.run {
@@ -149,14 +160,19 @@ private struct ServerTripItem: Identifiable {
   var id: String { summary.id }
 
   var status: TripRowStatus {
+    let cal = Calendar.current
     let now = Date()
     guard let s = startDate else { return .notStarted }
-    let startOfToday = Calendar.current.startOfDay(for: now)
-    // Compare start date at day granularity so a trip starting "today" is always in-progress
-    let startDay = Calendar.current.startOfDay(for: s)
+    let startOfToday = cal.startOfDay(for: now)
+    // Compare all dates at day granularity to avoid UTC-vs-local edge cases
+    let startDay = cal.startOfDay(for: s)
     if startDay > startOfToday { return .notStarted }
-    let inProgress = (startDay <= startOfToday) && (endDate == nil || (endDate ?? now) >= startOfToday)
-    return inProgress ? .inProgress : .completed
+    if let e = endDate {
+      let endDay = cal.startOfDay(for: e)
+      return endDay >= startOfToday ? .inProgress : .completed
+    }
+    // No end date — 1-day trip, in progress if today is the start day
+    return startDay == startOfToday ? .inProgress : .completed
   }
 }
 

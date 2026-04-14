@@ -12,6 +12,7 @@ import SwiftUI
 struct RecordActivityView: View {
   @StateObject private var auth = AuthService.shared
   @Environment(\.guideNavigateTo) private var guideNavigateTo
+  @Environment(\.dismiss) private var dismiss
 
   // Location for no-catch reports
   @StateObject private var locationManager = LocationManager()
@@ -29,7 +30,7 @@ struct RecordActivityView: View {
           // Action tiles — Record a Catch + Record Observation (blue)
           LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
             Button { goToAssistant = true } label: {
-              actionTile(icon: "square.and.pencil", label: "Record a Catch")
+              actionTile(icon: "square.and.pencil", label: "Record catch")
             }
             .accessibilityIdentifier("landedTile")
 
@@ -93,7 +94,13 @@ struct RecordActivityView: View {
     }
     .navigationTitle("New Activity")
     .navigationDestination(isPresented: $goToAssistant) {
-      ReportChatView(alwaysSolo: true, directToChat: true)
+      ReportChatView(alwaysSolo: true, directToChat: true, onSaved: {
+        // Pop all the way back to the landing view after catch is saved
+        goToAssistant = false
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+          dismiss()
+        }
+      })
         .navigationBarTitleDisplayMode(.inline)
     }
     .onAppear {
@@ -113,7 +120,8 @@ struct RecordActivityView: View {
       guideName: auth.currentFirstName ?? "",
       lat: locationManager.lastLocation?.coordinate.latitude,
       lon: locationManager.lastLocation?.coordinate.longitude,
-      memberId: nil
+      memberId: auth.currentMemberId,
+      communityId: CommunityService.shared.activeCommunityId
     )
     FarmedReportStore.shared.add(report)
 

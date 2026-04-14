@@ -12,7 +12,7 @@
 SUPABASE_PROJECT_URL = https://koyegehcwcrvxpfthkxq.supabase.co
 API_BASE_URL = koyegehcwcrvxpfthkxq.supabase.co
 SUPABASE_ANON_KEY = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtveWVnZWhjd2NydnhwZnRoa3hxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM3NjE3MzMsImV4cCI6MjA4OTMzNzczM30.XVjI2BRX0-XdHQFK_Vas2jc7zZN32DCXRVKtnsbQQGk
-LOG_LEVEL = debug
+LOG_LEVEL = error
 BETA_RELEASE = true
 
 // ──────────────────────────────────────────────
@@ -24,16 +24,15 @@ E_MEET_STAFF = true
 E_GEAR_CHECKLIST = false
 E_MANAGE_LICENSES = false
 E_SELF_ASSESSMENT = true
+E_PREFERENCES = true
 E_CATCH_CAROUSEL = true
-E_THE_BUZZ = true
 E_CATCH_MAP = true
-E_MANAGE_OPS = false
 
 // ──────────────────────────────────────────────
 // MARK: - API Endpoints (Edge Functions)
 // ──────────────────────────────────────────────
 
-UPLOAD_CATCH_URL = /functions/v1/upload-catch-reports-v4
+UPLOAD_CATCH_URL = /functions/v1/upload-catch-reports-v5
 MANAGE_TRIP_URL = functions/v1/manage-trip
 DOWNLOAD_CATCH_URL = /functions/v1/download-catch-reports
 RIVER_CONDITIONS_URL = /functions/v1/river-conditions
@@ -45,6 +44,7 @@ ANGLER_DETAILS_URL = /functions/v1/angler-details
 MY_PROFILE_URL = /functions/v1/my-profile
 PROFICIENCY_URL = /functions/v1/proficiency
 GEAR_URL = /functions/v1/gear
+MEMBER_PROFILE_FIELDS_URL = /functions/v1/member-profile-fields
 CLASSIFIED_LICENSES_URL = /functions/v1/classified-licenses
 CATCH_STORY_URL = /functions/v1/catch-story
 // Host+path only (no protocol) — xcconfig treats // as a comment.
@@ -60,13 +60,6 @@ STAE_BIO_DETAIL = /functions/v1/staff-bio-detail
 FLIGHT_DETAILS = /functions/v1/flight-details
 FLIGHT_STATUS = /functions/v1/flight-status
 
-// ──────────────────────────────────────────────
-// MARK: - Forum / Community Feed
-// ──────────────────────────────────────────────
-
-FORUM_BASE = /rest/v1
-FORUM_API_KEY = $(SUPABASE_ANON_KEY)
-BUZZ_CATEGORY_ID = 5d33c4b7-966c-4d9e-a3ed-ed9eafae168f
 
 // ──────────────────────────────────────────────
 // MARK: - App Branding (compile-time fallback — overridden by communities table at runtime)

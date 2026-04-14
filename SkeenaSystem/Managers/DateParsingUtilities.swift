@@ -8,6 +8,14 @@ import Foundation
 /// Used by LicenseTextRecognizer and FSELicense_BCFuzzyLabels.
 enum DateParsingUtilities {
 
+  /// Reusable formatter for DOB parsing (dateFormat is mutated per-attempt).
+  private static let dobParser: DateFormatter = {
+    let f = DateFormatter()
+    f.locale = Locale(identifier: "en_US_POSIX")
+    f.calendar = Calendar(identifier: .gregorian)
+    return f
+  }()
+
   /// Supported date formats for DOB parsing, in order of preference.
   private static let dobFormats = [
     "MMM d, yyyy",
@@ -28,9 +36,7 @@ enum DateParsingUtilities {
     let s = raw.trimmingCharacters(in: .whitespacesAndNewlines)
     guard !s.isEmpty else { return nil }
 
-    let dfIn = DateFormatter()
-    dfIn.locale = Locale(identifier: "en_US_POSIX")
-    dfIn.calendar = Calendar(identifier: .gregorian)
+    let dfIn = Self.dobParser
 
     var date: Date?
 
@@ -50,12 +56,7 @@ enum DateParsingUtilities {
     }
 
     guard let final = date else { return nil }
-
-    let out = DateFormatter()
-    out.calendar = Calendar(identifier: .gregorian)
-    out.locale = Locale(identifier: "en_US_POSIX")
-    out.dateFormat = "yyyy-MM-dd"
-    return out.string(from: final)
+    return DateFormatting.ymd.string(from: final)
   }
 
   /// Extracts the first regex match from text.

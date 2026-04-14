@@ -3,7 +3,7 @@
 //  SkeenaSystem
 //
 //  Centralized configuration manager with environment‑specific settings
-//  (Supabase URLs, anon keys, function endpoints, forum base, logging level, etc.).
+//  (Supabase URLs, anon keys, function endpoints, logging level, etc.).
 //
 
 import Foundation
@@ -25,8 +25,6 @@ public final class AppEnvironment {
     // These can be set in tests or at runtime to temporarily override configuration values.
     public var overrideProjectURL: URL?
     public var overrideAnonKey: String?
-    public var overrideForumBase: String?
-    public var overrideForumApiKey: String?
     public var overrideAppDisplayName: String?
     public var overrideAppLogoAsset: String?
 
@@ -64,7 +62,6 @@ public final class AppEnvironment {
     public var overrideUseLengthRegressor: Bool?
     public var overrideSpeciesDetectionThreshold: Double?
     public var overrideLodgeRivers: [String]?
-    public var overrideBuzzCategoryId: String?
     public var overrideCommunityName: String?
     public var overrideCommunityTagline: String?
     public var overrideDefaultRiver: String?
@@ -72,7 +69,23 @@ public final class AppEnvironment {
     public var overrideDefaultWaterBody: String?
     public var overrideTacticsEnabled: Bool?
 
-    private init() {}
+    private init() {
+        // Cache parsed CSV arrays once at init (avoids re-splitting on every access).
+        if let raw = Bundle.main.object(forInfoDictionaryKey: "LODGE_RIVERS") as? String, !raw.isEmpty {
+            _cachedLodgeRivers = raw.components(separatedBy: ",")
+                .map { $0.trimmingCharacters(in: .whitespaces) }
+                .filter { !$0.isEmpty }
+        }
+        if let raw = Bundle.main.object(forInfoDictionaryKey: "LODGE_WATER_BODIES") as? String, !raw.isEmpty {
+            _cachedLodgeWaterBodies = raw.components(separatedBy: ",")
+                .map { $0.trimmingCharacters(in: .whitespaces) }
+                .filter { !$0.isEmpty }
+        }
+    }
+
+    /// Pre-parsed CSV values from Info.plist (set once in init).
+    private var _cachedLodgeRivers: [String] = []
+    private var _cachedLodgeWaterBodies: [String] = []
 
     // MARK: - Helpers to read from Info.plist
 
@@ -112,20 +125,6 @@ public final class AppEnvironment {
         fatalError("SUPABASE_ANON_KEY not configured.")
     }
 
-    /// Forum REST base URL (e.g., https://.../rest/v1). Defaults to project URL + "/rest/v1".
-    public var forumBase: String {
-        if let v = overrideForumBase { return v }
-        if let v = stringFromInfo("FORUM_BASE") { return v }
-        // Default to projectURL host + /rest/v1
-        return "\(projectURL.scheme ?? "https")://\(projectURL.host ?? "")/rest/v1"
-    }
-
-    /// API key for Forum REST calls (defaults to anonKey).
-    public var forumApiKey: String {
-        if let v = overrideForumApiKey { return v }
-        if let v = stringFromInfo("FORUM_API_KEY") { return v }
-        return anonKey
-    }
 
     /// Display name for the app/community (used in UI).
     public var appDisplayName: String {
@@ -219,7 +218,7 @@ public final class AppEnvironment {
     public var uploadCatchURL: URL {
         if let v = overrideUploadCatchURL { return v }
         if let url = urlFromInfo("UPLOAD_CATCH_URL") { return url }
-        return projectURL.appendingPathComponent("/functions/v1/upload-catch-reports-v4")
+        return projectURL.appendingPathComponent("/functions/v1/upload-catch-reports-v5")
     }
 
     /// Manage-trip endpoint (functions/v1/manage-trip).
@@ -392,12 +391,7 @@ public final class AppEnvironment {
     /// Used to build river condition tiles. Names are sent as-is to the river-conditions API.
     public var lodgeRivers: [String] {
         if let v = overrideLodgeRivers { return v }
-        if let raw = stringFromInfo("LODGE_RIVERS"), !raw.isEmpty {
-            return raw.components(separatedBy: ",")
-                .map { $0.trimmingCharacters(in: .whitespaces) }
-                .filter { !$0.isEmpty }
-        }
-        return [] // No hardcoded fallback — LODGE_RIVERS must be set in xcconfig
+        return _cachedLodgeRivers
     }
 
     /// Strips common water-body suffixes from a river name (e.g. "Nehalem River" → "Nehalem").
@@ -414,12 +408,7 @@ public final class AppEnvironment {
     /// Used for polygon-based GPS detection and conditions forecasts.
     public var lodgeWaterBodies: [String] {
         if let v = overrideLodgeWaterBodies { return v }
-        if let raw = stringFromInfo("LODGE_WATER_BODIES"), !raw.isEmpty {
-            return raw.components(separatedBy: ",")
-                .map { $0.trimmingCharacters(in: .whitespaces) }
-                .filter { !$0.isEmpty }
-        }
-        return [] // No hardcoded fallback — LODGE_WATER_BODIES must be set in xcconfig
+        return _cachedLodgeWaterBodies
     }
 
     /// Default water body name when no GPS-based water body is resolved.
@@ -496,13 +485,4 @@ public final class AppEnvironment {
         return 0.70
     }
 
-    // MARK: - The Buzz configuration
-
-    /// Forum category ID used for "The Buzz" feed on the landing page.
-    /// Returns nil when not configured, allowing the UI to hide the section.
-    public var buzzCategoryId: String? {
-        if let v = overrideBuzzCategoryId { return v }
-        if let v = stringFromInfo("BUZZ_CATEGORY_ID"), !v.isEmpty { return v }
-        return nil
-    }
 }

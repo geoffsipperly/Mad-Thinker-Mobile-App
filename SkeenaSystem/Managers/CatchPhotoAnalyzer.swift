@@ -51,11 +51,17 @@ final class CatchPhotoAnalyzer {
   private let riverLocator: RiverLocator
   private let waterBodyLocator: WaterBodyLocator
 
-  // ViT species model (raw MLModel)
-  private let coreMLModel: MLModel
+  // ViT species model (raw MLModel) — nil if bundle or compilation fails
+  private let coreMLModel: MLModel?
 
-  // YOLOv8 detector from best.mlpackage
-  private let detectorModel: best
+  // YOLOv8 detector from best.mlpackage — nil if bundle or compilation fails
+  private let detectorModel: best?
+
+  // Cached on-demand models (avoid re-loading on every call)
+  private static var _sexModel: ViTFishSex?
+  #if canImport(MediaPipeTasksVision)
+  private static var _handLandmarker: HandLandmarker?
+  #endif
 
   // Species labels for ViT
     private let speciesLabels: [String] = [
@@ -74,13 +80,21 @@ final class CatchPhotoAnalyzer {
     let config = MLModelConfiguration()
 
     // Species model (ViTFishSpecies.mlpackage)
-    guard let speciesURL = Bundle.main.url(forResource: "ViTFishSpecies", withExtension: "mlmodelc") else {
-      fatalError("❌ Could not find ViTFishSpecies.mlmodelc in app bundle")
+    if let speciesURL = Bundle.main.url(forResource: "ViTFishSpecies", withExtension: "mlmodelc"),
+       let model = try? MLModel(contentsOf: speciesURL, configuration: config) {
+      self.coreMLModel = model
+    } else {
+      AppLogging.log("CatchPhotoAnalyzer: failed to load ViTFishSpecies model", level: .error, category: .ml)
+      self.coreMLModel = nil
     }
-    self.coreMLModel = try! MLModel(contentsOf: speciesURL, configuration: config)
 
     // YOLOv8 detector (best.mlpackage)
-    self.detectorModel = try! best(configuration: config)
+    if let detector = try? best(configuration: config) {
+      self.detectorModel = detector
+    } else {
+      AppLogging.log("CatchPhotoAnalyzer: failed to load YOLOv8 detector model", level: .error, category: .ml)
+      self.detectorModel = nil
+    }
   }
 
   // MARK: - Main analysis entry point
@@ -89,17 +103,27 @@ final class CatchPhotoAnalyzer {
     image: UIImage,
     location: CLLocation?
   ) async -> CatchPhotoAnalysis {
-    // 1. Location detection: river spines first, then water body polygons
+    // 1. Location detection: check both river spines and water body polygons,
+    //    pick whichever is closer when both match.
     var riverDisplay: String?
 
-    let riverName = riverLocator.riverName(near: location)
-    AppLogging.log("[Analyzer] RiverLocator result: '\(riverName)' for location: \(location?.coordinate.latitude ?? 0), \(location?.coordinate.longitude ?? 0)", level: .debug, category: .ml)
+    let riverResult = riverLocator.riverMatch(near: location)
+    let waterBodyResult = waterBodyLocator.waterBodyMatch(at: location)
+    AppLogging.log("[Analyzer] Location (\(location?.coordinate.latitude ?? 0), \(location?.coordinate.longitude ?? 0)) — river: \(riverResult?.name ?? "none") @ \(String(format: "%.2f", riverResult?.distanceKm ?? -1)) km, waterBody: \(waterBodyResult?.name ?? "none") @ \(String(format: "%.2f", waterBodyResult?.distanceKm ?? -1)) km", level: .debug, category: .ml)
 
-    if !riverName.isEmpty {
-      riverDisplay = riverName
-    } else if let waterBody = waterBodyLocator.waterBodyName(at: location) {
-      riverDisplay = waterBody
-      AppLogging.log("[Analyzer] Water body matched: \(waterBody)", level: .debug, category: .ml)
+    if let river = riverResult, let waterBody = waterBodyResult {
+      // Both matched — pick whichever is closer
+      if river.distanceKm <= waterBody.distanceKm {
+        riverDisplay = river.name
+        AppLogging.log("[Analyzer] River '\(river.name)' wins (closer)", level: .debug, category: .ml)
+      } else {
+        riverDisplay = waterBody.name
+        AppLogging.log("[Analyzer] Water body '\(waterBody.name)' wins (closer)", level: .debug, category: .ml)
+      }
+    } else if let river = riverResult {
+      riverDisplay = river.name
+    } else if let waterBody = waterBodyResult {
+      riverDisplay = waterBody.name
     } else {
       riverDisplay = nil
       AppLogging.log("[Analyzer] No location matched", level: .debug, category: .ml)
@@ -279,7 +303,7 @@ final class CatchPhotoAnalyzer {
     // Wrap the MLMultiArray in an MLFeatureProvider
     let provider = ViTInputFeatureProvider(imageArray: inputArray)
 
-    guard let output = try? coreMLModel.prediction(from: provider) else {
+    guard let output = try? coreMLModel?.prediction(from: provider) else {
       return nil
     }
 
@@ -348,9 +372,11 @@ final class CatchPhotoAnalyzer {
       return nil
     }
 
-    // Create the sex model on demand. If you want, we can later cache it.
-    let config = MLModelConfiguration()
-    guard let model = try? ViTFishSex(configuration: config) else {
+    // Lazy-cache the sex model so it's only loaded once.
+    if Self._sexModel == nil {
+      Self._sexModel = try? ViTFishSex(configuration: MLModelConfiguration())
+    }
+    guard let model = Self._sexModel else {
       AppLogging.log("runSexClassifier: failed to create ViTFishSex model", level: .error, category: .ml)
       return nil
     }
@@ -384,20 +410,21 @@ final class CatchPhotoAnalyzer {
     #if canImport(MediaPipeTasksVision)
     guard let cgImage = image.cgImage else { return nil }
 
-    let modelPath = Bundle.main.path(forResource: "hand_landmarker", ofType: "task")
-    guard let modelPath else {
-      AppLogging.log("detectHand: hand_landmarker.task not found in bundle", level: .error, category: .ml)
-      return nil
+    // Lazy-cache the HandLandmarker so the .task model is only loaded once.
+    if Self._handLandmarker == nil {
+      guard let modelPath = Bundle.main.path(forResource: "hand_landmarker", ofType: "task") else {
+        AppLogging.log("detectHand: hand_landmarker.task not found in bundle", level: .error, category: .ml)
+        return nil
+      }
+      let options = HandLandmarkerOptions()
+      options.baseOptions.modelAssetPath = modelPath
+      options.numHands = 2
+      options.minHandDetectionConfidence = 0.3
+      options.minHandPresenceConfidence = 0.3
+      options.runningMode = .image
+      Self._handLandmarker = try? HandLandmarker(options: options)
     }
-
-    let options = HandLandmarkerOptions()
-    options.baseOptions.modelAssetPath = modelPath
-    options.numHands = 2
-    options.minHandDetectionConfidence = 0.3
-    options.minHandPresenceConfidence = 0.3
-    options.runningMode = .image
-
-    guard let landmarker = try? HandLandmarker(options: options) else {
+    guard let landmarker = Self._handLandmarker else {
       AppLogging.log("detectHand: failed to create HandLandmarker", level: .error, category: .ml)
       return nil
     }
@@ -536,23 +563,16 @@ final class CatchPhotoAnalyzer {
     mean: [Float] = [0.485, 0.456, 0.406],
     std: [Float] = [0.229, 0.224, 0.225]
   ) throws -> MLMultiArray {
-    let targetSize = CGSize(width: 224, height: 224)
-
-    // 1) Resize the image to 224x224
-    guard let resized = resize(image: image, to: targetSize),
-          let cgImage = resized.cgImage
-    else {
+    guard let srcCGImage = image.cgImage else {
       throw PreprocessError.cannotResize
     }
 
-    let width = Int(targetSize.width)
-    let height = Int(targetSize.height)
-
-    // 2) Draw into RGBA8 buffer
+    let width = 224
+    let height = 224
     let bytesPerPixel = 4
     let bytesPerRow = bytesPerPixel * width
-    let bitsPerComponent = 8
 
+    // 1) Draw the original image directly into a 224×224 RGBA8 buffer (single resize pass)
     var rawData = [UInt8](repeating: 0, count: width * height * bytesPerPixel)
     guard
       let colorSpace = CGColorSpace(name: CGColorSpace.sRGB),
@@ -560,7 +580,7 @@ final class CatchPhotoAnalyzer {
         data: &rawData,
         width: width,
         height: height,
-        bitsPerComponent: bitsPerComponent,
+        bitsPerComponent: 8,
         bytesPerRow: bytesPerRow,
         space: colorSpace,
         bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
@@ -569,49 +589,28 @@ final class CatchPhotoAnalyzer {
       throw PreprocessError.cannotCreateContext
     }
 
-    context.draw(cgImage, in: CGRect(origin: .zero, size: targetSize))
+    context.draw(srcCGImage, in: CGRect(x: 0, y: 0, width: width, height: height))
 
-    // 3) Create MLMultiArray of shape [1, 3, 224, 224]
+    // 2) Create MLMultiArray of shape [1, 3, 224, 224]
     let shape: [NSNumber] = [1, 3, NSNumber(value: height), NSNumber(value: width)]
     let array = try MLMultiArray(shape: shape, dataType: .float32)
 
-    // Fill in channel-first order: [batch, channel, y, x]
-    // Apply ImageNet normalization: (pixel / 255 - mean) / std
+    // 3) Fill using a raw pointer — avoids ~150K NSNumber allocations per image
     let channelStride = height * width
-    let mean: [Float] = [0.485, 0.456, 0.406]  // R, G, B
-    let std: [Float]  = [0.229, 0.224, 0.225]
+    let ptr = array.dataPointer.bindMemory(to: Float.self, capacity: 3 * channelStride)
 
     for y in 0 ..< height {
       for x in 0 ..< width {
         let pixelIndex = y * bytesPerRow + x * bytesPerPixel
-        let r = (Float(rawData[pixelIndex + 0]) / 255.0 - mean[0]) / std[0]
-        let g = (Float(rawData[pixelIndex + 1]) / 255.0 - mean[1]) / std[1]
-        let b = (Float(rawData[pixelIndex + 2]) / 255.0 - mean[2]) / std[2]
-
         let hwIndex = y * width + x
 
-        let rIndex = 0 * channelStride + hwIndex
-        let gIndex = 1 * channelStride + hwIndex
-        let bIndex = 2 * channelStride + hwIndex
-
-        array[rIndex] = NSNumber(value: r)
-        array[gIndex] = NSNumber(value: g)
-        array[bIndex] = NSNumber(value: b)
+        ptr[0 * channelStride + hwIndex] = (Float(rawData[pixelIndex + 0]) / 255.0 - mean[0]) / std[0]
+        ptr[1 * channelStride + hwIndex] = (Float(rawData[pixelIndex + 1]) / 255.0 - mean[1]) / std[1]
+        ptr[2 * channelStride + hwIndex] = (Float(rawData[pixelIndex + 2]) / 255.0 - mean[2]) / std[2]
       }
     }
 
     return array
-  }
-
-  private func resize(image: UIImage, to targetSize: CGSize) -> UIImage? {
-    let format = UIGraphicsImageRendererFormat.default()
-    format.scale = 1.0 // we want logical pixels
-
-    let renderer = UIGraphicsImageRenderer(size: targetSize, format: format)
-    let result = renderer.image { _ in
-      image.draw(in: CGRect(origin: .zero, size: targetSize))
-    }
-    return result
   }
 
   private enum PreprocessError: Error {
@@ -666,7 +665,7 @@ final class CatchPhotoAnalyzer {
     let personBoxWidth: Double
     let personAspectRatio: Double
     let fishToPersonRatio: Double
-    let speciesIndex: Double
+    var speciesIndex: Double
     let speciesConfidence: Double
     let diagonalFraction: Double
     let handDetected: Double
@@ -952,7 +951,7 @@ final class CatchPhotoAnalyzer {
         return DetectionResult(fishBox: nil, personBox: nil)
       }
 
-      guard let output = try? detectorModel.prediction(image: pixelBuffer) else {
+      guard let output = try? detectorModel?.prediction(image: pixelBuffer) else {
         AppLogging.log("runDetector: model prediction failed", level: .error, category: .ml)
         return DetectionResult(fishBox: nil, personBox: nil)
       }
@@ -993,16 +992,21 @@ final class CatchPhotoAnalyzer {
       let numClasses = channels - 4
 
       // Helper closure to read arr[0, channel, anchor] or arr[0, anchor, channel]
-      let read: (_ channelIndex: Int, _ anchorIndex: Int) -> Double = { ch, an in
-        let idx: [NSNumber]
-        if channelsOnSecondAxis {
-          // [1, C, A]
-          idx = [0, NSNumber(value: ch), NSNumber(value: an)]
-        } else {
-          // [1, A, C]
-          idx = [0, NSNumber(value: an), NSNumber(value: ch)]
+      // Uses direct index math instead of allocating [NSNumber] arrays (~16K times).
+      let read: (_ channelIndex: Int, _ anchorIndex: Int) -> Double
+      let rawPtr = arr.dataPointer
+      if arr.dataType == .float32 {
+        let fp32 = rawPtr.bindMemory(to: Float32.self, capacity: channels * numAnchors)
+        read = { ch, an in
+          let i = channelsOnSecondAxis ? ch * numAnchors + an : an * channels + ch
+          return Double(fp32[i])
         }
-        return arr[idx].doubleValue
+      } else {
+        let fp64 = rawPtr.bindMemory(to: Float64.self, capacity: channels * numAnchors)
+        read = { ch, an in
+          let i = channelsOnSecondAxis ? ch * numAnchors + an : an * channels + ch
+          return fp64[i]
+        }
       }
 
       AppLogging.log({ "runDetector: output shape=\(arr.shape), channels=\(channels), anchors=\(numAnchors), channelsOnSecondAxis=\(channelsOnSecondAxis)" }, level: .debug, category: .ml)
@@ -1226,6 +1230,136 @@ final class CatchPhotoAnalyzer {
     )
 
     return (inches: clamped, display: display)
+  }
+
+  // MARK: - Species-corrected length re-estimation
+
+  /// Result of re-estimating length after species correction.
+  struct LengthReEstimate {
+    let lengthInches: Double?
+    let source: LengthEstimateSource
+  }
+
+  /// Maps user-facing species names (+ optional lifecycle stage) to model labels.
+  /// Used when re-estimating length after the researcher corrects species.
+  private static let speciesDisplayToLabel: [String: String] = [
+    "steelhead":       "steelhead_holding",
+    "sea-run trout":   "sea_run_trout",
+    "sea run trout":   "sea_run_trout",
+    "rainbow trout":   "rainbow_holding",
+    "brook trout":     "brook_holding",
+    "arctic char":     "articchar_holding",
+    "grayling":        "grayling",
+  ]
+
+  /// Maps model labels to their species index in the `speciesLabels` array.
+  private func speciesLabelToIndex(_ label: String) -> Int? {
+    speciesLabels.firstIndex(of: label)
+  }
+
+  /// Re-estimate length using the original feature vector but with a corrected species.
+  /// Called when the researcher changes species during the identification step,
+  /// because the regressor uses species index as an input feature, and some species
+  /// bypass the regressor entirely (e.g. sea_run_trout uses heuristic only).
+  ///
+  /// - Parameters:
+  ///   - originalFV: The feature vector from the initial ML analysis
+  ///   - correctedSpecies: The user-confirmed species display name (e.g. "Steelhead")
+  ///   - correctedLifecycleStage: Optional lifecycle stage (e.g. "Holding", "Traveler")
+  /// - Returns: Re-estimated length and source, or nil length if estimation fails
+  func reEstimateLength(
+    originalFV: LengthFeatureVector,
+    correctedSpecies: String?,
+    correctedLifecycleStage: String?
+  ) -> LengthReEstimate {
+    guard let species = correctedSpecies else {
+      return LengthReEstimate(lengthInches: nil, source: .heuristic)
+    }
+
+    // Build the model label from species + lifecycle stage
+    let lowerSpecies = species.lowercased().trimmingCharacters(in: .whitespacesAndNewlines)
+    let lowerStage = correctedLifecycleStage?.lowercased().trimmingCharacters(in: .whitespacesAndNewlines)
+
+    // Try direct lookup first (e.g. "steelhead" -> "steelhead_holding")
+    var modelLabel = Self.speciesDisplayToLabel[lowerSpecies]
+
+    // If we have a lifecycle stage, try species_stage combination
+    if let stage = lowerStage, !stage.isEmpty {
+      let combined = "\(lowerSpecies.replacingOccurrences(of: " ", with: "_"))_\(stage)"
+      if speciesLabels.contains(combined) {
+        modelLabel = combined
+      }
+    }
+
+    // Resolve species index
+    let speciesIdx: Int
+    if let label = modelLabel, let idx = speciesLabelToIndex(label) {
+      speciesIdx = idx
+    } else {
+      // Unknown species — use index 0 as fallback
+      speciesIdx = 0
+    }
+
+    let resolvedLabel = modelLabel ?? "unknown"
+    AppLogging.log({
+      "reEstimateLength: corrected species=\(species), stage=\(correctedLifecycleStage ?? "nil"), " +
+      "resolved label=\(resolvedLabel), index=\(speciesIdx)"
+    }, level: .info, category: .ml)
+
+    // Check if this species bypasses the regressor
+    let regressorBypassSpecies: Set<String> = ["sea_run_trout"]
+    let useRegressor = !regressorBypassSpecies.contains(resolvedLabel)
+
+    // Build updated feature vector with corrected species index
+    var updatedFV = originalFV
+    updatedFV.speciesIndex = Double(speciesIdx)
+
+    if useRegressor, AppEnvironment.shared.useLengthRegressor,
+       let predicted = predictLength(from: updatedFV) {
+      let clamped = max(
+        AppEnvironment.shared.fishMinLengthInches,
+        min(predicted, AppEnvironment.shared.fishMaxLengthInches)
+      )
+      AppLogging.log({
+        "reEstimateLength: regressor predicted=\(String(format: "%.1f", predicted)), " +
+        "clamped=\(String(format: "%.1f", clamped)) for \(resolvedLabel)"
+      }, level: .info, category: .ml)
+      return LengthReEstimate(lengthInches: clamped, source: .regressor)
+    }
+
+    // Fallback to species-scaled heuristic
+    // Reconstruct fish box dimensions from feature vector (in 640x640 model space)
+    let fw = originalFV.fishBoxWidth
+    let fh = originalFV.fishBoxHeight
+    let pixelLength = max(fw, fh)
+
+    let env = AppEnvironment.shared
+    let scaledPixelLength = pixelLength * env.fishBoxScaleFactor
+    let rawInches = scaledPixelLength / env.fishPixelsPerInch
+
+    // Check for species-specific range
+    if let range = Self.speciesLengthRanges[resolvedLabel] {
+      let heuristicMin = env.fishMinLengthInches
+      let heuristicMax = env.fishMaxLengthInches
+      let fraction = min(1.0, max(0.0,
+        (rawInches - heuristicMin) / (heuristicMax - heuristicMin)
+      ))
+      let scaled = range.min + fraction * (range.max - range.min)
+
+      AppLogging.log({
+        "reEstimateLength: heuristic species-scaled for \(resolvedLabel), " +
+        "raw=\(String(format: "%.1f", rawInches)), scaled=\(String(format: "%.1f", scaled))"
+      }, level: .info, category: .ml)
+      return LengthReEstimate(lengthInches: scaled, source: .heuristic)
+    }
+
+    // Default heuristic (steelhead range)
+    let clamped = max(env.fishMinLengthInches, min(rawInches, env.fishMaxLengthInches))
+    AppLogging.log({
+      "reEstimateLength: heuristic default, raw=\(String(format: "%.1f", rawInches)), " +
+      "clamped=\(String(format: "%.1f", clamped))"
+    }, level: .info, category: .ml)
+    return LengthReEstimate(lengthInches: clamped, source: .heuristic)
   }
 }
 

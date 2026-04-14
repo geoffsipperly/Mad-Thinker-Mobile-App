@@ -167,12 +167,15 @@ final class ConfigurationSnapshotTests: XCTestCase {
   // ============================================================================
 
   func testCoreDataEntities_exist() {
+    // Note: the legacy "CatchReport" Core Data entity was removed when the
+    // file-based CatchReport struct took over as the local catch model.
+    // Existing user rows from old app versions are dropped by lightweight
+    // migration on first launch after the upgrade.
     let expectedEntities = [
       "Community",
       "Lodge",
       "Trip",
       "TripClient",
-      "CatchReport",
       "ClassifiedWaterLicense",
       "VoiceNote"
     ]

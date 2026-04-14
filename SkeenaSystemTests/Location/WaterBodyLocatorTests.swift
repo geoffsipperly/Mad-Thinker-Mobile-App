@@ -201,6 +201,51 @@ final class WaterBodyLocatorTests: XCTestCase {
                       "Hood Canal should be checked before Puget Sound (more specific first)")
   }
 
+  // MARK: - waterBodyMatch: Distance Tests
+
+  func testWaterBodyMatch_seattleWaterfront_returnsPugetSoundWithDistance() {
+    let locator = WaterBodyLocator.shared
+    let location = CLLocation(latitude: seattleWaterfront.latitude,
+                              longitude: seattleWaterfront.longitude)
+
+    let result = locator.waterBodyMatch(at: location)
+    XCTAssertNotNil(result, "Seattle waterfront should match a water body")
+    XCTAssertEqual(result?.name, "Puget Sound")
+    XCTAssertGreaterThan(result?.distanceKm ?? 0, 0,
+                         "Distance to nearest edge should be > 0 for interior point")
+  }
+
+  func testWaterBodyMatch_nilLocation_returnsNil() {
+    let locator = WaterBodyLocator.shared
+    let result = locator.waterBodyMatch(at: nil)
+    XCTAssertNil(result)
+  }
+
+  // MARK: - Regression: Alki Beach should resolve to Puget Sound, not Green River
+
+  func testAlkiBeach_resolvesPugetSoundOverGreenRiver() {
+    // Alki Point is inside the Puget Sound polygon (~6km from the Green River
+    // mouth spine point). The distance-based resolution should prefer Puget Sound
+    // because the point is deep inside the polygon (large edge distance) while
+    // the Green River spine is 6km away.
+    let alkiPoint = CLLocationCoordinate2D(latitude: 47.570, longitude: -122.421)
+    let location = CLLocation(latitude: alkiPoint.latitude, longitude: alkiPoint.longitude)
+
+    let waterBody = WaterBodyLocator.shared.waterBodyMatch(at: location)
+    let river = RiverLocator.shared.riverMatch(near: location)
+
+    XCTAssertNotNil(waterBody, "Alki Point should be inside Puget Sound polygon")
+    XCTAssertEqual(waterBody?.name, "Puget Sound")
+
+    // The Green River also matches (~5.7km away). The water body edge distance
+    // should be less than the river spine distance, so water body wins in the
+    // "closer feature wins" comparison.
+    if let river = river {
+      XCTAssertLessThanOrEqual(waterBody!.distanceKm, river.distanceKm,
+                               "Alki Point should be closer to the Puget Sound edge (\(waterBody!.distanceKm) km) than to the Green River spine (\(river.distanceKm) km)")
+    }
+  }
+
   // MARK: - Performance
 
   func testPointInPolygon_performance() {

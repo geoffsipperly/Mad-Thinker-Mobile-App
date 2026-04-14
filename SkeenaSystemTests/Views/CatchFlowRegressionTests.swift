@@ -8,7 +8,7 @@ import SwiftUI
 ///    land directly on "Record Catch Details", skipping the setup screen.
 ///
 /// 2. ObservationsListView toolbar + button — "Record observation" was
-///    moved from the LandingView / PublicLandingView content tiles to
+///    moved from the GuideLandingView / PublicLandingView content tiles to
 ///    a + button in the Observations page toolbar.
 @MainActor
 final class CatchFlowRegressionTests: XCTestCase {
@@ -123,7 +123,7 @@ final class CatchFlowRegressionTests: XCTestCase {
   // MARK: - Observation recording moved to ObservationsListView
 
   func testSnapshot_observationRecording_nowLivesOnObservationsPage() {
-    // SNAPSHOT: "Record observation" was removed from LandingView and
+    // SNAPSHOT: "Record observation" was removed from GuideLandingView and
     // PublicLandingView content tiles. It is now accessed via the + button
     // in the ObservationsListView toolbar. This is verified by confirming
     // that ObservationsListView can be instantiated (toolbar compiles) and
@@ -144,14 +144,14 @@ final class CatchFlowRegressionTests: XCTestCase {
                    "onSaved must not fire on init")
   }
 
-  // MARK: - LandingView and PublicLandingView compile without observation tile
+  // MARK: - GuideLandingView and PublicLandingView compile without observation tile
 
-  func testLandingView_instantiatesWithoutCrash() {
+  func testGuideLandingView_instantiatesWithoutCrash() {
     // If the "Record observation" tile removal broke something (e.g. a missing
     // state variable), this init will fail to compile or crash.
-    let view = LandingView()
+    let view = GuideLandingView()
     XCTAssertNotNil(view,
-                    "LandingView must instantiate without the Record observation tile")
+                    "GuideLandingView must instantiate without the Record observation tile")
   }
 
   func testPublicLandingView_instantiatesWithoutCrash() {

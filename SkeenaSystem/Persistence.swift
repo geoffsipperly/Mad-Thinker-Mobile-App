@@ -35,9 +35,14 @@ final class PersistenceController {
     container.viewContext.mergePolicy = NSMergeByPropertyObjectTrumpMergePolicy
     container.viewContext.automaticallyMergesChangesFromParent = true
 
-    // Ensure the community and its Lodges exist before
-    // any trip sync or catch-recording flow tries to look them up.
-    seedCommunityIfNeeded(context: container.viewContext)
+    // Seed community & lodge rows on a background context to keep the
+    // view context queue free. performAndWait ensures seeding completes
+    // before any downstream code queries for the seeded entities.
+    let bgContext = container.newBackgroundContext()
+    bgContext.mergePolicy = NSMergeByPropertyObjectTrumpMergePolicy
+    bgContext.performAndWait { [self] in
+      seedCommunityIfNeeded(context: bgContext)
+    }
   }
 
   // MARK: - Seed data

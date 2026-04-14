@@ -2,7 +2,7 @@ import XCTest
 @testable import SkeenaSystem
 
 /// Tests for CatchChatViewModel's text-parsing helpers, correction logic,
-/// formatted summary generation, and PicMemo snapshot creation.
+/// formatted summary generation, and catch snapshot creation.
 ///
 /// Many helpers are private, so where necessary we replicate the logic
 /// in test helpers (same pattern as CatchReportArchiveTests and
@@ -397,10 +397,10 @@ final class CatchChatViewModelTests: XCTestCase {
     XCTAssertEqual(vm.currentAnglerName, "John Doe")
   }
 
-  // MARK: - makePicMemoSnapshot Tests (public interface)
+  // MARK: - makeCatchSnapshot Tests (public interface)
 
-  func testMakePicMemoSnapshot_noAnalysis_returnsNil() {
-    XCTAssertNil(vm.makePicMemoSnapshot(), "Should return nil when no analysis has been performed")
+  func testMakeCatchSnapshot_noAnalysis_returnsNil() {
+    XCTAssertNil(vm.makeCatchSnapshot(), "Should return nil when no analysis has been performed")
   }
 
   // MARK: - startConversationIfNeeded Tests

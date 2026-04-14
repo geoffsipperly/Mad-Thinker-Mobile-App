@@ -328,54 +328,28 @@ struct FishingForecastResultView: View {
   // MARK: - Formatting Helpers
 
   private func number(_ x: Double) -> String {
-    let f = NumberFormatter()
-    f.maximumFractionDigits = 2
-    f.minimumFractionDigits = 0
-    return f.string(from: NSNumber(value: x)) ?? "\(x)"
+    DateFormatting.decimal2.string(from: NSNumber(value: x)) ?? "\(x)"
   }
 
   private func formattedDate(_ ymd: String) -> String {
-    let df = DateFormatter()
-    df.locale = Locale(identifier: "en_US_POSIX")
-    df.dateFormat = "yyyy-MM-dd"
-    if let d = df.date(from: ymd) {
-      let out = DateFormatter()
-      out.locale = Locale(identifier: "en_US_POSIX")
-      out.dateStyle = .medium
-      out.timeStyle = .none
-      return out.string(from: d)
+    if let d = DateFormatting.ymd.date(from: ymd) {
+      return DateFormatting.mediumDate.string(from: d)
     }
     return ymd
   }
 
   private func parseDateTime(_ s: String) -> Date? {
-    let iso1 = ISO8601DateFormatter()
-    iso1.formatOptions = [.withInternetDateTime, .withTimeZone]
-    if let d = iso1.date(from: s) { return d }
-    let iso2 = ISO8601DateFormatter()
-    iso2.formatOptions = [.withInternetDateTime, .withFractionalSeconds, .withTimeZone]
-    if let d = iso2.date(from: s) { return d }
-    let f = DateFormatter()
-    f.locale = Locale(identifier: "en_US_POSIX")
-    f.dateFormat = "yyyy-MM-dd HH:mm"
-    return f.date(from: s)
+    DateFormatting.parseISOWithTZ(s)
   }
 
   private func formattedDateFromDateTime(_ s: String) -> String {
     guard let d = parseDateTime(s) else { return s }
-    let f = DateFormatter()
-    f.locale = Locale(identifier: "en_US_POSIX")
-    f.setLocalizedDateFormatFromTemplate("MMM d")
-    return f.string(from: d)
+    return DateFormatting.monthDay.string(from: d)
   }
 
   private func formattedTimeFromDateTime(_ s: String) -> String {
     guard let d = parseDateTime(s) else { return s }
-    let f = DateFormatter()
-    f.locale = Locale(identifier: "en_US_POSIX")
-    f.dateStyle = .none
-    f.timeStyle = .short
-    return f.string(from: d)
+    return DateFormatting.shortTime.string(from: d)
   }
 }
 
@@ -394,16 +368,7 @@ private struct TideWaveGraph: View {
   }
 
   private func parseDateTime(_ s: String) -> Date? {
-    let iso1 = ISO8601DateFormatter()
-    iso1.formatOptions = [.withInternetDateTime, .withTimeZone]
-    if let d = iso1.date(from: s) { return d }
-    let iso2 = ISO8601DateFormatter()
-    iso2.formatOptions = [.withInternetDateTime, .withFractionalSeconds, .withTimeZone]
-    if let d = iso2.date(from: s) { return d }
-    let f = DateFormatter()
-    f.locale = Locale(identifier: "en_US_POSIX")
-    f.dateFormat = "yyyy-MM-dd HH:mm"
-    return f.date(from: s)
+    DateFormatting.parseISOWithTZ(s)
   }
 
   private var orderedSamples: [TideSample] {
@@ -427,10 +392,7 @@ private struct TideWaveGraph: View {
   private var maxHeight: Double { orderedSamples.map(\.height).max() ?? 1 }
 
   private func number(_ x: Double) -> String {
-    let f = NumberFormatter()
-    f.maximumFractionDigits = 2
-    f.minimumFractionDigits = 0
-    return f.string(from: NSNumber(value: x)) ?? "\(x)"
+    DateFormatting.decimal2.string(from: NSNumber(value: x)) ?? "\(x)"
   }
 
   var body: some View {

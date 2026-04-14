@@ -13,7 +13,7 @@ final class CatchReportArchiveTests: XCTestCase {
   // MARK: - Helpers
 
   /// Replicates the archive logic from ReportsListView for testability.
-  private func isArchived(_ report: CatchReportPicMemo) -> Bool {
+  private func isArchived(_ report: CatchReport) -> Bool {
     guard report.status == .uploaded else { return false }
     let twoWeeksAgo = Calendar.current.date(byAdding: .day, value: -14, to: Date()) ?? Date.distantPast
     return report.createdAt < twoWeeksAgo
@@ -22,9 +22,9 @@ final class CatchReportArchiveTests: XCTestCase {
   private func createReport(
     createdAt: Date = Date(),
     catchDate: Date? = nil,
-    status: CatchReportPicMemoStatus = .savedLocally
-  ) -> CatchReportPicMemo {
-    CatchReportPicMemo(
+    status: CatchReportStatus = .savedLocally
+  ) -> CatchReport {
+    CatchReport(
       id: UUID(),
       createdAt: createdAt,
       catchDate: catchDate,

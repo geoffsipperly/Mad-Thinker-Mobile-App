@@ -441,8 +441,8 @@ public final class SynchTrips {
         }
       }
 
-      if let s = serverTrip.startDate, let sd = parseISO8601(s: s) { localTrip.startDate = sd }
-      if let e = serverTrip.endDate, let ed = parseISO8601(s: e) { localTrip.endDate = ed }
+      localTrip.startDate = parseISO8601(s: serverTrip.startDate)
+      localTrip.endDate = parseISO8601(s: serverTrip.endDate)
 
       if let tId = serverTrip.tripId, let uuid = UUID(uuidString: tId) { localTrip.tripId = uuid }
 
@@ -489,8 +489,8 @@ public final class SynchTrips {
 
       if let tripName = serverTrip.tripName { trip.name = tripName }
       if let guide = serverTrip.guideName { trip.guideName = guide }
-      if let s = serverTrip.startDate, let sd = parseISO8601(s: s) { trip.startDate = sd }
-      if let e = serverTrip.endDate, let ed = parseISO8601(s: e) { trip.endDate = ed }
+      trip.startDate = parseISO8601(s: serverTrip.startDate)
+      trip.endDate = parseISO8601(s: serverTrip.endDate)
       if let created = parseISO8601(s: serverTrip.createdAt) { trip.createdAt = created }
       if let updated = parseISO8601(s: serverTrip.updatedAt) { trip.localUpdatedAt = updated }
 
@@ -665,36 +665,23 @@ public final class SynchTrips {
 
   private static func parseISO8601(s: String?) -> Date? {
     guard let s = s else { return nil }
-    let iso1 = ISO8601DateFormatter()
-    iso1.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-    if let d = iso1.date(from: s) { return d }
-    let iso2 = ISO8601DateFormatter()
-    iso2.formatOptions = [.withInternetDateTime]
-    return iso2.date(from: s)
+    if let d = DateFormatting.iso8601WithFractional.date(from: s) { return d }
+    if let d = DateFormatting.iso8601.date(from: s) { return d }
+    // Fallback: date-only "yyyy-MM-dd" (e.g. 1-day trips)
+    return parseYMD(s: s)
   }
 
   private static func parseYMD(s: String?) -> Date? {
     guard let s = s else { return nil }
-    let df = DateFormatter()
-    df.calendar = Calendar(identifier: .gregorian)
-    df.dateFormat = "yyyy-MM-dd"
-    df.timeZone = TimeZone(secondsFromGMT: 0)
-    return df.date(from: s)
+    return DateFormatting.ymd.date(from: s)
   }
 
   private static func iso8601String(from date: Date) -> String {
-    let iso = ISO8601DateFormatter()
-    iso.formatOptions = [.withInternetDateTime]
-    iso.timeZone = TimeZone(secondsFromGMT: 0)
-    return iso.string(from: date)
+    DateFormatting.iso8601.string(from: date)
   }
 
   private static func ymdString(from date: Date) -> String {
-    let df = DateFormatter()
-    df.calendar = Calendar(identifier: .gregorian)
-    df.dateFormat = "yyyy-MM-dd"
-    df.timeZone = TimeZone(secondsFromGMT: 0)
-    return df.string(from: date)
+    DateFormatting.ymd.string(from: date)
   }
 
   // MARK: - Logging helpers
@@ -706,9 +693,7 @@ public final class SynchTrips {
 
   private static func fmt(_ d: Date?) -> String {
     guard let d = d else { return "<nil>" }
-    let f = ISO8601DateFormatter()
-    f.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-    return f.string(from: d)
+    return DateFormatting.iso8601WithFractional.string(from: d)
   }
 
   private static func truncate(_ s: String, max: Int = 2000) -> String {

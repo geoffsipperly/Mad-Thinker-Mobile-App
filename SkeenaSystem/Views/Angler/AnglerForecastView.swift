@@ -256,15 +256,8 @@ struct AnglerForecastView: View {
   // MARK: - Helpers
 
   private static func formatGeneratedAt(_ iso: String) -> String? {
-    let isoFmt = ISO8601DateFormatter()
-    isoFmt.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-    if let date = isoFmt.date(from: iso) ?? ISO8601DateFormatter().date(from: iso) {
-      let f = DateFormatter()
-      f.dateStyle = .medium
-      f.timeStyle = .short
-      return f.string(from: date)
-    }
-    return nil
+    guard let date = DateFormatting.parseISO(iso) else { return nil }
+    return DateFormatting.mediumDateTime.string(from: date)
   }
 
   static func firstWords(of text: String, count: Int) -> String {
@@ -360,12 +353,8 @@ private struct ForecastDayRow5Col: View {
   }
 
   private static func fmtDay(_ isoDay: String) -> String {
-    let f = DateFormatter()
-    f.dateFormat = "yyyy-MM-dd"
-    if let d = f.date(from: isoDay) {
-      let out = DateFormatter()
-      out.dateFormat = "EEE, MMM d"
-      return out.string(from: d)
+    if let d = DateFormatting.ymd.date(from: isoDay) {
+      return DateFormatting.weekdayMonthDay.string(from: d)
     }
     return isoDay
   }

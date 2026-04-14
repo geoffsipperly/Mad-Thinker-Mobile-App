@@ -15,12 +15,14 @@ struct CommunityMembership: Codable, Identifiable {
     let id: String
     let communityId: String
     let role: String  // "guide", "angler", or "public"
+    let isActive: Bool
     let communities: CommunityInfo
 
     enum CodingKeys: String, CodingKey {
         case id
         case communityId = "community_id"
         case role
+        case isActive = "is_active"
         case communities
     }
 }

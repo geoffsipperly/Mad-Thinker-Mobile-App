@@ -3,7 +3,7 @@
 // TripSyncService.swift
 //
 // Fetches all trips from the server and hydrates them into Core Data.
-// Called at app launch (LandingView) so trips are available before the
+// Called at app launch (GuideLandingView) so trips are available before the
 // guide taps "Record a Catch".
 
 import CoreData
@@ -95,11 +95,12 @@ final class TripSyncService {
     local.name = dto.tripName
     local.guideName = dto.guideName
 
-    let iso = ISO8601DateFormatter()
-    iso.formatOptions = [.withInternetDateTime]
-    if let s = dto.startDate, let d = iso.date(from: s) { local.startDate = d }
-    if let e = dto.endDate, let d = iso.date(from: e) { local.endDate = d }
-    if let c = dto.createdAt, let d = iso.date(from: c) { local.createdAt = d }
+    let parsedStart = dto.startDate.flatMap { Self.parseDate($0) }
+    let parsedEnd = dto.endDate.flatMap { Self.parseDate($0) }
+    local.startDate = parsedStart
+    local.endDate = parsedEnd
+    AppLogging.log("[TripSyncService] upsert trip '\(dto.tripName ?? "-")' — raw startDate=\(dto.startDate ?? "nil") endDate=\(dto.endDate ?? "nil") → parsed start=\(parsedStart.map { "\($0)" } ?? "nil") end=\(parsedEnd.map { "\($0)" } ?? "nil") existing=\(existing != nil)", level: .info, category: .trip)
+    if let c = dto.createdAt, let d = Self.parseDate(c) { local.createdAt = d }
 
     // Lodge by name – also ensure Community link
     if let lodgeName = dto.lodge, !lodgeName.isEmpty {
@@ -130,18 +131,13 @@ final class TripSyncService {
         client.licenseNumber = a.memberId
 
         if let licenses = a.licenses {
-          let ymd = DateFormatter()
-          ymd.calendar = Calendar(identifier: .gregorian)
-          ymd.dateFormat = "yyyy-MM-dd"
-          ymd.timeZone = TimeZone(secondsFromGMT: 0)
-
           for lic in licenses {
             let cw = ClassifiedWaterLicense(context: context)
             cw.client = client
             cw.licNumber = lic.licenseNumber ?? ""
             cw.water = lic.riverName ?? ""
-            if let s = lic.startDate, let d = ymd.date(from: s) { cw.validFrom = d }
-            if let s = lic.endDate, let d = ymd.date(from: s) { cw.validTo = d }
+            if let s = lic.startDate, let d = DateFormatting.ymd.date(from: s) { cw.validFrom = d }
+            if let s = lic.endDate, let d = DateFormatting.ymd.date(from: s) { cw.validTo = d }
           }
         }
       }
@@ -166,6 +162,13 @@ final class TripSyncService {
     if removedCount > 0 {
       AppLogging.log("[TripSyncService] Removed \(removedCount) orphaned trip(s) not on server", level: .info, category: .trip)
     }
+  }
+
+  // MARK: - Date parsing
+
+  /// Parse ISO8601 (with or without fractional seconds) or date-only "yyyy-MM-dd".
+  private static func parseDate(_ s: String) -> Date? {
+    DateFormatting.parseISO(s) ?? DateFormatting.ymd.date(from: s)
   }
 
   // MARK: - Community link helper
